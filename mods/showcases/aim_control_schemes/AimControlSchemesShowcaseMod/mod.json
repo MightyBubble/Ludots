@@ -1,0 +1,16 @@
+{
+  "name": "AimControlSchemesShowcaseMod",
+  "version": "1.0.0",
+  "description": "零 C# 瞄准方案场：同一名英雄在四套 control scheme 下切换键鼠/手柄与施法模式。",
+  "priority": 40,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "AimInteractionMod": "^1.0.0"
+  },
+  "tags": [
+    "showcase",
+    "aim",
+    "input",
+    "zero-code"
+  ]
+}

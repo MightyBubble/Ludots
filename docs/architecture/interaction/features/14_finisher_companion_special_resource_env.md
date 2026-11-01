@@ -53,7 +53,7 @@
 ### 当前分支已证明
 
 - shared command-source fan-out：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
-- 现有输入与 order pipeline：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 
 ### 当前结论
 
@@ -70,22 +70,21 @@
 
 ### 当前分支已实现并验证
 
-- Quick Cast / SmartCast：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
-- vector cast + chord input：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
-- double-tap skill activation：`src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Tests/GasTests/InputOrderContractTests.cs`、`src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`
-- queued orders：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs`
+- 即时施放：偏好 `pref.aim.cast_mode` = `interaction.context.aim.smart`
+- 方向和组合键：控制方案上的绑定，修饰位在 `MapTrigger.Modifiers`
+- 排干：`src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 
 ### 当前结论
 
 | Slice | 当前状态 | 说明 |
 |------|----------|------|
 | S1 组合键 | `runtime-ready` | 依赖现有 input binding / chord authoring |
-| S2 双击 | `implemented + verified` | 不再是“需新增 trigger type”；`InputTriggerType.DoubleTap` 已存在 |
-| S3 方向 + 按键 | `runtime-ready` | `Direction` / `Vector` 已有，细分玩法仍看具体 authoring |
-| S4 modifier 自我施放 | `runtime-ready` | 仍在现有 input mapping / modifier 路径上扩展 |
-| S5 Quick Cast | `implemented + verified` | showcase 已覆盖 |
-| S6 小地图施放 | `backlog` | 仍缺 adapter 侧 world-position 转换 |
-| S7 Shift queue | `implemented + verified baseline` | 现有 queued-order runtime 已闭环 |
+| S2 双击 | `design backlog` | 没有单独的双击触发类型；要做就写在交互状态的图里 |
+| S3 方向 + 按键 | `runtime-ready` | 地面点走 `graph.aim.rule.ground_only`，指针由 `GraphPointerSampleRuntime` 采样 |
+| S4 modifier 自我施放 | `data` | Alt 是 `Camera.Rig` 的 `AlternateModifier`；友方目标用 `graph.aim.pick.friendly`，没有强制自身字段 |
+| S5 Quick Cast | `implemented` | `interaction.context.aim.smart` |
+| S6 小地图施放 | `implemented` | `interaction.context.minimap`，命令图 `graph.minimap.command` 由声明 `Command` 的 mod 挂上 |
+| S7 Shift queue | `implemented` | `QueueModifier` + 提交图 `queue: "onQueueModifier"` |
 
 ---
 

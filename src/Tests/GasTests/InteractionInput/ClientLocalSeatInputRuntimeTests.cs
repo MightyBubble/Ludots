@@ -90,6 +90,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PublishSeats_MultiSeat_NotifiesEachActivationAndLaterSwitch()
+        {
+            using Harness harness = Harness.Create();
+            var seen = new List<(string Seat, int OldId, int NewId)>();
+            harness.Runtime.SeatSchemeChanged = (seat, oldId, newId) => seen.Add((seat, oldId, newId));
+            harness.PublishDualSeat();
+
+            int schemeA = harness.Schemes.SchemeIdRegistry.GetId(SchemeA);
+            int schemeB = harness.Schemes.SchemeIdRegistry.GetId(SchemeB);
+            Assert.That(seen, Is.EqualTo(new[]
+            {
+                ("seat.0", 0, schemeA),
+                ("seat.1", 0, schemeA),
+            }));
+
+            seen.Clear();
+            Assert.That(harness.Runtime.TrySwitchSeatScheme(harness.Seats, "seat.1", SchemeB), Is.True);
+            Assert.That(seen, Is.EqualTo(new[] { ("seat.1", schemeA, schemeB) }));
+
+            seen.Clear();
+            Assert.That(harness.Runtime.TrySwitchSeatScheme(harness.Seats, "seat.1", SchemeB), Is.True);
+            Assert.That(seen, Is.Empty);
+        }
+
+        [Test]
         public void TrySwitchSeatScheme_MultiSeat_SwitchesChannelAndWritesBackThatSeatOnly()
         {
             using Harness harness = Harness.Create(withPreferences: true);
@@ -156,7 +181,7 @@ namespace Ludots.Tests.GAS
             public Dictionary<string, object> Globals = null!;
             public ClientLocalSeatRegistry Seats = null!;
             public ControlSchemeRuntime Schemes = null!;
-            public ClientCastPreferenceStore Preferences = null!;
+            public ClientControlSchemePreferenceStore Preferences = null!;
             public ClientLocalSeatInputRuntime Runtime = null!;
 
             public static Harness Create(List<string>? allowedSchemes = null, bool withPreferences = false)
@@ -172,9 +197,10 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 
+                ClientControlSchemePreferenceStore preferences = CreatePreferenceStore();
                 if (withPreferences)
                 {
-                    harness.Preferences = CreatePreferenceStore();
+                    harness.Preferences = preferences;
                 }
 
                 var inputConfig = new InputConfigRoot
@@ -201,7 +227,7 @@ namespace Ludots.Tests.GAS
                 harness.Schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                     orderTypes,
-                    preferences: harness.Preferences,
+                    preferences,
                     inputConfig: inputConfig);
                 harness.Schemes.Install(new ControlSchemesConfig
                 {
@@ -217,6 +243,7 @@ namespace Ludots.Tests.GAS
                                 OrderTypeKey = "moveTo",
                                 ThrottleTicks = 6,
                                 StepDistanceCm = 400,
+                                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
                             },
                         },
                         new()
@@ -252,22 +279,10 @@ namespace Ludots.Tests.GAS
                 World.Destroy(World);
             }
 
-            private static ClientCastPreferenceStore CreatePreferenceStore()
+            private static ClientControlSchemePreferenceStore CreatePreferenceStore()
             {
-                var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var castCommitActionIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var contextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                return new ClientCastPreferenceStore(
-                    new CastCommitProfileRegistry(
-                        castCommitIds,
-                        castCommitActionIds,
-                        new InteractionContextProfileRegistry(contextProfileIds)),
-                    templateKeys.Register,
-                    templateKeys.GetName,
-                    formSetKeys.Register,
-                    formSetKeys.GetName);
+                return new ClientControlSchemePreferenceStore(
+                    Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
             }
         }
     }

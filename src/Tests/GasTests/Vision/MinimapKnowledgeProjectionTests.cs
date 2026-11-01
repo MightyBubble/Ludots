@@ -25,6 +25,7 @@ public sealed class MinimapKnowledgeProjectionTests
     private static readonly string[] EngineMods =
     {
         "LudotsCoreMod",
+        "CommandSourceCoreFixtureMod"
     };
 
     [Test]
@@ -216,7 +217,8 @@ public sealed class MinimapKnowledgeProjectionTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, EngineMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         return engine;
     }
 
@@ -234,6 +236,7 @@ public sealed class MinimapKnowledgeProjectionTests
             MinZoomExplicitHalfExtentCm = 750f,
             MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
             MaxZoomExplicitHalfExtentCm = 5000f,
+            InteractionContextId = "interaction.context.minimap",
             Actions = Ludots.Tests.Presentation.MinimapTestActions.Create(),
         });
     }

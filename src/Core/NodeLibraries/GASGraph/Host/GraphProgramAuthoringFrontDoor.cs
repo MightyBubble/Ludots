@@ -207,6 +207,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             }
 
                             break;
+                        case "budget":
+                            if (field.Value is not JsonValue budgetValue || !budgetValue.TryGetValue<string>(out _))
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{i}] field 'budget' must be a string.");
+                            }
+
+                            break;
                         case "filters":
                             RequireTriggerGraphEntryFiltersShape(obj, graphId, i, field.Value);
                             break;
@@ -217,7 +225,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             break;
                         default:
                             throw new InvalidOperationException(
-                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
+                                $"TriggerGraph graph '{graphId}' entries[{i}] has unknown field '{field.Key}'; allowed fields are label, event, action, start, once, refire, priority, budget, filters, hookAnchor, hookNodeBefore, hookNodeAfter.");
                     }
                 }
 
@@ -388,9 +396,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         }
 
                         break;
+                    case "payload":
+                        if (field.Value is not JsonObject payload || payload.Count == 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters field 'payload' must be a non-empty object.");
+                        }
+
+                        foreach (KeyValuePair<string, JsonNode?> payloadField in payload)
+                        {
+                            if (payloadField.Value is not JsonValue)
+                            {
+                                throw new InvalidOperationException(
+                                    $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters payload '{payloadField.Key}' must be a string or an integer.");
+                            }
+                        }
+
+                        break;
                     default:
                         throw new InvalidOperationException(
-                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction, action, instanceId, varName.");
+                            $"TriggerGraph graph '{graphId}' entries[{entryIndex}] filters has unknown field '{field.Key}'; allowed fields are region, tag, team, threshold, direction, action, instanceId, varName, payload.");
                 }
             }
         }

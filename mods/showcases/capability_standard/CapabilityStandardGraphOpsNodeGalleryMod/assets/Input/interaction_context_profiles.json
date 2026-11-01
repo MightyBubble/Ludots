@@ -2,6 +2,9 @@
   "profiles": [
     {
       "id": "interaction.context.gallery.aim"
+    },
+    {
+      "id": "interaction.context.gallery.pref"
     }
   ]
 }

@@ -1,0 +1,97 @@
+[
+  {
+    "id": "graph.aim.track_stick",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "Aim.Stick",
+        "action": "Aim.Stick",
+        "start": "px",
+        "refire": "restart",
+        "budget": "single-slice"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueX"
+      },
+      {
+        "id": "py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueY"
+      },
+      {
+        "id": "sx",
+        "op": "StoreArgFloat",
+        "argKey": "MapTrigger.ActionValueX"
+      },
+      {
+        "id": "sy",
+        "op": "StoreArgFloat",
+        "argKey": "MapTrigger.ActionValueY"
+      },
+      {
+        "id": "body",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.track_stick.body"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "px",
+        "fromPort": "next",
+        "to": "py"
+      },
+      {
+        "from": "py",
+        "fromPort": "next",
+        "to": "sx"
+      },
+      {
+        "from": "sx",
+        "fromPort": "next",
+        "to": "sy"
+      },
+      {
+        "from": "sy",
+        "fromPort": "next",
+        "to": "body"
+      },
+      {
+        "from": "body",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "px",
+        "fromPort": "value",
+        "to": "sx",
+        "toPort": "value"
+      },
+      {
+        "from": "py",
+        "fromPort": "value",
+        "to": "sy",
+        "toPort": "value"
+      }
+    ]
+  }
+]

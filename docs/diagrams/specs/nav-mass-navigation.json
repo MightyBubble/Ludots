@@ -28,7 +28,7 @@
 
   "nodes": [
     { "id": "ic1", "title": "PlayerInputHandler", "tint": "mauve", "x": 350, "y": 185, "w": 320, "h": 80 },
-    { "id": "ic2", "title": "InputOrderMappingSystem", "tint": "mauve", "x": 350, "y": 285, "w": 320, "h": 80 },
+    { "id": "ic2", "title": "CommandIntentBufferDrain", "tint": "mauve", "x": 350, "y": 285, "w": 320, "h": 80 },
     { "id": "ic3", "title": "SelectionRuntime", "tint": "mauve", "x": 350, "y": 372, "w": 320, "h": 80 },
 
     { "id": "rt1", "title": "MassNavigationRuntime", "tint": "clay", "x": 770, "y": 175, "w": 340, "h": 80, "items": ["Lifecycle + System Install"] },

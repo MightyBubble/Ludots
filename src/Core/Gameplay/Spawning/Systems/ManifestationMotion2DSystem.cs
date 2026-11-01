@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Platform.Abstractions;
@@ -39,6 +40,7 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 {
                     ManifestationFacingSource2D.SweepVelocity => ResolveSweepFacing(entity, motion, deltaSeconds),
                     ManifestationFacingSource2D.ParentExecutionTarget => ResolveParentExecutionFacing(parent),
+                    ManifestationFacingSource2D.ParentCastFacing => ResolveParentCastFacing(parent),
                     _ => null,
                 };
 
@@ -55,6 +57,17 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 ? World.Get<FacingDirection>(entity).AngleRad
                 : 0f;
             return current + (WorldPlane2D.DegToRadValue(motion.SweepDegreesPerSecond) * deltaSeconds);
+        }
+
+        private float? ResolveParentCastFacing(Entity parent)
+        {
+            if (!World.TryGet(parent, out BlackboardFloatBuffer blackboard) ||
+                !blackboard.TryGet(OrderBlackboardKeys.Cast_Facing, out float degrees))
+            {
+                return null;
+            }
+
+            return WorldPlane2D.DegToRadValue(degrees);
         }
 
         private float? ResolveParentExecutionFacing(Entity parent)

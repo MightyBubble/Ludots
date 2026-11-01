@@ -74,7 +74,8 @@
         "sourceId": { "type": ["string", "integer"] },
         "textToken": { "type": "string" },
         "constantValue": { "type": "number" },
-        "attributeId": { "type": ["string", "integer"] }
+        "attributeId": { "type": ["string", "integer"] },
+        "unit": { "enum": ["logicCm"] }
       }
     },
     "child": {
@@ -126,7 +127,6 @@
             "CastCommitted", "CastFailed", "CastStarted", "CastFinished", "CastInterrupted",
             "GlobalDayNight", "GlobalRegionChanged", "GlobalWeather",
             "AttributeValueChanged",
-            "AbilityAimBegun", "AbilityAimUpdated", "AbilityAimEnded", "AbilityAimSlotAdvanced",
             "EntityCollectionMemberAdded", "EntityCollectionMemberRemoved",
             "WorldOverlayUpdated", "WorldOverlayEnded",
             "WorldHudUpdated", "WorldHudEnded",

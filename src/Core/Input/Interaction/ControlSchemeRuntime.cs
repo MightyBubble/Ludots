@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
@@ -23,7 +24,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly OrderTypeRegistry _orderTypes;
         private readonly InputConfigRoot _inputConfig;
         private readonly Func<PlayerInputHandler> _handlerProvider;
-        private readonly ClientCastPreferenceStore _preferences;
+        private readonly ClientControlSchemePreferenceStore _preferences;
 
         private CompiledScheme[] _schemes = new CompiledScheme[8];
         private bool _allowAll = true;
@@ -33,15 +34,15 @@ namespace Ludots.Core.Input.Interaction
         public ControlSchemeRuntime(
             StringIntRegistry schemeIdRegistry,
             OrderTypeRegistry orderTypes,
+            ClientControlSchemePreferenceStore preferences,
             Func<PlayerInputHandler> handlerProvider = null,
-            ClientCastPreferenceStore preferences = null,
             InputConfigRoot inputConfig = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+            _preferences = preferences ?? throw new ArgumentNullException(nameof(preferences));
             _inputConfig = inputConfig;
             _handlerProvider = handlerProvider;
-            _preferences = preferences;
         }
 
         /// <summary>Scheme id space; players/mods reference schemes by these ids.</summary>
@@ -52,6 +53,13 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Bumped on every successful switch.</summary>
         public uint Revision { get; private set; }
+
+        /// <summary>
+        /// Invoked after the active scheme id changes, with the previous id (0 when none was
+        /// active) and the new id. A same-id call does not invoke it. The host assigns this
+        /// after <see cref="Install"/> so the install-time activation stays silent.
+        /// </summary>
+        public Action<int, int>? SchemeChanged { get; set; }
 
         /// <summary>
         /// The active scheme's axis move declaration with the order type key pre-resolved at
@@ -90,6 +98,44 @@ namespace Ludots.Core.Input.Interaction
                 scheme.HasAxisMove,
                 scheme.AxisMove);
             return true;
+        }
+
+        /// <summary>
+        /// The declared slot binding must name a real action, and an integer exactly when
+        /// that action's bindings carry <c>intValue</c>. Every installed context counts,
+        /// not only the active scheme; the scheme is checked when the key is resolved.
+        /// </summary>
+        public void RequireSlotBinding(string actionId, int? bindingInt, string where)
+        {
+            InputBindingKeyLookup.RequireSlotBinding(RequireInputConfig(), actionId, bindingInt, where);
+        }
+
+        /// <summary>
+        /// Key label of the binding inside the active scheme's contexts. Highest priority
+        /// context wins; equal priority keeps the earlier context in the scheme's list.
+        /// </summary>
+        public string ResolveActiveBindingKey(string actionId, int? bindingInt)
+        {
+            if (_activeSchemeId == 0)
+            {
+                throw new InvalidOperationException(
+                    "LUDOTS_INPUT_BINDING_KEY_SCHEME_INACTIVE: no control scheme is active.");
+            }
+
+            CompiledScheme scheme = _schemes[_activeSchemeId]
+                ?? throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_BINDING_KEY_SCHEME_INACTIVE: active control scheme id {_activeSchemeId} is not installed.");
+            string schemeName = _schemeIds.GetName(_activeSchemeId);
+            string scope = string.IsNullOrEmpty(schemeName)
+                ? $"control scheme #{_activeSchemeId}"
+                : $"control scheme '{schemeName}'";
+            return InputBindingKeyLookup.Resolve(RequireInputConfig(), scheme.InputContexts, scope, actionId, bindingInt);
+        }
+
+        private InputConfigRoot RequireInputConfig()
+        {
+            return _inputConfig ?? throw new InvalidOperationException(
+                "LUDOTS_INPUT_BINDING_KEY_INPUT_CONFIG_ABSENT: binding key lookup requires the installed input config.");
         }
 
         /// <summary>
@@ -154,7 +200,8 @@ namespace Ludots.Core.Input.Interaction
 
             if (switched)
             {
-                _preferences?.SetActiveScheme(_schemeIds.GetName(schemeId));
+                _preferences.SetActiveScheme(_schemeIds.GetName(schemeId));
+                _preferences.Save();
             }
 
             return true;
@@ -171,6 +218,32 @@ namespace Ludots.Core.Input.Interaction
         public bool TrySwitchRuntimeOnly(int schemeId)
         {
             return TrySwitchCore(schemeId, out _);
+        }
+
+        /// <summary>
+        /// Pushes the active scheme's input contexts onto a handler created after install.
+        /// Install records the scheme before the host binds a handler, so the push happens
+        /// at bind time. <see cref="PlayerInputHandler.PushContext"/> ignores a context that
+        /// is already on the stack.
+        /// </summary>
+        public void ApplyActiveContexts(PlayerInputHandler handler)
+        {
+            if (handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler));
+            }
+
+            if (_activeSchemeId == 0 || !IsInstalled(_activeSchemeId))
+            {
+                throw new InvalidOperationException(
+                    "Control scheme runtime has no active scheme to apply to the input handler.");
+            }
+
+            string[] contexts = _schemes[_activeSchemeId].InputContexts;
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                handler.PushContext(contexts[i]);
+            }
         }
 
         private bool TrySwitchCore(int schemeId, out bool switched)
@@ -205,9 +278,11 @@ namespace Ludots.Core.Input.Interaction
                 }
             }
 
+            int previousSchemeId = _activeSchemeId;
             _activeSchemeId = schemeId;
             Revision++;
             switched = true;
+            SchemeChanged?.Invoke(previousSchemeId, schemeId);
             return true;
         }
 
@@ -353,9 +428,9 @@ namespace Ludots.Core.Input.Interaction
                 return;
             }
 
-            if (_preferences != null && !string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
+            if (!string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
             {
-                string preferredScheme = _preferences.ActiveSchemeId.Trim();
+                string preferredScheme = _preferences.ActiveSchemeId;
                 if (!_schemeIds.TryGetId(preferredScheme, out int preferredSchemeId))
                 {
                     throw new InvalidOperationException(

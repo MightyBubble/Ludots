@@ -9,6 +9,8 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Spawning.Systems;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -97,6 +99,62 @@ namespace Ludots.Tests.GAS
             That(spatial.LastLineOrigin, Is.EqualTo(new WorldCmInt2(300, 300)));
             That(spatial.LastLineDirectionDeg, Is.EqualTo(90));
             That(spatial.LastLineLengthCm, Is.EqualTo(640));
+        }
+
+        [Test]
+        public void CastTimeLine_KeepsFrozenPoint_WhileSourceCastFacingFollowsThePointer()
+        {
+            using var world = World.Create();
+            var blackboard = new BlackboardFloatBuffer();
+            blackboard.Set(OrderBlackboardKeys.Cast_Facing, 0f);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(300, 300),
+                new AbilityExecInstance
+                {
+                    TargetPosCm = Fix64Vec2.FromInt(300, 930),
+                    HasTargetPos = 1
+                },
+                blackboard);
+
+            That(ResolveLineDirection(world, actor, SpatialQueryDirectionSource.Default), Is.EqualTo(90));
+            That(ResolveLineDirection(world, actor, SpatialQueryDirectionSource.SourceCastFacing), Is.EqualTo(0));
+
+            Entity frozenBeam = world.Create(
+                new ChildOf { Parent = actor },
+                new ManifestationMotion2D { FacingSource = ManifestationFacingSource2D.ParentExecutionTarget },
+                new FacingDirection { AngleRad = 1f });
+            Entity guidedBeam = world.Create(
+                new ChildOf { Parent = actor },
+                new ManifestationMotion2D { FacingSource = ManifestationFacingSource2D.ParentCastFacing },
+                new FacingDirection { AngleRad = 1f });
+            new ManifestationMotion2DSystem(world).Update(1f / 60f);
+
+            That(world.Get<FacingDirection>(frozenBeam).AngleRad, Is.EqualTo(WorldPlane2D.FacingRadFromDirection(0, 630)).Within(0.001f));
+            That(world.Get<FacingDirection>(guidedBeam).AngleRad, Is.EqualTo(0f).Within(0.001f));
+        }
+
+        private static int ResolveLineDirection(World world, Entity actor, SpatialQueryDirectionSource directionSource)
+        {
+            var spatial = new RecordingSpatialQueryService();
+            var query = new TargetQueryDescriptor
+            {
+                Kind = TargetResolverKind.BuiltinSpatial,
+                Spatial = new BuiltinSpatialDescriptor
+                {
+                    Shape = SpatialShape.Line,
+                    LengthCm = 640,
+                    HalfWidthCm = 80,
+                    DirectionSource = directionSource
+                }
+            };
+            Span<Entity> buffer = stackalloc Entity[4];
+            TargetResolverFanOutHelper.ResolveTargets(
+                world,
+                new EffectContext { Source = actor },
+                in query,
+                spatial,
+                buffer.ToArray());
+            return spatial.LastLineDirectionDeg;
         }
 
         [Test]

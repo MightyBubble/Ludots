@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Input.Runtime;
+using Ludots.Platform.Abstractions;
 using Raylib_cs;
 using Ludots.Raylib.Render;
 
@@ -53,11 +54,48 @@ namespace Ludots.Client.Raylib.Input
             {
                 return Raylib_cs.Raylib.GetMouseWheelMove() + (_synthetic?.WheelDeltaThisFrame ?? 0f);
             }
+
+            if (GamepadControlPath.TryParse(devicePath, out GamepadControlPath gamepad) &&
+                gamepad.Kind is GamepadControlKind.StickAxis or GamepadControlKind.Trigger)
+            {
+                if (_synthetic != null && _synthetic.TryGetGamepadAxis(gamepad, out float syntheticValue))
+                {
+                    return syntheticValue;
+                }
+
+                if (Raylib_cs.Raylib.IsGamepadAvailable(gamepad.Pad))
+                {
+                    return Raylib_cs.Raylib.GetGamepadAxisMovement(gamepad.Pad, RaylibInputPathParser.ToRaylibAxis(gamepad.Axis));
+                }
+
+                return 0f;
+            }
+
             return 0f;
         }
 
         public bool GetButton(string devicePath)
         {
+            if (GamepadControlPath.TryParse(devicePath, out GamepadControlPath gamepad))
+            {
+                if (gamepad.Kind is not (GamepadControlKind.Button or GamepadControlKind.Trigger))
+                {
+                    return false;
+                }
+
+                if (_synthetic != null && _synthetic.IsGamepadButtonDown(gamepad))
+                {
+                    return true;
+                }
+
+                if (Raylib_cs.Raylib.IsGamepadAvailable(gamepad.Pad))
+                {
+                    return Raylib_cs.Raylib.IsGamepadButtonDown(gamepad.Pad, RaylibInputPathParser.ToRaylibButton(gamepad.Button));
+                }
+
+                return false;
+            }
+
             var mouseBtn = RaylibInputPathParser.ParseMouseButton(devicePath);
             if (mouseBtn.HasValue && _synthetic != null &&
                 _synthetic.IsButtonDown(ToSyntheticButton(mouseBtn.Value)))

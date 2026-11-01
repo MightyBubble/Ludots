@@ -1,6 +1,7 @@
 {
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/showcases/fourx_demo/FourXDemoMod"
+    "../../../../../../../mods/showcases/fourx_demo/FourXDemoMod",
+    "../../../../../../../mods/fixtures/command_source/CommandSourceCoreFixtureMod"
   ]
 }

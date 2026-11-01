@@ -1,7 +1,9 @@
 using Arch.Core;
 using EntityCommandPanelMod;
+using EntityCommandPanelMod.Runtime;
 using System;
 using System.IO;
+using System.Text.Json.Nodes;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -42,8 +44,9 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");
 
             var clock = new DiscreteClock();
@@ -182,8 +185,9 @@ namespace Ludots.Tests.GAS
             using var engine = new GameEngine();
             string repoRoot = FindRepoRoot();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             World world = engine.World ?? throw new InvalidOperationException("GameEngine world was not initialized.");
 
             var clock = new DiscreteClock();
@@ -229,7 +233,10 @@ namespace Ludots.Tests.GAS
             Type sourceType = typeof(EntityCommandPanelModEntry).Assembly.GetType(
                 "EntityCommandPanelMod.Runtime.GasEntityCommandPanelSource",
                 throwOnError: true)!;
-            return (IEntityCommandPanelSource)Activator.CreateInstance(sourceType, engine)!;
+            var activations = new EntityCommandPanelSlotActivations(engine, maxPendingActivations: 4, maxPendingMembers: 4);
+            EntityCommandPanelSlotActionConfig slotConfig = EntityCommandPanelSlotActionConfig.Parse(
+                JsonNode.Parse("{\"slots\":[],\"modeHintContexts\":{}}")!.AsObject());
+            return (IEntityCommandPanelSource)Activator.CreateInstance(sourceType, engine, activations, slotConfig)!;
         }
 
         private static string FindRepoRoot()

@@ -6,9 +6,9 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Follows the
-    /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>. Schemes are pure device binding profiles:
+    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Catalog policy stays
+    /// DeepObject. <c>schemes</c> merge ArrayById on <c>id</c> and <c>allowedSchemes</c> appends via
+    /// <see cref="ConfigCatalogEntry.ArrayAppendFields"/>. Schemes are pure device binding profiles:
     /// order routing preferences live on the player representative (<see cref="InteractionPref"/>) and
     /// a legacy <c>defaults</c> node fails fast by name instead of being silently dropped. Axis
     /// move order type references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast
@@ -37,11 +37,14 @@ namespace Ludots.Core.Input.Interaction
             string relativePath = "Input/control_schemes.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
+            RequireArrayAppendField(in entry, "allowedSchemes");
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
+            if (fragments.Count == 0)
             {
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
+
+            var mergedObject = ConfigMerger.MergeDeepObjectArrayById(fragments, in entry, "schemes", report);
 
             RejectLegacySchemeDefaults(mergedObject, relativePath);
             var config = mergedObject.Deserialize<ControlSchemesConfig>(JsonOptions)
@@ -149,6 +152,7 @@ namespace Ludots.Core.Input.Interaction
 
             if (config.AllowedSchemes != null)
             {
+                var allowedIds = new HashSet<string>(StringComparer.Ordinal);
                 for (int i = 0; i < config.AllowedSchemes.Count; i++)
                 {
                     RequireTrimmedNonEmpty(config.AllowedSchemes[i], $"{source}.allowedSchemes[{i}]");
@@ -157,8 +161,29 @@ namespace Ludots.Core.Input.Interaction
                         throw new InvalidOperationException(
                             $"{source}.allowedSchemes[{i}] references undeclared scheme '{config.AllowedSchemes[i]}'.");
                     }
+
+                    if (!allowedIds.Add(config.AllowedSchemes[i]))
+                    {
+                        throw new InvalidOperationException(
+                            $"{source}.allowedSchemes[{i}] duplicates scheme '{config.AllowedSchemes[i]}'.");
+                    }
                 }
             }
+        }
+
+        private static void RequireArrayAppendField(in ConfigCatalogEntry entry, string field)
+        {
+            string[] fields = entry.ArrayAppendFields ?? Array.Empty<string>();
+            for (int i = 0; i < fields.Length; i++)
+            {
+                if (string.Equals(fields[i], field, StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Config catalog entry '{entry.RelativePath}' must declare ArrayAppendFields containing '{field}'.");
         }
 
         private static void RequireTrimmedNonEmpty(string value, string path)

@@ -14,6 +14,11 @@
       "id": "Select.End",
       "name": "Select_End",
       "type": "Button"
+    },
+    {
+      "id": "Command",
+      "name": "Frontline_Command",
+      "type": "Button"
     }
   ],
   "contexts": [

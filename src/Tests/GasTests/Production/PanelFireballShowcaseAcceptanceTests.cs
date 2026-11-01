@@ -55,11 +55,10 @@ public sealed class PanelFireballShowcaseAcceptanceTests
 
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
         Assert.That(engine.CurrentMapSession?.MapConfig?.Tags, Does.Contain("fireball"));
-        Assert.That(engine.MergedConfig.StartupInputContexts, Does.Contain("Default_Gameplay"));
         Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
         PlayerInputHandler liveInput = engine.GetService(CoreServiceKeys.InputHandler)
             ?? throw new InvalidOperationException("InputHandler missing.");
-        Assert.That(liveInput.HasContext("Default_Gameplay"), Is.True);
+        Assert.That(liveInput.HasContext("Camera.Rig"), Is.True);
         Assert.That(liveInput.HasAction("SkillQ"), Is.True);
         Assert.That(IsTeamHostile(engine, 1, 2), Is.True);
 
@@ -258,7 +257,8 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         mods = mods.ToArray();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         backend = InstallInput(engine);
         AcceptanceUiHostInstaller.Install(engine);
         return engine;
@@ -269,10 +269,7 @@ public sealed class PanelFireballShowcaseAcceptanceTests
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new TestInputBackend();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

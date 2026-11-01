@@ -38,7 +38,7 @@ public sealed class ArpgRevivalAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.arpg") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity hero = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -94,14 +94,12 @@ public sealed class ArpgRevivalAcceptanceTests
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" }),
-            Path.Combine(repoRoot, "assets"));
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "ArpgDemoMod" , "CommandSourceCoreFixtureMod"}),
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

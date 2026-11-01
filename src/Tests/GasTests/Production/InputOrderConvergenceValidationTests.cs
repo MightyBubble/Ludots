@@ -23,8 +23,9 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                assetsRoot);
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var attributeSystems = GetSystems(engine, SystemGroup.AttributeCalculation);
 
@@ -41,8 +42,9 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "MobaDemoMod" }),
-                assetsRoot);
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" }),
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
 
             var localInputNames = GetSystemNames(engine, SystemGroup.LocalInput);
@@ -113,8 +115,9 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                assetsRoot);
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                assetsRoot,
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             var orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
@@ -183,17 +186,11 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void InputAndPanelSources_HaveNoImplicitOrderTypeFallbacks()
+        public void PanelSource_HasNoImplicitOrderTypeFallbacks()
         {
             string repoRoot = FindRepoRoot();
-            string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
-            string inputMappingSystem = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingSystem.cs"));
-            string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
             string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
 
-            Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
-            Assert.That(inputMappingSystem, Does.Not.Contain("orderTypeId <= 0) return false"));
-            Assert.That(localOrderSource, Does.Not.Contain("? configOrderTypeId : 0"));
             Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
         }
 
@@ -204,8 +201,6 @@ namespace Ludots.Tests.GAS.Production
             string aiConfigLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Gameplay", "AI", "Config", "AiConfigLoader.cs"));
             string abilityExecLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Config", "AbilityExecLoader.cs"));
             string configMerger = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Config", "ConfigMerger.cs"));
-            string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
-            string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
             string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
 
             Assert.That(aiConfigLoader, Does.Contain("OrderTagId is outside the active AI order contract"));
@@ -213,8 +208,6 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(aiConfigLoader, Does.Not.Contain("? ot : 0"));
             Assert.That(aiConfigLoader, Does.Not.Contain("TryGetValue(\"OrderTypeId\""));
 
-            Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
-            Assert.That(localOrderSource, Does.Not.Contain("? v : 0"));
             Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
 
             Assert.That(abilityExecLoader, Does.Contain("field 'exec' is required"));

@@ -1,0 +1,19 @@
+{
+  "actions": [],
+  "contexts": [
+    {
+      "id": "NightRaid.Controls",
+      "priority": 40,
+      "bindings": [
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
+      ]
+    }
+  ]
+}

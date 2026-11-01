@@ -5,6 +5,9 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Presentation.Components;
@@ -40,6 +43,10 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<int, byte>? _resolveTextTokenArgCount;
         private readonly PresenterCommandKindRegistry? _commandKinds;
         private readonly PresenterBehaviorKindRegistry? _behaviorKinds;
+        private readonly InputCollectionKeyDeclarations? _collectionRoles;
+        private readonly Dictionary<string, string> _presenterSourceMods = new(StringComparer.Ordinal);
+        private string _loadingPresenterId = string.Empty;
+        private string _loadingPresenterSourceMod = string.Empty;
 
         public PresenterDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -59,10 +66,12 @@ namespace Ludots.Core.Presentation.Config
             PresenterCommandKindRegistry? commandKinds = null,
             PresenterBehaviorKindRegistry? behaviorKinds = null,
             Func<int, GraphKind>? resolveGraphProgramKind = null,
-            Func<int, byte>? resolveTextTokenArgCount = null)
+            Func<int, byte>? resolveTextTokenArgCount = null,
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _collectionRoles = collectionRoles;
             _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
             _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
@@ -72,7 +81,18 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimatorControllerId = resolveAnimatorControllerId ?? (_ => 0);
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
-            _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            Func<string, int> registerEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
+            _resolveEntityCollectionKeyId = key =>
+            {
+                string resolved = InputCollectionKeyDeclarations.Resolve(
+                    _collectionRoles,
+                    key,
+                    string.IsNullOrEmpty(_loadingPresenterId)
+                        ? "presenter"
+                        : $"presenter '{_loadingPresenterId}'",
+                    _loadingPresenterSourceMod);
+                return registerEntityCollectionKeyId(resolved);
+            };
             _resolveInteractionContextProfileId = resolveInteractionContextProfileId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
             _resolveGraphProgramKind = resolveGraphProgramKind;
@@ -83,6 +103,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            _presenterSourceMods.Clear();
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presenters.json", ConfigMergePolicy.ArrayById, "id");
             var fragments = _configs.CollectFragmentsWithSources(in entry);
             ValidateRawDefinitionIds(fragments, entry.RelativePath);
@@ -117,6 +138,7 @@ namespace Ludots.Core.Presentation.Config
                     "Presentation/presenters.json entry id");
 
                 mergedByKey[key] = obj;
+                _presenterSourceMods[key] = TriggerGraphHookWeaver.OwningMod(merged[i].SourceUri);
                 _registry.GetOrRegisterId(key);
             }
 
@@ -275,6 +297,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(createCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(createCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(createCommand, bindSpawn, "ownerMemberIndex");
             CopyBindSpawnField(createCommand, bindSpawn, "useEventPosition");
 
             var destroyCommand = new JsonObject
@@ -284,6 +308,8 @@ namespace Ludots.Core.Presentation.Config
             };
             CopyBindSpawnField(destroyCommand, bindSpawn, "scopeTag");
             CopyBindSpawnField(destroyCommand, bindSpawn, "ownerSource");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerCollection");
+            CopyBindSpawnField(destroyCommand, bindSpawn, "ownerMemberIndex");
 
             var spawnRule = new JsonObject
             {
@@ -657,6 +683,10 @@ namespace Ludots.Core.Presentation.Config
         private (string key, PresenterDefinition def) ParseDefinition(JsonNode node)
         {
             string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Presenter id");
+            _loadingPresenterId = key;
+            _loadingPresenterSourceMod = _presenterSourceMods.TryGetValue(key, out string? sourceMod)
+                ? sourceMod
+                : string.Empty;
 
             if (node is not JsonObject definitionObject)
             {
@@ -671,15 +701,20 @@ namespace Ludots.Core.Presentation.Config
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key, definitionPath, "behaviors");
             ChildPresenterRef[] children = ParseChildren(node["children"], $"{definitionPath}.children");
             ValidateChildrenCapacity(key, children);
-            Vector3 positionOffset = ParseAnchorOffset(node["anchor"], key, $"{definitionPath}.anchor");
-            ValidateRootTransformSources(key, positionOffset, behaviors);
+            ParsedAnchor anchor = ParseAnchor(node["anchor"], key, $"{definitionPath}.anchor");
+            ValidateRootTransformSources(key, anchor.Offset, behaviors);
 
             var def = new PresenterDefinition
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Presenter '{key}' extends"),
                 DefaultLifetime = ParseLifecycle(node["lifecycle"], key, $"{definitionPath}.lifecycle"),
-                PositionOffset = positionOffset,
+                PositionOffset = anchor.Offset,
+                HasWorldPositionBinding = anchor.HasWorldPosition,
+                WorldPositionXKeyId = anchor.WorldPositionXKeyId,
+                WorldPositionYKeyId = anchor.WorldPositionYKeyId,
+                WorldPositionXKey = anchor.WorldPositionXKey,
+                WorldPositionYKey = anchor.WorldPositionYKey,
                 Rules = ParseRules(node["rules"], key, $"{definitionPath}.rules"),
                 Bindings = ParseBindings(node["bindings"], key, $"{definitionPath}.bindings"),
                 Children = children,
@@ -940,7 +975,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] BindSpawnFields =
         {
             "template", "spawnedOn", "destroyedOn", "condition",
-            "scopeTag", "scopeSource", "ownerSource", "useEventPosition",
+            "scopeTag", "scopeSource", "ownerSource", "ownerCollection", "ownerMemberIndex", "useEventPosition",
         };
 
         private static readonly string[] BehaviorSlotFields =
@@ -982,6 +1017,13 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] AnchorFields =
         {
             "offset",
+            "worldPosition",
+        };
+
+        private static readonly string[] WorldPositionFields =
+        {
+            "x",
+            "y",
         };
 
         private static readonly string[] OverrideFields =
@@ -1011,7 +1053,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static readonly string[] BindingFields =
         {
-            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional",
+            "paramKey", "source", "constantValue", "sourceId", "textToken", "attributeId", "optional", "unit",
         };
 
         private static readonly string[] ParamDefaultFields =
@@ -1176,6 +1218,7 @@ namespace Ludots.Core.Presentation.Config
         private static readonly string[] CommandFields =
         {
             "kind", "route", "definitionId", "scopeTag", "scopeSource", "ownerSource",
+            "ownerCollection", "ownerMemberIndex",
             "useEventPosition", "paramKey", "paramLane", "valueSource",
             "paramValue", "intValue", "vectorValue", "paramGraphProgramId",
             "vectorXSource", "vectorYSource", "vectorZSource", "vectorWSource",
@@ -1380,11 +1423,25 @@ namespace Ludots.Core.Presentation.Config
                 $"Presenter '{key}' lifecycle must declare durationSeconds or persistence.");
         }
 
-        private static Vector3 ParseAnchorOffset(JsonNode? node, string key, string path)
+        private readonly struct ParsedAnchor
+        {
+            public Vector3 Offset { get; init; }
+            public bool HasWorldPosition { get; init; }
+            public int WorldPositionXKeyId { get; init; }
+            public int WorldPositionYKeyId { get; init; }
+            public string WorldPositionXKey { get; init; }
+            public string WorldPositionYKey { get; init; }
+        }
+
+        private static ParsedAnchor ParseAnchor(JsonNode? node, string key, string path)
         {
             if (node == null)
             {
-                return Vector3.Zero;
+                return new ParsedAnchor
+                {
+                    WorldPositionXKey = string.Empty,
+                    WorldPositionYKey = string.Empty,
+                };
             }
 
             if (node is not JsonObject obj)
@@ -1399,7 +1456,49 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presenter '{key}' anchor requires field 'offset'.");
             }
 
-            return ParseVector3(obj["offset"]);
+            bool hasWorldPosition = obj["worldPosition"] != null;
+            string xKey = string.Empty;
+            string yKey = string.Empty;
+            int xKeyId = 0;
+            int yKeyId = 0;
+            if (hasWorldPosition)
+            {
+                if (obj["worldPosition"] is not JsonObject worldPosition)
+                {
+                    throw new InvalidOperationException($"Presenter '{key}' anchor.worldPosition must be an object.");
+                }
+
+                RejectUnknownFields(worldPosition, $"{path}.worldPosition", WorldPositionFields);
+                xKey = ParseBlackboardKeyName(worldPosition["x"], $"Presenter '{key}' anchor.worldPosition.x");
+                yKey = ParseBlackboardKeyName(worldPosition["y"], $"Presenter '{key}' anchor.worldPosition.y");
+                xKeyId = OrderBlackboardKeyRegistry.Resolve(xKey);
+                yKeyId = OrderBlackboardKeyRegistry.Resolve(yKey);
+            }
+
+            return new ParsedAnchor
+            {
+                Offset = ParseVector3(obj["offset"]),
+                HasWorldPosition = hasWorldPosition,
+                WorldPositionXKeyId = xKeyId,
+                WorldPositionYKeyId = yKeyId,
+                WorldPositionXKey = xKey,
+                WorldPositionYKey = yKey,
+            };
+        }
+
+        private static string ParseBlackboardKeyName(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? key) || string.IsNullOrWhiteSpace(key))
+            {
+                throw new InvalidOperationException($"{context} must be a non-empty blackboard key.");
+            }
+
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must be a trimmed blackboard key.");
+            }
+
+            return key;
         }
 
         private PresenterRule[] ParseRules(JsonNode? node, string owner, string path)
@@ -1510,10 +1609,6 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.ContextActivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
                 PresentationEventKind.ContextDeactivated => ResolveRequired(_resolveInteractionContextProfileId(key), kind, "interaction context profile", key),
-                PresentationEventKind.AbilityAimBegun => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimSlotAdvanced => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimUpdated => PresentationEventKeyRegistry.Register(key),
-                PresentationEventKind.AbilityAimEnded => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldOverlayUpdated => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldOverlayEnded => PresentationEventKeyRegistry.Register(key),
                 PresentationEventKind.WorldHudUpdated => PresentationEventKeyRegistry.Register(key),
@@ -1572,6 +1667,8 @@ namespace Ludots.Core.Presentation.Config
             bool hasVectorSources = HasCommandVectorSources(obj);
             bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
             PresenterCommandRouteStrategy routeStrategy = ResolveBuiltinCommandRoute(commandKind, presenterDefinitionId);
+            PresenterCommandEntitySource ownerSource = ParseCommandOwnerSource(obj, commandKind, context);
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
             return new PresenterCommand
             {
                 CommandKind = commandKind,
@@ -1581,7 +1678,9 @@ namespace Ludots.Core.Presentation.Config
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(obj["scopeTag"]),
                 ScopeSource = ParseCommandScopeSource(obj, commandKind, context),
-                OwnerSource = ParseCommandOwnerSource(obj, commandKind, context),
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = ParseCommandUseEventPosition(obj, commandKind, context),
                 HasParamPayload = hasParamPayload,
                 ParamKey = commandKind == PresenterCommandKind.SetParam || hasParamPayload
@@ -1719,6 +1818,10 @@ namespace Ludots.Core.Presentation.Config
                 : PresenterCommandValueSource.Fixed;
             int paramGraphProgramId = ParseExtensionCommandParamGraphProgramId(obj, hasParamPayload, valueSource, context);
             bool hasVectorSources = HasCommandVectorSources(obj);
+            PresenterCommandEntitySource ownerSource = obj["ownerSource"] != null
+                ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
+                : PresenterCommandEntitySource.EventSource;
+            ParseOwnerCollection(obj, ownerSource, context, out int ownerCollectionKeyId, out int ownerMemberIndex);
 
             return new PresenterCommand
             {
@@ -1733,9 +1836,9 @@ namespace Ludots.Core.Presentation.Config
                 ScopeSource = obj["scopeSource"] != null
                     ? ParseRequiredEnum<PresenterCommandScopeSource>(obj["scopeSource"], $"{context}.scopeSource")
                     : PresenterCommandScopeSource.Fixed,
-                OwnerSource = obj["ownerSource"] != null
-                    ? ParseRequiredEnum<PresenterCommandEntitySource>(obj["ownerSource"], $"{context}.ownerSource")
-                    : PresenterCommandEntitySource.EventSource,
+                OwnerSource = ownerSource,
+                OwnerCollectionKeyId = ownerCollectionKeyId,
+                OwnerMemberIndex = ownerMemberIndex,
                 UseEventPosition = obj["useEventPosition"] != null &&
                     ParseRequiredBool(obj["useEventPosition"], $"{context}.useEventPosition"),
                 HasParamPayload = hasParamPayload,
@@ -1890,6 +1993,49 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredEnum<PresenterCommandEntitySource>(node, $"{context}.ownerSource");
+        }
+
+        private void ParseOwnerCollection(
+            JsonObject obj,
+            PresenterCommandEntitySource ownerSource,
+            string context,
+            out int keyId,
+            out int index)
+        {
+            JsonNode? collection = obj["ownerCollection"];
+            JsonNode? indexNode = obj["ownerMemberIndex"];
+            if (ownerSource != PresenterCommandEntitySource.EventSourceCollectionMember)
+            {
+                if (collection != null || indexNode != null)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.ownerCollection is only valid when ownerSource is '{PresenterCommandEntitySource.EventSourceCollectionMember}'.");
+                }
+
+                keyId = 0;
+                index = 0;
+                return;
+            }
+
+            string name = ParseRequiredSemanticString(collection, $"{context}.ownerCollection");
+            keyId = _resolveEntityCollectionKeyId(name);
+            if (keyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.ownerCollection references unknown entity collection '{name}'.");
+            }
+
+            index = 0;
+            if (indexNode == null)
+            {
+                return;
+            }
+
+            index = ParseRequiredInt(indexNode, $"{context}.ownerMemberIndex");
+            if (index < 0)
+            {
+                throw new InvalidOperationException($"{context}.ownerMemberIndex must be >= 0.");
+            }
         }
 
         private static PresenterCommandScopeSource ParseCommandScopeSource(
@@ -2202,13 +2348,21 @@ namespace Ludots.Core.Presentation.Config
             RejectRemovedBindingFields(node, context);
             string source = node["source"]?.GetValue<string>();
             bool optional = node["optional"]?.GetValue<bool>() ?? false;
+            ValueUnit unit = ParseValueUnit(node["unit"], context);
+            if (unit != ValueUnit.None && source != "ownerBlackboardFloat")
+            {
+                throw new InvalidOperationException(
+                    $"{context} unit '{node["unit"]}' is only valid when source is ownerBlackboardFloat.");
+            }
+
             ValueRef value = source switch
             {
                 "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
                     $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
                 "graph" => ValueRef.FromGraph(ResolveGraphProgramId(node["sourceId"], context)),
                 "ownerBlackboardFloat" => ValueRef.FromOwnerBlackboardFloat(
-                    ResolveBlackboardKeyId(node["sourceId"], context)),
+                    ResolveBlackboardKeyId(node["sourceId"], context),
+                    unit),
                 "pointerScreenX" => ValueRef.FromPointerScreenX(),
                 "pointerScreenY" => ValueRef.FromPointerScreenY(),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Presenter binding entityColor.sourceId")),
@@ -2224,17 +2378,31 @@ namespace Ludots.Core.Presentation.Config
             return value;
         }
 
+        private static ValueUnit ParseValueUnit(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return ValueUnit.None;
+            }
+
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? unit) || string.IsNullOrWhiteSpace(unit))
+            {
+                throw new InvalidOperationException($"{context} unit must be a non-empty string.");
+            }
+
+            if (string.Equals(unit, "logicCm", StringComparison.Ordinal))
+            {
+                return ValueUnit.LogicCm;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} unit '{unit}' is unknown. Known units: logicCm.");
+        }
+
         private static int ResolveBlackboardKeyId(JsonNode? node, string context)
         {
             string keyName = ParseRequiredSemanticString(node, $"{context} ownerBlackboardFloat.sourceId");
-            int keyId = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(keyName);
-            if (keyId <= Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.InvalidId)
-            {
-                throw new InvalidOperationException(
-                    $"{context} ownerBlackboardFloat.sourceId '{keyName}' did not resolve to a config key id.");
-            }
-
-            return keyId;
+            return OrderBlackboardKeyRegistry.Resolve(keyName);
         }
 
         private static void RejectRemovedBindingFields(JsonNode node, string context)

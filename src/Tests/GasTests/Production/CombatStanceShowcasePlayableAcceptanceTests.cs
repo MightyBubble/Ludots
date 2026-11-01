@@ -117,7 +117,8 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
                 "CombatStanceBehaviorMod",
                 "CombatStanceShowcaseMod"
             }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallDummyInput(engine);
         return engine;
     }

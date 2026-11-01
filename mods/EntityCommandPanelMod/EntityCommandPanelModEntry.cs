@@ -3,6 +3,9 @@ using EntityCommandPanelMod.Runtime;
 using EntityCommandPanelMod.Systems;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Engine;
+using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Modding;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Scripting;
@@ -14,6 +17,8 @@ namespace EntityCommandPanelMod
     {
         private const string InstalledKey = "EntityCommandPanelMod.Installed";
 
+        public static readonly ServiceKey<EntityCommandPanelSlotActivations> SlotActivationsKey = new("EntityCommandPanelMod.SlotActivations");
+
         /// <summary>
         /// Default panel aggregation profile for collection selections (RFC-0065 PNL-4, DEC-10).
         /// The profile itself is declared in this mod's own
@@ -22,6 +27,9 @@ namespace EntityCommandPanelMod
         /// <see cref="Runtime.CollectionGasEntityCommandPanelSource.SetAggregationProfile"/>.
         /// </summary>
         private const string DefaultAggregationProfileId = "aggregation.by_family";
+
+        private const int MaxPendingActivations = 64;
+        private const int MaxPendingActivationMembers = 512;
 
         public void OnLoad(IModContext context)
         {
@@ -53,10 +61,11 @@ namespace EntityCommandPanelMod
             var sources = new EntityCommandPanelSourceRegistry();
             var handles = new EntityCommandPanelAliasStore();
             var collectionQueries = new EntityCommandPanelCollectionQueryConfigRegistry();
+            string commandSourceKey = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             collectionQueries.Register(new EntityCommandPanelCollectionQueryConfig
             {
-                Id = "collection.command.source",
-                CollectionKey = "collection.command.source",
+                Id = commandSourceKey,
+                CollectionKey = commandSourceKey,
                 Title = "Collection Commands",
                 Filter = EntityCommandPanelCollectionFilter.Any,
                 Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
@@ -78,7 +87,22 @@ namespace EntityCommandPanelMod
                 Sort = EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel
             });
 
-            var gasSource = new GasEntityCommandPanelSource(engine);
+            var activations = new EntityCommandPanelSlotActivations(engine, MaxPendingActivations, MaxPendingActivationMembers);
+            EntityCommandPanelToolbarCatalog catalog = EntityCommandPanelToolbarCatalog.Require(engine);
+            EntityCommandPanelToolbarComposer.Require(engine).Bind(catalog);
+            var slotConfig = EntityCommandPanelSlotActionConfig.Load(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+            ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+                ?? throw new System.InvalidOperationException("ControlSchemeRuntime must be registered before EntityCommandPanelMod installs.");
+            for (int i = 0; i < slotConfig.Slots.Count; i++)
+            {
+                EntityCommandPanelSlotBinding slot = slotConfig.Slots[i];
+                schemes.RequireSlotBinding(
+                    slot.ActionId,
+                    slot.BindingIntOrNull,
+                    $"{EntityCommandPanelSlotActionConfig.RelativePath} slots[{i}]");
+            }
+
+            var gasSource = new GasEntityCommandPanelSource(engine, activations, slotConfig);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new System.InvalidOperationException("EntityCollectionStore must be registered before EntityCommandPanelMod installs.");
             var aggregationProfiles = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
@@ -87,7 +111,8 @@ namespace EntityCommandPanelMod
             sources.Register(
                 CollectionGasEntityCommandPanelSource.SourceId,
                 new CollectionGasEntityCommandPanelSource(
-                    engine, collections, gasSource, collectionQueries, aggregationProfiles, DefaultAggregationProfileId));
+                    engine, collections, gasSource, activations, collectionQueries, aggregationProfiles, DefaultAggregationProfileId));
+            engine.RegisterSystem(new EntityCommandPanelActivationDispatchSystem(activations), SystemGroup.EventDispatch);
 
             var runtime = new EntityCommandPanelRuntime(engine, sources, handles);
 
@@ -95,6 +120,7 @@ namespace EntityCommandPanelMod
             engine.SetService(CoreServiceKeys.EntityCommandPanelCollectionQueryConfigRegistry, collectionQueries);
             engine.SetService(CoreServiceKeys.EntityCommandPanelHandleStore, handles);
             engine.SetService(CoreServiceKeys.EntityCommandPanelService, runtime);
+            engine.SetService(SlotActivationsKey, activations);
 
             if (engine.GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
             {

@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
@@ -80,15 +81,15 @@ namespace Ludots.Tests.GAS
             GraphProgramRegistry programs = LoadPrograms(IntBlackboardConfigGraphJson);
             Execute(programs, "tests.graph.int-blackboard-config", world, caster, target, api);
 
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.sum"))], Is.EqualTo(5));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.sumCopy"))], Is.EqualTo(5));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.configInt"))], Is.EqualTo(17));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.configEffect"))], Is.EqualTo(321));
-            Assert.That(api.FloatBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.rawFloat"))], Is.EqualTo(4.5f));
-            Assert.That(api.FloatBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.configFloat"))], Is.EqualTo(6.25f));
-            Assert.That(api.EntityBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.ltSelected"))], Is.EqualTo(target));
-            Assert.That(api.EntityBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.eqSelected"))], Is.EqualTo(target));
-            Assert.That(api.EntityBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.entityCopy"))], Is.EqualTo(target));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.sum"))], Is.EqualTo(5));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.sumCopy"))], Is.EqualTo(5));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.configInt"))], Is.EqualTo(17));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.configEffect"))], Is.EqualTo(321));
+            Assert.That(api.FloatBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.rawFloat"))], Is.EqualTo(4.5f));
+            Assert.That(api.FloatBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.configFloat"))], Is.EqualTo(6.25f));
+            Assert.That(api.EntityBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.ltSelected"))], Is.EqualTo(target));
+            Assert.That(api.EntityBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.eqSelected"))], Is.EqualTo(target));
+            Assert.That(api.EntityBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.entityCopy"))], Is.EqualTo(target));
             Assert.That(world.Get<AttributeBuffer>(caster).GetCurrent(copiedAttr), Is.EqualTo(4.5f));
         }
 
@@ -127,13 +128,13 @@ namespace Ludots.Tests.GAS
             Assert.That(api.LastLineHalfWidthCm, Is.EqualTo(25));
             Assert.That(api.LastHexRangeRadius, Is.EqualTo(2));
             Assert.That(api.LastHexRingRadius, Is.EqualTo(3));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.filteredCount"))], Is.EqualTo(1));
-            Assert.That(api.EntityBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.firstTarget"))], Is.EqualTo(kept));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.rectCount"))], Is.EqualTo(2));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.lineCount"))], Is.EqualTo(3));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.hexRangeCount"))], Is.EqualTo(1));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.hexRingCount"))], Is.EqualTo(2));
-            Assert.That(api.IntBlackboard[(caster, ConfigKeyRegistry.GetId("tests.bb.hexNeighborCount"))], Is.EqualTo(3));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.filteredCount"))], Is.EqualTo(1));
+            Assert.That(api.EntityBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.firstTarget"))], Is.EqualTo(kept));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.rectCount"))], Is.EqualTo(2));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.lineCount"))], Is.EqualTo(3));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.hexRangeCount"))], Is.EqualTo(1));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.hexRingCount"))], Is.EqualTo(2));
+            Assert.That(api.IntBlackboard[(caster, OrderBlackboardKeyRegistry.Resolve("tests.bb.hexNeighborCount"))], Is.EqualTo(3));
         }
 
         [Test]

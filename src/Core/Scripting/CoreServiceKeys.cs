@@ -179,7 +179,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SyntheticInputDevice> SyntheticInput = new("SyntheticInput");
         public static readonly ServiceKey<IHostFrameCapture> HostFrameCapture = new("HostFrameCapture");
         public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
-        public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
         public static readonly ServiceKey<InputActionAttributeBindingRegistry> InputActionAttributeBindingRegistry = new("InputActionAttributeBindingRegistry");
         public static readonly ServiceKey<IInputDeviceWatcher> InputDeviceWatcher = new("InputDeviceWatcher");
         public static readonly ServiceKey<Ludots.Core.Gameplay.MapTriggers.TriggerGraphActionBindingIndex> TriggerGraphActionBindings = new("TriggerGraphActionBindings");
@@ -329,13 +328,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CollectionApplier> CollectionApplier = new("CollectionApplier");
         public static readonly ServiceKey<Ludots.Core.Input.Config.InputCollectionKeyDeclarations> InputCollectionKeys = new("InputCollectionKeys");
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
-        public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
         public static readonly ServiceKey<CommandIntentProfileRegistry> CommandIntentProfileRegistry = new("CommandIntentProfileRegistry");
         public static readonly ServiceKey<CastDispatchProfileRegistry> CastDispatchProfileRegistry = new("CastDispatchProfileRegistry");
         public static readonly ServiceKey<InteractionContextProfileRegistry> InteractionContextProfileRegistry = new("InteractionContextProfileRegistry");
-        public static readonly ServiceKey<CastCommitProfileRegistry> CastCommitProfileRegistry = new("CastCommitProfileRegistry");
-        public static readonly ServiceKey<ClientCastPreferenceStore> ClientCastPreferenceStore = new("ClientCastPreferenceStore");
+        public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionPrefCatalog> InteractionPrefCatalog = new("InteractionPrefCatalog");
+        public static readonly ServiceKey<ClientControlSchemePreferenceStore> ClientControlSchemePreferenceStore = new("ClientControlSchemePreferenceStore");
         public static readonly ServiceKey<ControlSchemeRuntime> ControlSchemeRuntime = new("ControlSchemeRuntime");
         public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionModeMap> InteractionModeMap = new("InteractionModeMap");
         public static readonly ServiceKey<Ludots.Core.UI.EntityCommandPanels.AbilityAggregationProfileRegistry> AbilityAggregationProfileRegistry = new("AbilityAggregationProfileRegistry");
@@ -343,8 +341,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Ludots.Core.UI.CommandDeck.CommandDeckRouteResolver> CommandDeckRouteResolver = new("CommandDeckRouteResolver");
         public static readonly ServiceKey<Ludots.Core.UI.ProductionOverview.ProductionOverviewProfileRegistry> ProductionOverviewProfileRegistry = new("ProductionOverviewProfileRegistry");
         public static readonly ServiceKey<Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime> InteractionContextInstances = new("InteractionContextInstances");
+        public static readonly ServiceKey<Ludots.Core.Input.PointerRegionContextRegistry> PointerRegionContextRegistry = new("PointerRegionContextRegistry");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
-        public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer> CommandIntentSubmissions = new("CommandIntentSubmissions");
         public static readonly ServiceKey<Ludots.Core.Input.Orders.CommandIntentBufferDrainSystem> CommandIntentBufferDrain = new("CommandIntentBufferDrain");

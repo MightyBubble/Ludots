@@ -18,6 +18,7 @@ using Ludots.UI;
 using Ludots.UI.Skia;
 using Ludots.Tests;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -43,7 +44,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
         Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0),
             string.Join(" | ", engine.TriggerManager.Errors));
@@ -65,7 +66,7 @@ public sealed class RtsAimGraphAcceptanceTests
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create("collection.command.source", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { caster },
             rep);
 
@@ -122,7 +123,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -132,7 +133,7 @@ public sealed class RtsAimGraphAcceptanceTests
         Entity caster = SpawnOwnedUnit(engine);
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create("collection.command.source", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { caster },
             rep);
 
@@ -164,7 +165,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -178,8 +179,8 @@ public sealed class RtsAimGraphAcceptanceTests
             store.TryGetView(rh2, out var rv2) &&
             rv2.Count > 0);
 
-        int commandSourceKeyId = store.KeyRegistry.GetId("collection.command.source");
-        Assert.That(commandSourceKeyId, Is.GreaterThan(0), "collection.command.source 键已注册（battle profile 声明）");
+        int commandSourceKeyId = store.KeyRegistry.GetId(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
+        Assert.That(commandSourceKeyId, Is.GreaterThan(0), "command source 键已注册（battle profile 声明）");
 
         // ── 左键拖框：press 起角+激活 selecting context，release 提交命中到命令源集合 ──
         backend.SetMousePosition(new Vector2(0f, 0f));
@@ -217,7 +218,7 @@ public sealed class RtsAimGraphAcceptanceTests
         using GameEngine engine = CreateEngine(repoRoot, backend);
         engine.LoadMap(new MapLoadRequest(
             new MapId(MapId),
-            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1) })));
+            MapLaunchContext.Create(new[] { new LocalSeatLaunchBinding("seat.0", 1, "scheme.default") })));
         TickUntil(engine, 60, () => engine.CurrentMapSession != null);
 
         Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
@@ -229,7 +230,7 @@ public sealed class RtsAimGraphAcceptanceTests
             ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
         store.Replace(
             rep,
-            EntityCollectionDescriptor.Create("collection.command.source", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
+            EntityCollectionDescriptor.Create(InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.CommandSource),
             new[] { footman, peasant, barracks },
             rep);
 
@@ -323,14 +324,12 @@ public sealed class RtsAimGraphAcceptanceTests
     {
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "EntityCommandPanelMod", "RtsDemoMod" }),
-            Path.Combine(repoRoot, "assets"));
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod", "RtsDemoMod" }),
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         var inputConfig = new Ludots.Core.Input.Config.InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         var uiRoot = new UIRoot(new SkiaUiRenderer());
         uiRoot.Resize(1920f, 1080f);

@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Registry;
@@ -29,17 +30,26 @@ namespace Ludots.Core.EntityCollections
         }
 
         /// <summary>Removes every bound collection; used at world-restore boundaries where all
-        /// entity references the sources held belong to the replaced world.</summary>
+        /// entity references the sources held belong to the replaced world. Restore does not
+        /// emit membership events — the listeners belonged to the replaced world.</summary>
         public void Clear()
         {
-            for (int slot = 0; slot < _active.Length; slot++)
+            _suppressMembershipNotify = true;
+            try
             {
-                if (_active[slot] &&
-                    _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
-                    _owners[slot] != Entity.Null)
+                for (int slot = 0; slot < _active.Length; slot++)
                 {
-                    Remove(_owners[slot], payload.KeyId);
+                    if (_active[slot] &&
+                        _collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _) &&
+                        _owners[slot] != Entity.Null)
+                    {
+                        Remove(_owners[slot], payload.KeyId);
+                    }
                 }
+            }
+            finally
+            {
+                _suppressMembershipNotify = false;
             }
         }
 
@@ -149,6 +159,22 @@ namespace Ludots.Core.EntityCollections
         public StringIntRegistry KeyRegistry => _keyRegistry;
         public int CollectionCount => _collections.ActiveCount;
         public int RowCapacity => _rowEntities.Length;
+
+        /// <summary>
+        /// Zero-allocation gate consulted on every write. False skips the member diff entirely.
+        /// The engine returns true only when a TriggerGraph subscribes to the membership event
+        /// on the owner's map.
+        /// </summary>
+        public Func<Entity, bool>? MembershipNotifyProbe { get; set; }
+
+        /// <summary>
+        /// Invoked after the write, once per entity that appeared (<c>added</c> true) or
+        /// disappeared. Nested writes rent their own buffers; this store does not keep a
+        /// shared scratch.
+        /// </summary>
+        public Action<Entity, int, Entity, bool>? MembershipChanged { get; set; }
+
+        private bool _suppressMembershipNotify;
 
         public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
         {
@@ -309,6 +335,24 @@ namespace Ludots.Core.EntityCollections
 
             EnsureSlotRowCapacity(slot, entities.Length);
             int rowStart = _rowStarts[slot];
+            bool notify = WantsMembershipNotify(owner);
+            int oldCount = 0;
+            if (notify)
+            {
+                oldCount = _active[slot] ? _rowCounts[slot] : 0;
+                if (!RowsDiffer(_rowEntities, rowStart, oldCount, entities))
+                {
+                    notify = false;
+                }
+            }
+
+            Entity[]? rentedOld = null;
+            if (notify && oldCount > 0)
+            {
+                rentedOld = ArrayPool<Entity>.Shared.Rent(oldCount);
+                Array.Copy(_rowEntities, rowStart, rentedOld, 0, oldCount);
+            }
+
             for (int i = 0; i < entities.Length; i++)
             {
                 int rowIndex = rowStart + i;
@@ -372,6 +416,21 @@ namespace Ludots.Core.EntityCollections
                     out _);
             }
 
+            if (notify)
+            {
+                try
+                {
+                    EmitMembershipDiff(owner, keyId, rentedOld, oldCount, entities);
+                }
+                finally
+                {
+                    if (rentedOld != null)
+                    {
+                        ArrayPool<Entity>.Shared.Return(rentedOld);
+                    }
+                }
+            }
+
             return new EntityCollectionHandle(slot, _revisions[slot]);
         }
 
@@ -393,6 +452,16 @@ namespace Ludots.Core.EntityCollections
                 return false;
             }
 
+            bool notify = WantsMembershipNotify(owner) && _active[slot] && _rowCounts[slot] > 0;
+            Entity[]? rentedOld = null;
+            int oldCount = 0;
+            if (notify)
+            {
+                oldCount = _rowCounts[slot];
+                rentedOld = ArrayPool<Entity>.Shared.Rent(oldCount);
+                Array.Copy(_rowEntities, _rowStarts[slot], rentedOld, 0, oldCount);
+            }
+
             _active[slot] = false;
             _owners[slot] = Entity.Null;
             _rowCounts[slot] = 0;
@@ -400,6 +469,18 @@ namespace Ludots.Core.EntityCollections
             _summaries[slot] = string.Empty;
             _collections.Remove(EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId));
             _revisions[slot] = 1;
+
+            if (notify && rentedOld != null)
+            {
+                try
+                {
+                    EmitMembershipDiff(owner, keyId, rentedOld, oldCount, ReadOnlySpan<Entity>.Empty);
+                }
+                finally
+                {
+                    ArrayPool<Entity>.Shared.Return(rentedOld);
+                }
+            }
 
             return true;
         }
@@ -791,6 +872,165 @@ namespace Ludots.Core.EntityCollections
             }
 
             return hash;
+        }
+
+        private bool WantsMembershipNotify(Entity owner)
+        {
+            return !_suppressMembershipNotify
+                && MembershipNotifyProbe != null
+                && MembershipChanged != null
+                && MembershipNotifyProbe(owner);
+        }
+
+        private void EmitMembershipDiff(
+            Entity owner,
+            int keyId,
+            Entity[]? oldEntities,
+            int oldCount,
+            ReadOnlySpan<Entity> next)
+        {
+            Action<Entity, int, Entity, bool> changed = MembershipChanged
+                ?? throw new InvalidOperationException("COLLECTION.ERR.MembershipNotifyWithoutListener");
+            if (oldEntities != null)
+            {
+                for (int i = 0; i < oldCount; i++)
+                {
+                    Entity entity = oldEntities[i];
+                    if (entity == Entity.Null || SeenBefore(oldEntities, i, entity) || SpanContains(next, entity))
+                    {
+                        continue;
+                    }
+
+                    changed(owner, keyId, entity, false);
+                }
+            }
+
+            for (int i = 0; i < next.Length; i++)
+            {
+                Entity entity = next[i];
+                if (entity == Entity.Null || SeenBefore(next, i, entity) || ArrayContains(oldEntities, oldCount, entity))
+                {
+                    continue;
+                }
+
+                changed(owner, keyId, entity, true);
+            }
+        }
+
+        private static bool RowsDiffer(Entity[] rows, int start, int oldCount, ReadOnlySpan<Entity> next)
+        {
+            for (int i = 0; i < next.Length; i++)
+            {
+                Entity entity = next[i];
+                if (entity == Entity.Null || SeenBefore(next, i, entity))
+                {
+                    continue;
+                }
+
+                if (!RowContains(rows, start, oldCount, entity))
+                {
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < oldCount; i++)
+            {
+                Entity entity = rows[start + i];
+                if (entity == Entity.Null || RowSeenBefore(rows, start, i, entity))
+                {
+                    continue;
+                }
+
+                if (!SpanContains(next, entity))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool RowContains(Entity[] rows, int start, int count, Entity entity)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (rows[start + i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool RowSeenBefore(Entity[] rows, int start, int index, Entity entity)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (rows[start + i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool SpanContains(ReadOnlySpan<Entity> entities, Entity entity)
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (entities[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ArrayContains(Entity[]? entities, int count, Entity entity)
+        {
+            if (entities == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                if (entities[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool SeenBefore(ReadOnlySpan<Entity> entities, int index, Entity entity)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (entities[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool SeenBefore(Entity[] entities, int index, Entity entity)
+        {
+            for (int i = 0; i < index; i++)
+            {
+                if (entities[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static ulong HashCombine(ulong hash, uint value)

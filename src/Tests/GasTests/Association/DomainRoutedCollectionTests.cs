@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Registry;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -244,7 +245,7 @@ namespace Ludots.Tests.GAS
                 batch,
                 EntityCollectionSourceKind.UiAcquisition,
                 DomainRoutingUnresolvedPolicy.Reject));
-            Assert.That(exception!.Message, Does.Contain(stray.ToString()).And.Contain("collection.command.source"));
+            Assert.That(exception!.Message, Does.Contain(stray.ToString()).And.Contain("core.selection"));
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out _), Is.False, "A rejected batch must not partially land.");
         }
@@ -521,7 +522,9 @@ namespace Ludots.Tests.GAS
                         world,
                         tagOps),
                     query,
-                    keyRegistry.Register("collection.ui.cast.raw"));
+                    InputCollectionKeyDeclarations.ForResolvedRoles(
+                        keyRegistry,
+                        new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
                 return new Harness
                 {
                     Relationships = relationships,
@@ -530,7 +533,7 @@ namespace Ludots.Tests.GAS
                     Writer = applier,
                     View = new ControlPlaneView(store, query),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                 };
             }
         }

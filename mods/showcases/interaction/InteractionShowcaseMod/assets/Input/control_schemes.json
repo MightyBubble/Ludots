@@ -1,12 +1,10 @@
 {
   "schemes": [
     {
-      "id": "scheme.default",
-      "inputContexts": []
-    },
-    {
       "id": "scheme.wasd_move",
-      "inputContexts": [],
+      "inputContexts": [
+        "Camera.Rig"
+      ],
       "axisMove": {
         "actionId": "Move",
         "orderTypeKey": "moveTo",
@@ -18,6 +16,8 @@
   ],
   "allowedSchemes": [
     "scheme.default",
-    "scheme.wasd_move"
+    "scheme.wasd_move",
+    "scheme.aim.kbm",
+    "scheme.aim.gamepad"
   ]
 }

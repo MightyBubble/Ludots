@@ -23,12 +23,14 @@
 ```text
 InputRuntimeSystem
   -> AuthoritativeInputAccumulator
-  -> AuthoritativeInputSnapshotSystem
+  -> AuthoritativeInputSnapshotSystem (LocalInput)
   -> CoreServiceKeys.AuthoritativeInput
-  -> CameraRuntimeSystem
-  -> InputOrderMappingSystem / Select / GAS Response
+  -> 交互状态上的触发图 (SubmitCommandIntent / SubmitCast)
+  -> CommandIntentBufferDrainSystem (LocalInput)
+  -> OrderQueue
   -> GAS / Physics2D / MassNavigationFlow
   -> WorldPositionCm
+CameraRuntimeSystem 在 DeferredTriggerCollection，读同一份冻结快照
 ```
 
 ### 渲染帧
@@ -47,7 +49,7 @@ PlayerInputHandler.Update()
 关键约束：
 
 - `assets/Configs/Engine/clock.json` 当前固定步为 30 Hz
-- `CameraRuntimeSystem` 与 `InputOrderMappingSystem` 同属 `SystemGroup.InputCollection`
+- `AuthoritativeInputSnapshotSystem` 在 `SystemGroup.LocalInput`，`CameraRuntimeSystem` 在 `SystemGroup.DeferredTriggerCollection`
 - `CameraPresenter` 只能消费 `CameraManager.GetInterpolatedState(alpha)`
 
 ## 3. 相机架构
@@ -142,7 +144,9 @@ PlayerInputHandler.Update()
 - live 输入采样：`src/Core/Input/Systems/InputRuntimeSystem.cs`
 - 权威输入冻结：`src/Core/Input/Systems/AuthoritativeInputSnapshotSystem.cs`
 - 相机固定步推进：`src/Core/Systems/CameraRuntimeSystem.cs`
-- 输入到 Order：`src/Core/Input/Orders/InputOrderMappingSystem.cs`；相机模式键由各 showcase 自持轮询或图节点（`ActivateVirtualCamera`）驱动
+- 输入到 Order：交互状态的触发图调用 `SubmitCommandIntent` / `SubmitCast`，下一拍由 `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs` 排干。相机键位在根资产输入上下文 `Camera.Rig`（`PointerPos` 绑 `<Mouse>/Pos`）。切机位提交 `VirtualCameraRequest` 或 `CameraPoseRequest`，不另开一套输入映射
+- 指针落在 `pointerRouting` 为 `ui` 的区域时，`PointerRegionContextSystem` 把对应交互状态推上去。相机 `Zoom` 按绑定上的 `suppressOnUiWheelCaptured` 让路
+- 本机座位要带 `controlSchemeId`。`scheme.default` 的 `inputContexts` 就是 `Camera.Rig`。宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 推当前方案的上下文
 
 时序原则：
 

@@ -8,6 +8,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Core.Input.Config;
 
 namespace RtsDemoMod.Runtime
 {
@@ -33,7 +34,7 @@ namespace RtsDemoMod.Runtime
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.CommandSource,
                 owner,
@@ -53,7 +54,7 @@ namespace RtsDemoMod.Runtime
                 engine.World,
                 engine.GlobalContext,
                 owner,
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 out primary);
         }
 
@@ -63,7 +64,7 @@ namespace RtsDemoMod.Runtime
             return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCount(
                 engine.GlobalContext,
                 owner,
-                "collection.command.source");
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
         }
 
         public static void WriteCameraFocusRequests(GameEngine engine, Entity target, bool snapCamera)

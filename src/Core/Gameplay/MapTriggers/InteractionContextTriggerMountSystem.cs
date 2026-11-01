@@ -69,6 +69,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly Func<MapSessionManager?> _sessions;
         private readonly Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter _graphReturnWriter;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly InteractionContextInstanceRuntime _contextInstances;
 
         private Entity[] _subjects = new Entity[16];
         private int _subjectCount;
@@ -79,6 +80,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
         private readonly List<Trigger> _actionTriggerScratch = new(4);
         private readonly List<Trigger> _mountScratch = new(8);
         private readonly List<int> _staleOpenScratch = new(4);
+        private readonly List<Entity> _deferredUnparkSubjects = new(2);
+        private bool _deferUnpark;
         // Window lifecycle marks: per subject the currently-open profiles and
         // their mount regime. Keyed subject-first so a reconcile only touches its own entry —
         // never a whole-window scan (same bounded-scan discipline the retired heartbeat sweep
@@ -97,7 +100,8 @@ namespace Ludots.Core.Gameplay.MapTriggers
             EventSchemaRegistry? eventSchemas,
             Func<MapSessionManager?> sessions,
             Ludots.Core.NodeLibraries.GASGraph.GraphReturnWriter graphReturnWriter,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi)
+            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
+            InteractionContextInstanceRuntime contextInstances)
             : base(world)
         {
             _triggerManager = triggerManager ?? throw new ArgumentNullException(nameof(triggerManager));
@@ -108,6 +112,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             _sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
             _graphReturnWriter = graphReturnWriter ?? throw new ArgumentNullException(nameof(graphReturnWriter));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            _contextInstances = contextInstances ?? throw new ArgumentNullException(nameof(contextInstances));
             // An owner destroyed while still carrying context components never
             // went through an explicit deactivation — run each carried context's
             // onDeactivated slot at the destroy boundary so settlement/preview cleanup
@@ -169,6 +174,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
                 }
 
                 current.Add(subject);
+                ReleaseOrphanedInstances(subject);
                 CollectDesiredProfiles(subject, _desiredProfileIds);
                 ReconcileSubject(subject);
                 _desiredProfileIds.Clear();
@@ -213,10 +219,43 @@ namespace Ludots.Core.Gameplay.MapTriggers
         {
             FlushDeferredDeactivatedUnmounts();
             if (!World.IsAlive(subject)) return;
+            ReleaseOrphanedInstances(subject);
             _desiredProfileIds.Clear();
             CollectDesiredProfiles(subject, _desiredProfileIds);
             ReconcileSubject(subject);
             _desiredProfileIds.Clear();
+        }
+
+        /// <summary>
+        /// Hold parked-window restores until <see cref="EndInputDispatchPhase"/>.
+        /// Parking stays immediate: a foreground context opened earlier in this phase
+        /// still hides ancestor actions from later actions. The restore waits because
+        /// the action that closes the foreground context is often earlier in the same
+        /// phase than the actions that context had parked.
+        /// </summary>
+        public void BeginInputDispatchPhase()
+        {
+            _deferUnpark = true;
+        }
+
+        /// <summary>
+        /// End the phase opened by <see cref="BeginInputDispatchPhase"/> and restore
+        /// any window that is no longer parked.
+        /// </summary>
+        public void EndInputDispatchPhase()
+        {
+            _deferUnpark = false;
+            int count = _deferredUnparkSubjects.Count;
+            for (int i = 0; i < count; i++)
+            {
+                Entity subject = _deferredUnparkSubjects[i];
+                if (World.IsAlive(subject))
+                {
+                    ReconcileAfterInputAction(subject);
+                }
+            }
+
+            _deferredUnparkSubjects.Clear();
         }
 
         /// <summary>
@@ -307,6 +346,12 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
                 if (state == WindowMountState.Parked && !parked)
                 {
+                    if (_deferUnpark)
+                    {
+                        DeferUnpark(subject);
+                        continue;
+                    }
+
                     // Foreground descendant gone: restore the interactive mounts — the window
                     // never closed, so no Activated slot (park/unpark is a regime change only).
                     SetWindowState(subject, profileId, WindowMountState.Interactive);
@@ -348,6 +393,19 @@ namespace Ludots.Core.Gameplay.MapTriggers
         /// Siblings and the foreground profile itself are never parked — scope coexistence stays
         /// a non-stack set.
         /// </summary>
+        private void DeferUnpark(Entity subject)
+        {
+            for (int i = 0; i < _deferredUnparkSubjects.Count; i++)
+            {
+                if (_deferredUnparkSubjects[i] == subject)
+                {
+                    return;
+                }
+            }
+
+            _deferredUnparkSubjects.Add(subject);
+        }
+
         private void CollectParkedProfiles(Entity subject, List<int> parkedSink)
         {
             parkedSink.Clear();
@@ -448,6 +506,14 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             World.GetEntities(in _activeContextQuery, _subjects);
+        }
+
+        // Deactivated slots of released orphans run at the release change point; flushing their
+        // deferred unmounts right away keeps the close pass from running the slot a second time.
+        private void ReleaseOrphanedInstances(Entity subject)
+        {
+            _contextInstances.ReleaseOrphanedInstances(subject);
+            FlushDeferredDeactivatedUnmounts();
         }
 
         private void CollectDesiredProfiles(Entity subject, List<int> profileIds)
@@ -559,14 +625,22 @@ namespace Ludots.Core.Gameplay.MapTriggers
 
             for (int i = 0; i < graphIds.Length; i++)
             {
-                _graphReturnWriter.Execute(
-                    graphIds[i],
-                    caster: subject,
-                    explicitTarget: Entity.Null,
-                    targetContext: Entity.Null,
-                    targetPosCm: default,
-                    randomSeed: 0u,
-                    api: _graphApi);
+                _graphApi.PushContextMount(subject, profileId);
+                try
+                {
+                    _graphReturnWriter.Execute(
+                        graphIds[i],
+                        caster: subject,
+                        explicitTarget: Entity.Null,
+                        targetContext: Entity.Null,
+                        targetPosCm: default,
+                        randomSeed: 0u,
+                        api: _graphApi);
+                }
+                finally
+                {
+                    _graphApi.PopContextMount();
+                }
             }
         }
 

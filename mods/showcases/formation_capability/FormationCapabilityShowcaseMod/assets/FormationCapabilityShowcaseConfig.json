@@ -3,6 +3,8 @@
   "formationAnchor": {
     "templateId": "formation_capability_showcase_formation_anchor"
   },
+  "commandSourceCollectionKey": "role:commandSource",
+  "commandMembersCollectionKey": "formation.command.members",
   "initialCommandSourceFormationId": "shu_left_vanguard",
   "initialCommandSourceEntityCapacity": 1,
   "orderBatchCapacity": 512,

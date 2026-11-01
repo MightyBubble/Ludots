@@ -5,9 +5,13 @@
   "main": "bin/net9.0/FogVisionDecayShowcaseMod.dll",
   "priority": 132,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "knowledge", "fog-of-war", "association"]
+  "tags": [
+    "showcase",
+    "knowledge",
+    "fog-of-war",
+    "association"
+  ]
 }

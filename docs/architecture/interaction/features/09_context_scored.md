@@ -7,14 +7,14 @@
 
 ## 1. 当前状态
 
-`ContextGroup` 与 `ContextScored` 已经是 `feat/mod-interaction-showcase` 的 runtime infrastructure，不再是设计提案。
+`ContextGroup` 与 `ContextScored` 是运行时设施。图用 `SubmitCast` 把槽号和目标交进缓冲，`CommandIntentBufferDrainSystem` 排干；槽上的技能如果是 context group 的 root ability，就交给 `ContextScoredOrderResolver`。
 
 已实现并有证据的路径：
 
 - 注册与配置：`src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`
-- 解析与路由：`src/Core/Input/Orders/ContextScoredOrderResolver.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs`
-- 接入本地输入：`mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs`
-- 测试与 acceptance：`src/Tests/GasTests/ContextScoredResolverTests.cs`、`src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`、`artifacts/acceptance/interaction-showcase/path.mmd`
+- 排干：`src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
+- 解析：`src/Core/Input/Orders/ContextScoredOrderResolver.cs`
+- 测试：`src/Tests/GasTests/Ability/ContextScoredResolverTests.cs`、`src/Tests/GasTests/Production/InteractionShowcasePlayableAcceptanceTests.cs`
 
 ---
 
@@ -35,20 +35,19 @@
 
 ## 3. 当前 runtime 形态
 
-### 3.1 输入侧不是 `contextGroupId`，而是 root slot
+### 3.1 输入交的是槽号，不是 `contextGroupId`
 
-当前输入映射并没有单独的 `contextGroupId` 字段。
+档案和提交都不带 `contextGroupId`。命令意图的 `route.slot` 可以声明 `ContextGroup`，排干时也会看这个槽本身是不是 root。
 
 实际做法是：
 
-- `InputOrderMapping.ArgsTemplate.I0` 指向 root ability slot
-- `ContextScoredOrderResolver` 从 slot 解析出 root ability
+- 提交进来的槽号指向 root ability；`AbilitySlotResolver` 解析出技能 id
 - `ContextGroupRegistry.TryGetByRootAbility(...)` 找到候选组
 - 解析出 concrete slot index 与 concrete target
 
 对应实现：
 
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 - `src/Core/Input/Orders/ContextScoredOrderResolver.cs`
 - `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`
 

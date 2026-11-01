@@ -71,7 +71,10 @@ namespace ModdingTest
                 // Let's verify.
                 
                 Console.WriteLine("[Bootstrapper] Initializing...");
-                var result = GameBootstrapper.InitializeFromBaseDirectory(rootDir);
+                string userDataRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "Ludots");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(rootDir, userDataRoot);
                 engine = result.Engine;
                 
                 Console.WriteLine("[Bootstrapper] Engine Initialized.");
@@ -166,7 +169,7 @@ namespace ModdingTest
                 var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
                 var backend = new DummyInputBackend();
                 var inputHandler = new PlayerInputHandler(backend, inputConfig);
-                inputHandler.PushContext("Default_Gameplay");
+                inputHandler.PushContext("Camera.Rig");
                 engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
 
                 engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest

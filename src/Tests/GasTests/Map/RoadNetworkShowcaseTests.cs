@@ -171,6 +171,75 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadMoveOrderBindingSystem_ClickedRoadMoveFollow_PlansRouteFromActorWhenActivated()
+        {
+            using var world = World.Create();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore, new[]
+            {
+                (100, 0),
+                (200, 0),
+                (450, 150),
+            });
+            var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(77, 171);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderBuffer(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(100, 0));
+            Order clicked = CreateMoveOrder(actor, orderTypeId: 171, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Queued);
+            clicked.OrderId = 9001;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in clicked, priority: 100);
+
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, 171, plans, runtime, new MassNavigationRuntimeBinding());
+
+            bindSystem.Update(1f / 60f);
+
+            Assert.That(pathService.Requests.Count, Is.EqualTo(1));
+            Assert.That(pathService.Requests[0].Start.Xcm, Is.EqualTo(100), "The route starts where the unit stands when the order activates.");
+            Assert.That(pathService.Requests[0].Goal.Xcm, Is.EqualTo(450));
+            ref readonly Order active = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
+            Assert.That(active.OrderId, Is.EqualTo(9001));
+            Assert.That(active.OrderTypeId, Is.EqualTo(171));
+            Assert.That(active.SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
+            Assert.That(active.Args.Spatial.PointCount, Is.EqualTo(3));
+            Assert.That(OrderWorldSpatialResolver.TryResolveExplicitMoveDestination(in active, out Vector3 destination), Is.True);
+            Assert.That(destination.X, Is.EqualTo(450f));
+            Assert.That(destination.Z, Is.EqualTo(150f));
+            Assert.That(plans.TryGetPlan(actor, 9001, out _), Is.True);
+        }
+
+        [Test]
+        public void RoadMoveOrderBindingSystem_ClickedRoadMoveFollow_PlanningFailureEndsOrderWithStatus()
+        {
+            using var world = World.Create();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId: 77);
+            OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(77, 171);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderBuffer(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            Order clicked = CreateMoveOrder(actor, orderTypeId: 171, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            clicked.OrderId = 9002;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in clicked, priority: 100);
+
+            var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, 171, plans, runtime, new MassNavigationRuntimeBinding());
+
+            bindSystem.Update(1f / 60f);
+
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Contain("Road command rejected"));
+            Assert.That(plans.TryGetPlan(actor, 9002, out _), Is.False);
+        }
+
+        [Test]
         public void RoadMoveOrderExpander_TrySubmit_PlanningFailure_ReturnsRejectedValidation_NotQueueFull()
         {
             using var world = World.Create();
@@ -879,7 +948,7 @@ namespace Ludots.Tests.GAS
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
             Assert.That(engine.World.Has<CommandSourceDragState>(owner), Is.True);
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
-            Assert.That(collections.TryGetView(owner, "collection.command.source", out EntityCollectionView view), Is.True);
+            Assert.That(collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView view), Is.True);
             Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
             Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
             Assert.That(view.PrimaryEntity, Is.EqualTo(owner));
@@ -1601,7 +1670,7 @@ namespace Ludots.Tests.GAS
             var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             MassNavigationRuntimeBinding binding = CreateReadyRoadMassRuntimeBinding(simulation);
-            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var executionSystem = new RoadMoveExecutionSystem(world, binding);
             var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
@@ -1712,7 +1781,7 @@ namespace Ludots.Tests.GAS
             var plans = new MovePlanStore(world, new RoadRouteFinalTargetMovePlanResolver());
             var runtime = new MovePlanRuntimeService(world, plans);
             var binding = new MassNavigationRuntimeBinding();
-            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, binding);
             var executionSystem = new RoadMoveExecutionSystem(world, binding);
             var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, binding);
@@ -2240,7 +2309,6 @@ namespace Ludots.Tests.GAS
             var modPaths = new List<string>
             {
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "input", "SelectionInteractionMod"),
@@ -2248,7 +2316,7 @@ namespace Ludots.Tests.GAS
             };
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             engine.Start();
             return engine;
         }
@@ -2293,10 +2361,7 @@ namespace Ludots.Tests.GAS
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -2493,7 +2558,7 @@ namespace Ludots.Tests.GAS
         {
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -2508,7 +2573,7 @@ namespace Ludots.Tests.GAS
         {
             primary = Entity.Null;
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
-            return collections.TryGet(owner, "collection.command.source", out EntityCollectionHandle handle) &&
+            return collections.TryGet(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionHandle handle) &&
                    collections.TryGetEntityAt(handle, 0, out primary);
         }
 
@@ -2542,10 +2607,6 @@ namespace Ludots.Tests.GAS
             sb.Append(" | status=");
             sb.Append(engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out object? statusObj) && statusObj is string status
                 ? status
-                : "<none>");
-            sb.Append(" | order=");
-            sb.Append(engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? orderObj) && orderObj is string order
-                ? order
                 : "<none>");
             for (int i = 0; i < instanceIds.Length; i++)
             {

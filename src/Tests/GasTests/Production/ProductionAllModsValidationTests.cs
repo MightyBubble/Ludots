@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
@@ -27,13 +28,13 @@ namespace Ludots.Tests.GAS.Production
         {
             yield return new TestCaseData(new ModCase(
                     "LudotsCoreMod",
-                    new[] { "LudotsCoreMod" },
+                    new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_LudotsCoreMod");
 
             yield return new TestCaseData(new ModCase(
                     "MobaDemoMod",
-                    new[] { "LudotsCoreMod", "MobaDemoMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "MobaDemoMod" },
                     true))
                 .SetName("ProdModSmoke_MobaDemoMod");
 
@@ -51,91 +52,97 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "PerformanceVisualizationMod",
-                    new[] { "LudotsCoreMod", "PerformanceVisualizationMod" },
+                    new[] { "LudotsCoreMod", "PerformanceVisualizationMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_PerformanceVisualizationMod");
 
             yield return new TestCaseData(new ModCase(
                     "CapabilityStandardPhysics2DShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_CapabilityStandardPhysics2DShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "CapabilityStandardVirtualCameraShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CapabilityStandardVirtualCameraShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraBootstrapMod", "VirtualCameraShotsMod", "CapabilityStandardVirtualCameraShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_CapabilityStandardVirtualCameraShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "TerrainBenchmarkMod",
-                    new[] { "LudotsCoreMod", "TerrainBenchmarkMod" },
+                    new[] { "LudotsCoreMod", "TerrainBenchmarkMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_TerrainBenchmarkMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraBootstrapMod",
-                    new[] { "LudotsCoreMod", "CameraBootstrapMod" },
+                    new[] { "LudotsCoreMod", "CameraBootstrapMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_CameraBootstrapMod");
 
             yield return new TestCaseData(new ModCase(
                     "SharedThreeCProfilesMod",
-                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_SharedThreeCProfilesMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraProfilesMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" },
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "CommandSourceCoreFixtureMod" },
                     true))
                 .SetName("ProdModSmoke_CameraProfilesMod");
 
             yield return new TestCaseData(new ModCase(
                     "VirtualCameraShotsMod",
-                    new[] { "LudotsCoreMod", "VirtualCameraShotsMod" },
+                    new[] { "LudotsCoreMod", "VirtualCameraShotsMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_VirtualCameraShotsMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceMod");
 
             yield return new TestCaseData(new ModCase(
                     "CameraAcceptanceHotpathEntryMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
+                    new[] { "LudotsCoreMod", "SharedThreeCProfilesMod", "CameraAcceptanceMod", "CameraAcceptanceHotpathEntryMod" },
                     true))
                 .SetName("ProdModSmoke_CameraAcceptanceHotpathEntryMod");
 
             yield return new TestCaseData(new ModCase(
                     "InteractionShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_InteractionShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "ChampionSkillSandboxMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "EntityCommandPanelMod", "DiagnosticsOverlayMod", "ChampionSkillSandboxMod" },
                     true))
                 .SetName("ProdModSmoke_ChampionSkillSandboxMod");
 
             yield return new TestCaseData(new ModCase(
+                    "AimControlSchemesShowcaseMod",
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "AimControlSchemesShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_AimControlSchemesShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
                     "NarrativeFrontendMod",
-                    new[] { "LudotsCoreMod", "NarrativeFrontendMod" },
+                    new[] { "LudotsCoreMod", "NarrativeFrontendMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_NarrativeFrontendMod");
 
             yield return new TestCaseData(new ModCase(
                     "NarrativeShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
+                    new[] { "LudotsCoreMod", "AimInteractionMod", "CameraProfilesMod", "NarrativeFrontendMod", "EntityInfoPanelsMod", "InteractionShowcaseMod", "NarrativeShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_NarrativeShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "RelationshipShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "NarrativeFrontendMod", "RelationshipShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CameraProfilesMod", "NarrativeFrontendMod", "RelationshipShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_RelationshipShowcaseMod");
 
@@ -147,19 +154,19 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "FourXDemoMod",
-                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" },
+                    new[] { "LudotsCoreMod", "EntityInfoPanelsMod", "EntityCommandPanelMod", "FourXDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_FourXDemoMod");
 
             yield return new TestCaseData(new ModCase(
                     "TcgDemoMod",
-                    new[] { "LudotsCoreMod", "TcgDemoMod" },
+                    new[] { "LudotsCoreMod", "TcgDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_TcgDemoMod");
 
             yield return new TestCaseData(new ModCase(
                     "ArpgDemoMod",
-                    new[] { "LudotsCoreMod", "ArpgDemoMod" },
+                    new[] { "LudotsCoreMod", "ArpgDemoMod" , "CommandSourceCoreFixtureMod"},
                     true))
                 .SetName("ProdModSmoke_ArpgDemoMod");
 
@@ -258,7 +265,7 @@ namespace Ludots.Tests.GAS.Production
                 {
                     var ex = Assert.Throws(modCase.ExpectedExceptionType ?? typeof(Exception), () =>
                     {
-                        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                     });
                     if (!string.IsNullOrWhiteSpace(modCase.ExpectedMessageContains))
                     {
@@ -267,10 +274,11 @@ namespace Ludots.Tests.GAS.Production
                     return;
                 }
 
-                engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+                engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 InstallDummyInput(engine);
 
                 engine.Start();
+                EnsureEntryClientSeat(engine);
                 engine.LoadStartupMap();
 
                 for (int i = 0; i < 10; i++)
@@ -293,6 +301,25 @@ namespace Ludots.Tests.GAS.Production
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+        }
+
+        private static void EnsureEntryClientSeat(GameEngine engine)
+        {
+            if (engine.MergedConfig.HasStartupLocalSeats ||
+                !string.Equals(engine.MergedConfig.StartupMapId, "entry", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            engine.MergedConfig.StartupLocalSeats = new List<StartupLocalSeatConfig>
+            {
+                new()
+                {
+                    SeatId = "seat.0",
+                    PlayerId = 1,
+                    ControlSchemeId = "scheme.default",
+                },
+            };
         }
 
         private static void InstallDummyInput(GameEngine engine)

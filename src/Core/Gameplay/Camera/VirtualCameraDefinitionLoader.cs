@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -13,12 +14,17 @@ namespace Ludots.Core.Gameplay.Camera
     {
         private readonly ConfigPipeline _pipeline;
         private readonly VirtualCameraRegistry _registry;
+        private readonly InputCollectionKeyDeclarations? _collectionRoles;
         private readonly JsonSerializerOptions _options = CreateOptions();
 
-        public VirtualCameraDefinitionLoader(ConfigPipeline pipeline, VirtualCameraRegistry registry)
+        public VirtualCameraDefinitionLoader(
+            ConfigPipeline pipeline,
+            VirtualCameraRegistry registry,
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             _pipeline = pipeline ?? throw new System.ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new System.ArgumentNullException(nameof(registry));
+            _collectionRoles = collectionRoles;
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -98,7 +104,11 @@ namespace Ludots.Core.Gameplay.Camera
                         ZoomFactorPerWheel = config.ZoomFactorPerWheel,
                         FollowMode = config.FollowMode,
                         FollowTargetKind = config.FollowTargetKind,
-                        FollowCollectionKey = config.FollowCollectionKey,
+                        FollowCollectionKey = InputCollectionKeyDeclarations.Resolve(
+                            _collectionRoles,
+                            config.FollowCollectionKey,
+                            $"virtual camera '{config.Id}'",
+                            Ludots.Core.NodeLibraries.GASGraph.Host.TriggerGraphHookWeaver.OwningMod(merged[i].SourceUri)),
                         FollowActionId = config.FollowActionId,
                         MoveActionId = config.MoveActionId,
                         ZoomActionId = config.ZoomActionId,

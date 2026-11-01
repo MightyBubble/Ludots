@@ -447,8 +447,9 @@ namespace Ludots.Tests.GasTests.UI
         }
 
         /// <summary>
-        /// Dual-seat input runtime with two channels and no declared schemes — the
-        /// channel table is the attribution source; admission consumes channel seat ids.
+        /// Dual-seat input runtime. Admission consumes channel seat ids. Each seat
+        /// declares a scheme because publishing a multi-seat table requires one;
+        /// the scheme pushes no contexts because this harness does not sample bindings.
         /// </summary>
         private sealed class InputHarness : IDisposable
         {
@@ -469,14 +470,27 @@ namespace Ludots.Tests.GasTests.UI
                 var schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                     orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")),
                     inputConfig: inputConfig);
+
+                schemes.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        new()
+                        {
+                            Id = "scheme.panel",
+                            InputContexts = new List<string>(),
+                        },
+                    },
+                });
 
                 var harness = new InputHarness
                 {
                     Seats = new ClientLocalSeatRegistry(),
                 };
-                harness.Seats.Add(new ClientLocalSeat(SeatZero) { PossessedPlayerId = 7, PossessedRep = repZero });
-                harness.Seats.Add(new ClientLocalSeat(SeatOne) { PossessedPlayerId = 8, PossessedRep = repOne });
+                harness.Seats.Add(new ClientLocalSeat(SeatZero, "scheme.panel") { PossessedPlayerId = 7, PossessedRep = repZero });
+                harness.Seats.Add(new ClientLocalSeat(SeatOne, "scheme.panel") { PossessedPlayerId = 8, PossessedRep = repOne });
 
                 var globals = new Dictionary<string, object>();
                 harness.Runtime = new ClientLocalSeatInputRuntime(globals, schemes, inputConfig);

@@ -56,6 +56,7 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             list.Add(mount);
+            mount.ClearActionValueSample();
             mount.IsActionRegistered = true;
         }
 

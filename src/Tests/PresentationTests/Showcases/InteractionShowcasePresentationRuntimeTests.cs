@@ -27,8 +27,8 @@ namespace Ludots.Tests.Presentation
         {
             "EntityInfoPanelsMod",
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
+            "AimInteractionMod",
             "InteractionShowcaseMod",
             "EntityCommandPanelMod",
             "EntityCommandPanelShowcaseMod"
@@ -106,7 +106,7 @@ namespace Ludots.Tests.Presentation
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             PresentationAcceptanceUiHostInstaller.Install(engine, 1600f, 900f);
             HeadlessPresentationTestHost.Install(engine);
@@ -124,10 +124,7 @@ namespace Ludots.Tests.Presentation
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);

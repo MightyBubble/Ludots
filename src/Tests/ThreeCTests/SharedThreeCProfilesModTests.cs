@@ -18,11 +18,12 @@ namespace Ludots.Tests.ThreeC
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "SharedThreeCProfilesMod"
+                "SharedThreeCProfilesMod",
+                "CommandSourceCoreFixtureMod"
             });
 
             using var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             Assert.That(registry, Is.Not.Null);

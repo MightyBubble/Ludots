@@ -1,0 +1,57 @@
+[
+  {
+    "id": "graph.minimap.zoom",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "on_zoom",
+        "action": "Minimap.Zoom",
+        "start": "wheel",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "wheel",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.ActionValueX"
+      },
+      {
+        "id": "px",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenX"
+      },
+      {
+        "id": "py",
+        "op": "LoadEntryPayloadFloat",
+        "payloadKey": "MapTrigger.PointerScreenY"
+      },
+      {
+        "id": "apply",
+        "op": "MinimapApplyWheelZoom"
+      },
+      {
+        "id": "ok",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      { "from": "wheel", "fromPort": "next", "to": "px" },
+      { "from": "px", "fromPort": "next", "to": "py" },
+      { "from": "py", "fromPort": "next", "to": "apply" },
+      { "from": "apply", "fromPort": "next", "to": "ok" },
+      { "from": "ok", "fromPort": "next", "to": "halt" }
+    ],
+    "valueEdges": [
+      { "from": "wheel", "fromPort": "value", "to": "apply", "toPort": "a" },
+      { "from": "px", "fromPort": "value", "to": "apply", "toPort": "b" },
+      { "from": "py", "fromPort": "value", "to": "apply", "toPort": "c" },
+      { "from": "ok", "fromPort": "value", "to": "halt", "toPort": "value" }
+    ]
+  }
+]

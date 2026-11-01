@@ -1,7 +1,6 @@
 {
   "modPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/showcases/moba_demo/MobaDemoMod",
     "../../../../../../../mods/PerformanceVisualizationMod",
     "../../../../../../../mods/TerrainBenchmarkMod",

@@ -143,8 +143,10 @@ A single `resolve` or `launch` command may accept multiple selectors.
 
 - `rootMods`
 - `orderedMods`
-- startup diagnostics such as `defaultCoreMod`, `startupMapId`, and `startupInputContexts`
+- startup diagnostics: `defaultCoreMod`, `startupMapId`, and `browserRuntime`
 - warnings for multi-root conflicts and the final winning config source
+
+Input contexts are not a resolve diagnostic. When the host binds the input processor, `ControlSchemeRuntime.ApplyActiveContexts` pushes the contexts of the active control scheme. `scheme.default` lists `Camera.Rig` in `inputContexts`. A local seat carries `controlSchemeId`.
 
 If multiple root mods define `startupMapId`, only one startup map is selected at runtime. Always run `resolve` before `launch` when reproducing multi-mod behavior.
 

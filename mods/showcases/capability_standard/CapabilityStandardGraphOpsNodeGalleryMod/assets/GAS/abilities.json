@@ -10,5 +10,40 @@
         }
       ]
     }
+  },
+  {
+    "id": "Ability.GraphOps.CastRange",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 640
+    }
+  },
+  {
+    "id": "Ability.GraphOps.EffectFloat",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.GraphOps.NamedRadius"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "targeting": {
+      "castRangeCm": 640
+    }
   }
 ]

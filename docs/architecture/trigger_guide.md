@@ -56,34 +56,30 @@ Mod 注册 System 工厂，Map Trigger 按需激活：
 
 ```csharp
 // 在 OnLoad 中注册工厂（不立即创建 System）
-context.SystemFactoryRegistry.Register("TabTargetCycle", SystemGroup.InputCollection, ctx =>
+context.SystemFactoryRegistry.RegisterPresentation("DiagnosticsOverlay", scriptCtx =>
 {
-    var engine = ctx.GetEngine() ?? throw new InvalidOperationException("GameEngine is required.");
-    return new TabTargetCycleSystem(engine.World, engine.GlobalContext, engine.SpatialQueries);
-});
-
-context.SystemFactoryRegistry.RegisterPresentation("SkillBarOverlay", ctx =>
-{
-    var engine = ctx.GetEngine() ?? throw new InvalidOperationException("GameEngine is required.");
-    return new SkillBarOverlaySystem(engine.World, engine.GlobalContext);
+    var engine = scriptCtx.GetEngine();
+    if (engine == null)
+        return new NoopSystem();
+    return new DiagnosticsOverlaySystem(engine);
 });
 ```
 
 激活由 Map Trigger 或 EventHandler 完成：
 ```csharp
-context.OnEvent(GameEvents.MapLoaded, ctx =>
+context.OnEvent(GameEvents.GameStart, ctx =>
 {
-    var sfr = ctx.Get<SystemFactoryRegistry>(ContextKeys.SystemFactoryRegistry);
     var engine = ctx.GetEngine();
-    sfr.TryActivate("TabTargetCycle", ctx, engine);  // 幂等，重复激活返回 false
+    var sfr = engine.ModLoader.SystemFactoryRegistry;
+    sfr.TryActivate("DiagnosticsOverlay", ctx, engine);  // 幂等，重复激活返回 false
     return Task.CompletedTask;
 });
 ```
 
 约束：
 
-- 消费玩家**逻辑输入**的 system 必须注册到 `SystemGroup.InputCollection`，并读取 `CoreServiceKeys.AuthoritativeInput`。
-- `CommandSourceAcquisitionSystem`、`GasInputResponseSystem` 位于 `src/Core/Input/...`，属于 fixed-step 输入系统，不应作为 presentation system 注册。
+- 吃权威输入的固定步系统读 `CoreServiceKeys.AuthoritativeInput`。快照系统在 `SystemGroup.LocalInput`。`CommandIntentBufferDrainSystem` 也在 `LocalInput`，排干上一拍触发图写入的 `SubmitCommandIntent` / `SubmitCast`。
+- 技能栏、瞄准指示器由玩法 mod 自己的面板和 presenter 规则声明。引擎不注册默认技能栏。
 - presentation system 只承载 HUD / overlay / presenter 等渲染侧逻辑，不直接消费 live `PlayerInputHandler`。
 
 ### 2.3 TriggerDecoratorRegistry — Mod 修饰既有 Trigger

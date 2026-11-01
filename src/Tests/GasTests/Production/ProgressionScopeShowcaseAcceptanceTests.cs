@@ -112,13 +112,12 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "EntityCommandPanelMod",
                 "ProgressionScopeShowcaseMod"
             });
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallDummyInput(engine);
             AcceptanceUiHostInstaller.Install(engine);
             engine.Start();

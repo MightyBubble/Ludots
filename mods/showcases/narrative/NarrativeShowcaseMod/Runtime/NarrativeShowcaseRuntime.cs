@@ -97,7 +97,6 @@ namespace NarrativeShowcaseMod.Runtime
             if (showcaseActive)
             {
                 ActivateInputContexts(input);
-                EnsureSmartCastInteractionMode(engine);
                 EnsurePlayerLocale(engine);
                 RequireShowcaseSolePossessedRep(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
@@ -1125,15 +1124,6 @@ namespace NarrativeShowcaseMod.Runtime
             }
 
             return result;
-        }
-
-        private static void EnsureSmartCastInteractionMode(GameEngine engine)
-        {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
-                mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping)
-            {
-                mapping.SetInteractionMode(Ludots.Core.Input.Orders.CastModeType.SmartCast);
-            }
         }
 
         private void EnsurePlayerLocale(GameEngine engine)

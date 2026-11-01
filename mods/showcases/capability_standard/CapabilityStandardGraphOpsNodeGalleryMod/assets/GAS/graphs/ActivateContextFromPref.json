@@ -1,0 +1,88 @@
+[
+  {
+    "id": "showcase.graph_op.ActivateContextFromPref",
+    "kind": "Effect",
+    "entry": "drain",
+    "nodes": [
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "slot",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "open",
+        "op": "ActivateContextFromPref",
+        "key": "pref.gallery.sample",
+        "parentContext": "interaction.context.gallery.aim"
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "slot"
+      },
+      {
+        "from": "slot",
+        "fromPort": "next",
+        "to": "open"
+      },
+      {
+        "from": "open",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "open",
+        "toPort": "source"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "open",
+        "toPort": "target"
+      },
+      {
+        "from": "slot",
+        "fromPort": "value",
+        "to": "open",
+        "toPort": "value"
+      }
+    ]
+  }
+]

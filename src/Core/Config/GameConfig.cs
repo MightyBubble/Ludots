@@ -5,7 +5,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Networking.Configuration;
@@ -39,7 +38,11 @@ namespace Ludots.Core.Config
         /// </summary>
         public List<StartupLocalSeatConfig> StartupLocalSeats { get; set; } = new();
 
-        public List<string> StartupInputContexts { get; set; } = new List<string>();
+        /// <summary>
+        /// Where this client writes the active control scheme id. <c>user://</c> expands against
+        /// the host-supplied user data root. Blank fails engine startup by this field name.
+        /// </summary>
+        public string? ControlSchemePreferencePath { get; set; }
 
         public bool HasStartupLocalSeats => StartupLocalSeats != null && StartupLocalSeats.Count > 0;
 
@@ -91,8 +94,6 @@ namespace Ludots.Core.Config
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
         public CommandSourceAcquisitionConfig? CommandSource { get; set; }
-
-        public InteractionActionBindings? InteractionActions { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 

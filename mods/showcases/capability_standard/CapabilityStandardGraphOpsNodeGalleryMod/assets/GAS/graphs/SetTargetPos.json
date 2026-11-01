@@ -1,0 +1,50 @@
+[
+  {
+    "id": "showcase.graph_op.SetTargetPos",
+    "kind": "Effect",
+    "entry": "x",
+    "nodes": [
+      {
+        "id": "x",
+        "op": "ConstFloat",
+        "floatValue": 160.0
+      },
+      {
+        "id": "y",
+        "op": "ConstFloat",
+        "floatValue": -80.0
+      },
+      {
+        "id": "point",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      { "from": "x", "fromPort": "next", "to": "y" },
+      { "from": "y", "fromPort": "next", "to": "point" },
+      { "from": "point", "fromPort": "next", "to": "drain" },
+      { "from": "drain", "fromPort": "next", "to": "explicit" },
+      { "from": "explicit", "fromPort": "next", "to": "hit" }
+    ],
+    "valueEdges": [
+      { "from": "x", "fromPort": "value", "to": "point", "toPort": "a" },
+      { "from": "y", "fromPort": "value", "to": "point", "toPort": "b" },
+      { "from": "drain", "fromPort": "value", "to": "hit", "toPort": "value" },
+      { "from": "explicit", "fromPort": "value", "to": "hit", "toPort": "target" }
+    ]
+  }
+]

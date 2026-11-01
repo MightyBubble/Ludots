@@ -9,7 +9,7 @@ namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime.Drivers;
 
 /// <summary>
 /// Hosts the SubmitCommandIntent vignette: the TriggerGraph resolves a ground point through the
-/// aim-source helper and hands one command intent to the order pipeline's submission buffer
+/// pointer-sample helper and hands one command intent to the order pipeline's submission buffer
 /// (constitution §12); the graph never routes inline. This driver executes the compiled graph
 /// against the engine's production API and captions from what the buffer actually holds —
 /// the drain runs in the order kernel's own phase, which the gallery does not tick.
@@ -41,7 +41,7 @@ public sealed class CommandIntentNodeDriver : IGraphOpsNodeDriver
             ?? throw new InvalidOperationException(
                 $"Command intent gallery '{ctx.Vignette.Op}' requires the engine command intent submission buffer.");
 
-        // Same gallery aim-source contract as the aimsource driver: a flat bounded ground so
+        // Same gallery pointer-sample contract as the pointer sample driver: a flat bounded ground so
         // the vignette's authored screen point resolves through the ray→ground chain.
         var worldBounds = new Ludots.Platform.Abstractions.WorldAabbCm(-10_000, -10_000, 20_000, 20_000);
         var galleryGlobals = new System.Collections.Generic.Dictionary<string, object>
@@ -57,8 +57,8 @@ public sealed class CommandIntentNodeDriver : IGraphOpsNodeDriver
             [Ludots.Core.Scripting.CoreServiceKeys.WorldSizeSpec.Name] =
                 new Ludots.Core.Spatial.WorldSizeSpec(worldBounds, 100),
         };
-        ctx.Api.BindAimSource(
-            new Ludots.Core.Input.AimSource.GraphAimSourceRuntime(ctx.SimWorld, galleryGlobals));
+        ctx.Api.BindPointerSample(
+            new Ludots.Core.Input.PointerSample.GraphPointerSampleRuntime(ctx.SimWorld, galleryGlobals));
 
         GraphProgramPackage package = ctx.Compiled.Package!.Value;
         if (package.TriggerGraphEntries is not { Length: 1 } entries)

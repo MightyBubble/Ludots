@@ -1,6 +1,3 @@
 {
-  "startupMapId": "deterministic_replay",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ]
+  "startupMapId": "deterministic_replay"
 }

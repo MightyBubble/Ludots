@@ -26,6 +26,8 @@ namespace InteractionShowcaseMod.Systems
         private const int FormationSpacingCm = 50;
         private const int FrontOffsetCm = 260;
         private const int WaveIntervalTicks = 30;
+        // Each cast adds a cooldown tag, so one wave must stay inside the per-frame deferred trigger budget.
+        private const int MaxCastsPerSidePerWave = 480;
 
         private static readonly QueryDescription StressMageQuery = new QueryDescription()
             .WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
@@ -242,8 +244,8 @@ namespace InteractionShowcaseMod.Systems
                 return;
             }
 
-            int redBudget = Math.Min(_redMages.Count, available / 2);
-            int blueBudget = Math.Min(_blueMages.Count, available - redBudget);
+            int redBudget = Math.Min(Math.Min(_redMages.Count, MaxCastsPerSidePerWave), available / 2);
+            int blueBudget = Math.Min(Math.Min(_blueMages.Count, MaxCastsPerSidePerWave), available - redBudget);
             int issued = 0;
 
             issued += DispatchOrders(_redMages, ref _redWaveCursor, _blueAnchor, playerId: 1, redBudget);

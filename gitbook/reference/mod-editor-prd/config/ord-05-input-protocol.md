@@ -24,7 +24,7 @@
 | `payloadA`（EventGate） | 超时 tick 数；0 表示一直等 |
 | `tick` | 门在时间轴上的开启点 |
 
-玩家选目标、确认这类输入不写在时间轴里，写在交互上下文的图里（见 ord-06），图算完再下施法命令，目标随命令进来。
+玩家选目标、确认这类输入不写在时间轴里，写在交互上下文的图里（见 input-03），图算完再下施法命令，目标随命令进来。
 
 ## 3. 文件结构
 
@@ -45,4 +45,4 @@
 
 - 事件门真实例：`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/GAS/abilities.json`
 
-**相关文档**：[ord-05 PRD](../prd/ord-05-input-protocol.md) · [ord-06 配置说明](ord-06-input-mappings.md)
+**相关文档**：[ord-05 PRD](../prd/ord-05-input-protocol.md) · [input-03 配置说明](input-03-interaction-context.md)

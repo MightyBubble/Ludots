@@ -30,6 +30,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using RtsMultiplayerFrontlineMod.Runtime;
+using Ludots.Core.Input.Config;
 
 namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
@@ -80,7 +81,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private readonly NetworkCommandAdmissionOutcome[] _admissionProgressScratch;
 
     private PlayerInputHandler? _input;
-    private InteractionActionBindings? _bindings;
+    private const string SelectBeginActionId = "Select.Begin";
+    private const string CommandActionId = "Command";
+
     private AuthoritativeGroundPointerOverride? _groundOverride;
     private IReplicatedClientCommandPort? _commandPort;
     private IReplicatedClientRuntimeStatus? _clientStatus;
@@ -88,7 +91,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private IScreenProjector? _projector;
     private PresentationFrameReceiptBuffer? _presentationReceipts;
     private PresenterEntityRuntime? _performerRuntime;
-    private InputOrderMappingSystem? _inputOrderMapping;
+    private InteractionContextProfileRegistry? _contextProfiles;
     private int _infantryBodyTemplateId;
     private GestureState _gesture;
     private ClientStage _clientStage = ClientStage.Connecting;
@@ -235,15 +238,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void BindClientServices()
     {
-        if (_inputOrderMapping != null)
+        if (_contextProfiles != null)
         {
             return;
         }
 
         PlayerInputHandler input = _engine.GetService(CoreServiceKeys.InputHandler)
             ?? throw new InvalidOperationException("Acceptance client requires PlayerInputHandler.");
-        InteractionActionBindings bindings = _engine.GetService(CoreServiceKeys.InteractionActionBindings)
-            ?? throw new InvalidOperationException("Acceptance client requires interaction action bindings.");
         AuthoritativeGroundPointerOverride groundOverride = _engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
             ?? throw new InvalidOperationException("Acceptance client requires authoritative ground pointer override.");
         IReplicatedClientCommandPort commandPort = _engine.GetService(CoreServiceKeys.ReplicatedClientCommandPort)
@@ -274,11 +275,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 "Acceptance client cannot resolve the frontline infantry body performer definition.");
         }
-        InputOrderMappingSystem inputOrderMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping)
-            ?? throw new InvalidOperationException("Acceptance client requires the active input-order mapping system.");
+        InteractionContextProfileRegistry contextProfiles = _engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+            ?? throw new InvalidOperationException("Acceptance client requires the interaction context profile registry.");
 
         _input = input;
-        _bindings = bindings;
         _groundOverride = groundOverride;
         _commandPort = commandPort;
         _clientStatus = clientStatus;
@@ -286,11 +286,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _projector = projector;
         _presentationReceipts = presentationReceipts;
         _performerRuntime = performerRuntime;
-        _inputOrderMapping = inputOrderMapping;
+        _contextProfiles = contextProfiles;
         _infantryBodyTemplateId = infantryBodyTemplateId;
 
-        RequireInputAction(bindings.ConfirmActionId);
-        RequireInputAction(bindings.CommandActionId);
+        RequireInputAction(SelectBeginActionId);
+        RequireInputAction(CommandActionId);
         RequireInputAction(ReservedInputActionIds.PointerPos);
         RequireInputAction(_frontline.ReadyActionId);
         RequireInputAction("SkillQ");
@@ -1384,7 +1384,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException("Cannot select a dead replicated entity.");
         }
         BeginPointerGesture(
-            _bindings!.ConfirmActionId,
+            SelectBeginActionId,
             ProjectEntity(entity),
             worldCm: null,
             additive,
@@ -1400,7 +1400,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void BeginEntityCommand(string actionName, Entity target, Vector2 screen)
     {
         BeginPointerGesture(
-            _bindings!.CommandActionId,
+            CommandActionId,
             screen,
             GetWorldPosition(target),
             additive: false,
@@ -1424,7 +1424,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             throw new InvalidOperationException("The training input did not commit a network command batch.");
         }
-        if (_inputOrderMapping!.IsAiming)
+        if (IsForegroundContextActive())
         {
             throw new InvalidOperationException("Targetless infantry training incorrectly entered an aiming interaction.");
         }
@@ -1589,7 +1589,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void BeginGroundCommand(string actionName, WorldCmInt2 target, Vector2 screen)
     {
         BeginPointerGesture(
-            _bindings!.CommandActionId,
+            CommandActionId,
             screen,
             target,
             additive: false,
@@ -1642,7 +1642,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 throw new InvalidOperationException("A prior authoritative ground pointer override was not consumed.");
             }
             WorldCmInt2 point = worldCm.Value;
-            _groundOverride.Set(_bindings!.CommandActionId, new Vector2(point.X, point.Y));
+            _groundOverride.Set(CommandActionId, new Vector2(point.X, point.Y));
         }
         if (screen.HasValue)
         {
@@ -1685,18 +1685,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
                     _commandPort.LastSubmitResult != ReplicatedClientCommandSubmitResult.Submitted ||
                     _commandPort.LastSubmittedBatchSequence == 0)
                 {
-                    InputOrderActivationResult activation = _inputOrderMapping?.LastActivationResult ?? default;
-                    // InteractionContextStack 已随 #1306 路线④退役(投影吸收);命令失败诊断不再有栈可读。
-                    string stackInfo = "stack=retired(#1306)";
                     throw new InvalidOperationException(
                         $"Input action '{_pendingCommandAction}' did not produce exactly one submitted network command batch; " +
                         $"revision={_commandPort.SubmissionRevision}, result={_commandPort.LastSubmitResult}, " +
                         $"sequence={_commandPort.LastSubmittedBatchSequence}, " +
-                        $"activation={activation.State}, orderId={activation.OrderId}, rejection={activation.Rejection}, " +
-                        $"aiming={_inputOrderMapping?.IsAiming}, {stackInfo}.");
+                        $"foregroundContext={IsForegroundContextActive()}.");
                 }
                 _pendingCommandSequence = _commandPort.LastSubmittedBatchSequence;
-                CaptureSubmittedAttackTarget();
             }
 
             if (_gesture.Screen.HasValue)
@@ -1721,42 +1716,20 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return true;
     }
 
-    private void CaptureSubmittedAttackTarget()
+    private bool IsForegroundContextActive()
     {
-        bool attacksInfantry = string.Equals(
-            _pendingCommandAction,
-            "AttackEnemyInfantry",
-            StringComparison.Ordinal);
-        bool attacksCore = string.Equals(
-            _pendingCommandAction,
-            "AttackEnemyCore",
-            StringComparison.Ordinal);
-        if (!attacksInfantry && !attacksCore)
+        Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+        Span<int> active = stackalloc int[16];
+        int count = InteractionContextInstanceRuntime.CopyActiveContextIdsNewestFirst(_world, rep, active);
+        for (int i = 0; i < count; i++)
         {
-            return;
+            if (_contextProfiles!.IsForeground(active[i]))
+            {
+                return true;
+            }
         }
 
-        InputOrderActivationResult activation = _inputOrderMapping!.LastActivationResult;
-        Entity target = activation.Target;
-        int expectedEnemySideIndex = 1 - _localSideIndex;
-        if (activation.State != InputOrderActivationState.Submitted ||
-            target == Entity.Null ||
-            !_world.IsAlive(target) ||
-            (attacksInfantry
-                ? !_world.Has<FrontlineInfantry>(target)
-                : !_world.Has<FrontlineCore>(target)) ||
-            !_world.TryGet(target, out FrontlineParticipant participant) ||
-            participant.SideIndex != expectedEnemySideIndex)
-        {
-            throw new InvalidOperationException(
-                $"{_pendingCommandAction} did not submit one live opposing " +
-                $"{(attacksInfantry ? "infantry" : "core")} target through the active input mapping.");
-        }
-
-        _attackTarget = target;
-        _evidence.Gameplay.AttackTargetHandle = FormatHandle(target);
-        _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(target);
-        _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(target, _healthAttributeId);
+        return false;
     }
 
     private bool TryCompletePendingCommand()
@@ -2053,7 +2026,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void CaptureCommandActors()
     {
         Entity owner = RequireLocalPlayerEntity();
-        _commandActorCount = _collections!.CopyEntities(owner, "collection.command.source", _commandActors);
+        _commandActorCount = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _commandActors);
         if (_commandActorCount <= 0)
         {
             throw new InvalidOperationException("Player input command has no formally selected command-source actors.");
@@ -2102,7 +2075,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private string[] CaptureSelectedHandles()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         var handles = new string[count];
         for (int i = 0; i < count; i++)
         {
@@ -2114,7 +2087,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private AcceptancePositionEvidence[] CaptureSelectedPositions()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         var result = new AcceptancePositionEvidence[count];
         for (int i = 0; i < count; i++)
         {
@@ -2133,7 +2106,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private void RequireSelectedSet(ReadOnlySpan<Entity> expected)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         if (count != expected.Length)
         {
             throw new InvalidOperationException(
@@ -2271,7 +2244,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -2296,7 +2269,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private bool AreSelectedActorsVisibleWithPresenterPayload()
     {
         Entity owner = RequireLocalPlayerEntity();
-        int count = _collections!.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections!.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         if (count <= 0)
         {
             return false;
@@ -3130,7 +3103,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return Array.Empty<AcceptanceSelectedActorCheckpoint>();
         }
 
-        int count = _collections.CopyEntities(owner, "collection.command.source", _entityScratch);
+        int count = _collections.CopyEntities(owner, InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"), _entityScratch);
         var selected = new AcceptanceSelectedActorCheckpoint[count];
         for (int i = 0; i < count; i++)
         {

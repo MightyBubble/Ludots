@@ -35,11 +35,11 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
     private static readonly string[] ShowcaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         "FourXDemoMod",
         "EntityCommandPanelMod",
         "RtsDemoMod",
+        "AimInteractionMod",
         "MobaDemoMod",
         "EntityInfoPanelsMod",
         "GenreInfoShowcaseMod"
@@ -172,7 +172,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
 
         PresentationAcceptanceUiHostInstaller.Install(engine, 1920f, 1080f);
@@ -190,10 +190,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
     {
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);
@@ -333,7 +330,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         builder.AppendLine("## Scenario Card");
         builder.AppendLine("- Goal: validate one localized cross-genre info-panel runtime for 4X, RTS, and MOBA selection surfaces.");
         builder.AppendLine("- Map: `genre_info_showcase`");
-        builder.AppendLine("- Mods: `LudotsCoreMod`, `CoreInputMod`, `CameraProfilesMod`, `FourXDemoMod`, `EntityCommandPanelMod`, `RtsDemoMod`, `MobaDemoMod`, `EntityInfoPanelsMod`, `GenreInfoShowcaseMod`");
+        builder.AppendLine("- Mods: `LudotsCoreMod`, `CameraProfilesMod`, `FourXDemoMod`, `EntityCommandPanelMod`, `RtsDemoMod`, `MobaDemoMod`, `EntityInfoPanelsMod`, `GenreInfoShowcaseMod`");
         builder.AppendLine("- Viewport: `1920x1080` headless Skia export.");
         builder.AppendLine("- Evidence: four screenshots plus trace, battle report, and path mermaid.");
         builder.AppendLine();

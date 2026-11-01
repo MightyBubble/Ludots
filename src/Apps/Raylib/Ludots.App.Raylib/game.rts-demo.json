@@ -1,7 +1,6 @@
 {
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/EntityCommandPanelMod",
     "../../../../../../../mods/showcases/rts_demo/RtsDemoMod"
   ]

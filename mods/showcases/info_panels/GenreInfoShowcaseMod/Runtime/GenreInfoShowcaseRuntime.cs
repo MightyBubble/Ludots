@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.Core.Input.Config;
 
 namespace GenreInfoShowcaseMod.Runtime
 {
@@ -175,7 +176,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 Array.Resize(ref members, written);
             }
 
-            ReplaceCommandSource(collections, viewer, members, $"Recall control group {groupIndex}");
+            ReplaceCommandSource(engine, collections, viewer, members, $"Recall control group {groupIndex}");
             ReplaceCollection(
                 collections,
                 viewer,
@@ -183,7 +184,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 EntityCollectionRoleKind.Display,
                 members,
                 "Formation view");
-            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = "collection.command.source";
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
             return true;
         }
@@ -195,7 +196,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return false;
             }
 
-            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = "collection.command.source";
+            engine.GlobalContext[GenreInfoShowcaseIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             return true;
         }
 
@@ -208,7 +209,7 @@ namespace GenreInfoShowcaseMod.Runtime
 
             if (!collections.TryGetView(viewer, GenreInfoShowcaseIds.FormationCollectionKey, out _))
             {
-                Entity[] members = SnapshotCollection(collections, viewer, "collection.command.source");
+                Entity[] members = SnapshotCollection(collections, viewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
                 ReplaceCollection(
                     collections,
                     viewer,
@@ -446,7 +447,7 @@ namespace GenreInfoShowcaseMod.Runtime
                    keyObj is string key &&
                    !string.IsNullOrWhiteSpace(key)
                 ? key
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
         }
 
         private static Entity[] SnapshotCollection(EntityCollectionStore collections, Entity viewer, string key)
@@ -469,13 +470,14 @@ namespace GenreInfoShowcaseMod.Runtime
         }
 
         private static void ReplaceCommandSource(
+            GameEngine engine,
             EntityCollectionStore collections,
             Entity viewer,
             ReadOnlySpan<Entity> members,
             string summary)
         {
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 viewer,

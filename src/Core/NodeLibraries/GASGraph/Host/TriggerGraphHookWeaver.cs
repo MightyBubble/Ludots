@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
@@ -41,6 +42,51 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
     public static class TriggerGraphHookWeaver
     {
         public const string HookCycleError = "GAS.GRAPH.ERR.HookInvokeCycle";
+
+        /// <summary>
+        /// Mod id carried by a config source uri (<c>{modId}:assets/...</c>, or the token
+        /// before the first colon for core assets). Empty when the uri has no owner.
+        /// </summary>
+        public static string OwningMod(string? sourceUri)
+        {
+            if (string.IsNullOrWhiteSpace(sourceUri))
+            {
+                return string.Empty;
+            }
+
+            const string marker = ":assets/";
+            int assets = sourceUri.IndexOf(marker, StringComparison.Ordinal);
+            if (assets > 0)
+            {
+                return sourceUri.Substring(0, assets);
+            }
+
+            int colon = sourceUri.IndexOf(':');
+            return colon > 0 ? sourceUri.Substring(0, colon) : string.Empty;
+        }
+
+        private static void RequireSameMod(HookRecord hook, IReadOnlyDictionary<string, string> owningMods)
+        {
+            string callerMod = RequireOwningMod(owningMods, hook.CallerGraphId);
+            string targetMod = RequireOwningMod(owningMods, hook.Target.TargetGraphId);
+            if (!string.Equals(callerMod, targetMod, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraphHookWeaver: mod '{callerMod}' graph '{hook.CallerGraphId}' cannot hook graph " +
+                    $"'{hook.Target.TargetGraphId}' declared by mod '{targetMod}'.");
+            }
+        }
+
+        private static string RequireOwningMod(IReadOnlyDictionary<string, string> owningMods, string graphId)
+        {
+            if (!owningMods.TryGetValue(graphId, out string? mod) || string.IsNullOrWhiteSpace(mod))
+            {
+                throw new InvalidOperationException(
+                    $"TriggerGraphHookWeaver: graph '{graphId}' has no owning mod; hook weaving needs the registration source.");
+            }
+
+            return mod;
+        }
 
         private sealed class HookRecord
         {
@@ -86,7 +132,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityCollectionStore? entityCollections = null,
             BuiltinHandlerRegistry? builtinHandlers = null,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            IReadOnlyDictionary<string, string>? owningMods = null,
+            InputCollectionKeyDeclarations? collectionRoles = null)
         {
             if (registry == null) throw new ArgumentNullException(nameof(registry));
             if (documents == null) throw new ArgumentNullException(nameof(documents));
@@ -115,6 +163,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return;
             }
 
+            if (owningMods == null)
+            {
+                throw new InvalidOperationException(
+                    "TriggerGraphHookWeaver: hook entries require each graph's owning mod; none was supplied.");
+            }
+
+            for (int i = 0; i < hooks.Count; i++)
+            {
+                RequireSameMod(hooks[i], owningMods);
+            }
+
             DetectCycles(hooks);
 
             var byTarget = new Dictionary<string, List<HookRecord>>(StringComparer.OrdinalIgnoreCase);
@@ -134,9 +193,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             foreach (KeyValuePair<string, List<HookRecord>> pair in byTarget)
             {
                 pair.Value.Sort(CompareHookOrder);
+                string sourceMod = owningMods.TryGetValue(pair.Key, out string? mod) ? mod : string.Empty;
                 WeaveTarget(
                     registry, pair.Key, byId[pair.Key], pair.Value,
-                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums, opRegistry);
+                    symbolResolver, eventSchemas, entityCollections, builtinHandlers, cloneOptions, enums, opRegistry,
+                    collectionRoles, sourceMod);
             }
         }
 
@@ -376,7 +437,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             BuiltinHandlerRegistry? builtinHandlers,
             JsonSerializerOptions cloneOptions,
             Ludots.Core.Scripting.EnumCatalog? enums = null,
-            GasGraphOpRegistry? opRegistry = null)
+            GasGraphOpRegistry? opRegistry = null,
+            InputCollectionKeyDeclarations? collectionRoles = null,
+            string? sourceMod = null)
         {
             // Group hooks by (resolved node, position): every group is one chain on the
             // anchor, ordered by (priority, compile order) as sorted by the caller.
@@ -501,7 +564,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(merged, eventSchemas, enums, opRegistry);
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(
+                merged, eventSchemas, enums, opRegistry, collectionRoles, sourceMod);
             List<GraphDiagnostic> errors = compiled.Diagnostics.Where(d => d.Severity == GraphDiagnosticSeverity.Error).ToList();
             if (errors.Count > 0 || compiled.Package == null)
             {
@@ -511,7 +575,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             GraphProgramPackage package = compiled.Package.Value;
-            GraphProgramSymbolPatcher.Patch(package.Symbols, package.Program, symbolResolver, entityCollections, builtinHandlers);
+            GraphProgramSymbolPatcher.Patch(
+                package.Symbols, package.Program, symbolResolver, entityCollections, builtinHandlers, collectionRoles, sourceMod, targetGraphId);
+            GraphProgramSymbolPatcher.PatchInvokeGraphKeys(package.Symbols, package.Program);
 
             int graphId = GraphIdRegistry.GetId(targetGraphId);
             registry.ReplaceProgram(
@@ -709,6 +775,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             foreach (GraphControlFlowValueEdge edge in fragment.ValueEdges)
             {
+                // HaltReturnInt terminals are not copied; their value input has no consumer
+                // once control is handed to the continuation.
+                if (fragment.DroppedHaltNodes.Contains(edge.To) || fragment.DroppedHaltNodes.Contains(edge.From))
+                {
+                    continue;
+                }
+
                 merged.ValueEdges.Add(new GraphControlFlowValueEdge(
                     PrefixedId(hook.CallerGraphId, edge.From),
                     edge.FromPort,

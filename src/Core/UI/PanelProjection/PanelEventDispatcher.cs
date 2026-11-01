@@ -153,7 +153,7 @@ namespace Ludots.Core.UI.PanelProjection
                 world.Add(contextEntity, new BlackboardIntBuffer());
             }
 
-            int keyId = Gameplay.GAS.Registry.ConfigKeyRegistry.Register(key);
+            int keyId = Gameplay.GAS.Orders.OrderBlackboardKeyRegistry.Resolve(key);
             world.Get<BlackboardIntBuffer>(contextEntity).Set(keyId, value);
         }
     }

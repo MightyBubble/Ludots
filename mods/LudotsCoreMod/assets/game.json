@@ -1,8 +1,5 @@
 {
   "startupMapId": "entry",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
   "presentation": {
     "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 65536,
@@ -58,6 +55,7 @@
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0,
+      "interactionContextId": "interaction.context.minimap",
       "actions": {
         "zoom": "Minimap.Zoom"
       }
@@ -78,11 +76,6 @@
     "attributes": {
       "health": "Health"
     }
-  },
-  "interactionActions": {
-    "confirmActionId": "Select.Begin",
-    "commandActionId": "Command",
-    "cancelActionId": "Cancel"
   },
   "commandSource": {
     "targetFilter": {

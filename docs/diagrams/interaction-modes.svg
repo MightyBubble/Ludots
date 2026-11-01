@@ -43,7 +43,7 @@ z
 " clip-path="url(#pda6ca82707)" style="fill: #f5f0e8; stroke-dasharray: 6,4; stroke-dashoffset: 0; stroke: #b39b7d; stroke-linejoin: miter"/>
    </g>
    <g id="text_1">
-    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="40.32" y="699.593437" transform="rotate(-0 40.32 699.593437)">技能施放模式决策流程</text>
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #5b6470" x="40.32" y="699.593437" transform="rotate(-0 40.32 699.593437)">手势偏好与评分根</text>
    </g>
    <g id="patch_3">
     <path d="M 34.56 93.6
@@ -215,127 +215,127 @@ z
 " clip-path="url(#pda6ca82707)" style="fill: #f0f0ea; stroke: #999a7e; stroke-linejoin: miter"/>
    </g>
    <g id="text_2">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="194.4" y="115.112188" transform="rotate(-0 194.4 115.112188)">SmartCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="194.4" y="115.112188" transform="rotate(-0 194.4 115.112188)">aim.smart</text>
    </g>
    <g id="text_3">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="131.993625" transform="rotate(-0 194.4 131.993625)">智能施法</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="131.993625" transform="rotate(-0 194.4 131.993625)">即时施放</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="159.353625" transform="rotate(-0 194.4 159.353625)">1. 按下立即施放</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="159.353625" transform="rotate(-0 194.4 159.353625)">1. 激活即 smart_cast</text>
    </g>
    <g id="text_5">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="173.033625" transform="rotate(-0 194.4 173.033625)">2. 无需目标确认</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="173.033625" transform="rotate(-0 194.4 173.033625)">2. 提交后关掉自身</text>
    </g>
    <g id="text_6">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="186.713625" transform="rotate(-0 194.4 186.713625)">3. 响应速度最快</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="186.713625" transform="rotate(-0 194.4 186.713625)">3. 默认偏好是它</text>
    </g>
    <g id="text_7">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="214.073625" transform="rotate(-0 194.4 214.073625)">Pros: 操作最简 · 响应极快</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="214.073625" transform="rotate(-0 194.4 214.073625)">图 graph.aim.smart_cast</text>
    </g>
    <g id="text_8">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="227.753625" transform="rotate(-0 194.4 227.753625)">Cons: 精度较低</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="227.753625" transform="rotate(-0 194.4 227.753625)">状态 interaction.context.aim.smart</text>
    </g>
    <g id="text_9">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="255.113625" transform="rotate(-0 194.4 255.113625)">Use Case: 位移技能 / 自我增益</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="194.4" y="255.113625" transform="rotate(-0 194.4 255.113625)">位移 / 自我增益</text>
    </g>
    <g id="text_10">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="554.4" y="115.112188" transform="rotate(-0 554.4 115.112188)">AimCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="554.4" y="115.112188" transform="rotate(-0 554.4 115.112188)">aim.click</text>
    </g>
    <g id="text_11">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="131.993625" transform="rotate(-0 554.4 131.993625)">瞄准施法</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="131.993625" transform="rotate(-0 554.4 131.993625)">点击确认</text>
    </g>
    <g id="text_12">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="159.353625" transform="rotate(-0 554.4 159.353625)">1. 按下显示瞄准范围</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="159.353625" transform="rotate(-0 554.4 159.353625)">1. 激活跑 indicate</text>
    </g>
    <g id="text_13">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="173.033625" transform="rotate(-0 554.4 173.033625)">2. 点击确认施放</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="173.033625" transform="rotate(-0 554.4 173.033625)">2. confirm 确认落点</text>
    </g>
    <g id="text_14">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="186.713625" transform="rotate(-0 554.4 186.713625)">3. 可随时取消瞄准</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="186.713625" transform="rotate(-0 554.4 186.713625)">3. cancel 取消</text>
    </g>
    <g id="text_15">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="214.073625" transform="rotate(-0 554.4 214.073625)">Pros: 精度最高 · 可控性强</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="214.073625" transform="rotate(-0 554.4 214.073625)">图 graph.aim.confirm</text>
    </g>
    <g id="text_16">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="227.753625" transform="rotate(-0 554.4 227.753625)">Cons: 操作稍慢</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="227.753625" transform="rotate(-0 554.4 227.753625)">指示器 graph.aim.indicate</text>
    </g>
    <g id="text_17">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="255.113625" transform="rotate(-0 554.4 255.113625)">Use Case: 指向性技能 / AOE 技能</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="554.4" y="255.113625" transform="rotate(-0 554.4 255.113625)">指向性技能 / AOE</text>
    </g>
    <g id="text_18">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="914.4" y="115.112188" transform="rotate(-0 914.4 115.112188)">ContextScored</text>
    </g>
    <g id="text_19">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="131.993625" transform="rotate(-0 914.4 131.993625)">上下文评分施法</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="131.993625" transform="rotate(-0 914.4 131.993625)">排干时解析槽</text>
    </g>
    <g id="text_20">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="159.353625" transform="rotate(-0 914.4 159.353625)">1. 采集上下文信息</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="159.353625" transform="rotate(-0 914.4 159.353625)">1. 槽是评分根</text>
    </g>
    <g id="text_21">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="173.033625" transform="rotate(-0 914.4 173.033625)">2. 多目标评分排序</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="173.033625" transform="rotate(-0 914.4 173.033625)">2. 排干交给 resolver</text>
    </g>
    <g id="text_22">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="186.713625" transform="rotate(-0 914.4 186.713625)">3. 自动选择最优目标</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="186.713625" transform="rotate(-0 914.4 186.713625)">3. 得到技能和目标</text>
    </g>
    <g id="text_23">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="214.073625" transform="rotate(-0 914.4 214.073625)">Pros: 智能选择 · 适合复杂场景</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="214.073625" transform="rotate(-0 914.4 214.073625)">CommandIntentBufferDrainSystem</text>
    </g>
    <g id="text_24">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="227.753625" transform="rotate(-0 914.4 227.753625)">Cons: 结果不完全可预期</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="227.753625" transform="rotate(-0 914.4 227.753625)">ContextScoredOrderResolver</text>
    </g>
    <g id="text_25">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="255.113625" transform="rotate(-0 914.4 255.113625)">Use Case: 团战技能 / 智能辅助</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="914.4" y="255.113625" transform="rotate(-0 914.4 255.113625)">context group 的根槽</text>
    </g>
    <g id="text_26">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1260" y="115.112188" transform="rotate(-0 1260 115.112188)">PressReleaseAimCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1260" y="115.112188" transform="rotate(-0 1260 115.112188)">aim.release</text>
    </g>
    <g id="text_27">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="131.993625" transform="rotate(-0 1260 131.993625)">按住瞄准 · 松开施放</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="131.993625" transform="rotate(-0 1260 131.993625)">松开确认</text>
    </g>
    <g id="text_28">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="159.353625" transform="rotate(-0 1260 159.353625)">1. 按下开始瞄准</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="159.353625" transform="rotate(-0 1260 159.353625)">1. 激活跑 indicate</text>
    </g>
    <g id="text_29">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="173.033625" transform="rotate(-0 1260 173.033625)">2. 持续调整目标</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="173.033625" transform="rotate(-0 1260 173.033625)">2. 按住继续跟踪</text>
    </g>
    <g id="text_30">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="186.713625" transform="rotate(-0 1260 186.713625)">3. 松开确认施放</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="186.713625" transform="rotate(-0 1260 186.713625)">3. release_confirm</text>
    </g>
    <g id="text_31">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="214.073625" transform="rotate(-0 1260 214.073625)">Pros: 精度高 · 手感好</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="214.073625" transform="rotate(-0 1260 214.073625)">图 graph.aim.release_confirm</text>
    </g>
    <g id="text_32">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="227.753625" transform="rotate(-0 1260 227.753625)">Cons: 操作较复杂</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="227.753625" transform="rotate(-0 1260 227.753625)">与点击共用 cancel</text>
    </g>
    <g id="text_33">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="255.113625" transform="rotate(-0 1260 255.113625)">Use Case: 狙击技能 / 蓄力技能</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1260" y="255.113625" transform="rotate(-0 1260 255.113625)">按住再松手的瞄准</text>
    </g>
    <g id="text_34">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="144" y="846.632187" transform="rotate(-0 144 846.632187)">Input Event</text>
    </g>
    <g id="text_35">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="381.6" y="846.632187" transform="rotate(-0 381.6 846.632187)">有明确目标?</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="381.6" y="846.632187" transform="rotate(-0 381.6 846.632187)">槽是评分根?</text>
    </g>
    <g id="text_36">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="648" y="846.632187" transform="rotate(-0 648 846.632187)">需要快速施放?</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="648" y="846.632187" transform="rotate(-0 648 846.632187)">偏好是 smart?</text>
    </g>
    <g id="text_37">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="914.4" y="846.632187" transform="rotate(-0 914.4 846.632187)">需要精确瞄准?</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="914.4" y="846.632187" transform="rotate(-0 914.4 846.632187)">偏好是 click?</text>
    </g>
    <g id="text_38">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1173.6" y="846.632187" transform="rotate(-0 1173.6 846.632187)">蓄力 / 按住?</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1173.6" y="846.632187" transform="rotate(-0 1173.6 846.632187)">偏好是 release?</text>
    </g>
    <g id="text_39">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="381.6" y="987.032187" transform="rotate(-0 381.6 987.032187)">ContextScored</text>
    </g>
    <g id="text_40">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="648" y="987.032187" transform="rotate(-0 648 987.032187)">SmartCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="648" y="987.032187" transform="rotate(-0 648 987.032187)">aim.smart</text>
    </g>
    <g id="text_41">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="914.4" y="987.032187" transform="rotate(-0 914.4 987.032187)">AimCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="914.4" y="987.032187" transform="rotate(-0 914.4 987.032187)">aim.click</text>
    </g>
    <g id="text_42">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1173.6" y="987.032187" transform="rotate(-0 1173.6 987.032187)">PressReleaseAimCast</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1173.6" y="987.032187" transform="rotate(-0 1173.6 987.032187)">aim.release</text>
    </g>
    <g id="line2d_1">
     <path d="M 223.2 846
@@ -458,10 +458,10 @@ z
 " clip-path="url(#pda6ca82707)" style="fill: #8a94a3"/>
    </g>
    <g id="text_43">
-    <text style="font-weight: 700; font-size: 20px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #181b20" x="720" y="40.4675" transform="rotate(-0 720 40.4675)">4 种技能施放交互模式</text>
+    <text style="font-weight: 700; font-size: 20px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #181b20" x="720" y="40.4675" transform="rotate(-0 720 40.4675)">三种手势和评分解析</text>
    </g>
    <g id="text_44">
-    <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="720" y="68.6325" transform="rotate(-0 720 68.6325)">Interaction Mode 对比 / 施放方式设计</text>
+    <text style="font-size: 12px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="720" y="68.6325" transform="rotate(-0 720 68.6325)">pref.aim.cast_mode / 评分在排干</text>
    </g>
    <g id="text_45">
     <g id="patch_24">
@@ -477,7 +477,7 @@ Q 507.39 853.637852 510.05 853.637852
 z
 " style="fill: #ffffff; opacity: 0.92"/>
     </g>
-    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="514.8" y="848.616211" transform="rotate(-0 514.8 848.616211)">是</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="514.8" y="848.616211" transform="rotate(-0 514.8 848.616211)">否</text>
    </g>
    <g id="text_46">
     <g id="patch_25">
@@ -525,7 +525,7 @@ Q 374.19 925.637852 376.85 925.637852
 z
 " style="fill: #ffffff; opacity: 0.92"/>
     </g>
-    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="381.6" y="920.616211" transform="rotate(-0 381.6 920.616211)">否</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #4a525e" x="381.6" y="920.616211" transform="rotate(-0 381.6 920.616211)">是</text>
    </g>
    <g id="text_49">
     <g id="patch_28">

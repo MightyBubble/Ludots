@@ -5,7 +5,6 @@
   "TargetFps": 60,
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/AIInspectorMod",
     "../../../../../../../mods/showcases/utility_autocast/UtilityAutocastShowcaseMod"
   ]

@@ -1,11 +1,19 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.MapTriggers;
+using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
+using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
@@ -23,6 +31,9 @@ namespace Ludots.Core.Engine
         private const string MassNavigationMovePlanOrderAdapterInstalledKey =
             "GameEngine.MassNavigationMovePlanOrderAdapterInstalled";
 
+        private static readonly QueryDescription LocalInputConsumingContextQuery =
+            new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
+
         public MapSession CurrentMapSession { get; private set; }
 
         // Board-scoped query facades (#1567 slice 2): one shared world partition, per-board
@@ -30,6 +41,9 @@ namespace Ludots.Core.Engine
         // converter/hex metrics/extent, so hex satellites answer with their own topology.
         private readonly Dictionary<string, Ludots.Core.Spatial.SpatialQueryService> _boardScopedQueries =
             new(System.StringComparer.OrdinalIgnoreCase);
+
+        private readonly List<PendingControlSchemeChange> _pendingControlSchemeChanges = new();
+        private bool _flushingControlSchemeChanges;
 
         public bool TryGetBoardScopedSpatialQueries(string boardName, out Ludots.Core.Spatial.SpatialQueryService service)
         {
@@ -287,6 +301,283 @@ namespace Ludots.Core.Engine
             }
 
             return ctx;
+        }
+
+        private struct PendingControlSchemeChange
+        {
+            public string SeatId;
+            public MapId MapId;
+            public int OldSchemeId;
+            public int NewSchemeId;
+        }
+
+        /// <summary>
+        /// Publish <see cref="GameEvents.ControlSchemeChanged"/> for one seat. Scheme payload
+        /// ints are ConfigKey ids of the scheme name (0 when there was no previous scheme).
+        /// A change that arrives before any map subscriber exists is held and fired from
+        /// <see cref="TriggerManager.MapTriggerTableChanged"/>, because context mounts register
+        /// on a later tick than seat activation.
+        /// </summary>
+        private void PublishControlSchemeChanged(ClientLocalSeat seat, int oldSchemeId, int newSchemeId)
+        {
+            if (oldSchemeId == newSchemeId)
+            {
+                return;
+            }
+
+            if (!TryResolveSchemeChangeTarget(seat, out MapSession session, out Entity rep))
+            {
+                DropPendingControlSchemeChange(seat.SeatId);
+                return;
+            }
+
+            if (!TriggerManager.HasMapEventSubscribers(session.MapId, GameEvents.ControlSchemeChanged))
+            {
+                StashPendingControlSchemeChange(seat.SeatId, session.MapId, oldSchemeId, newSchemeId);
+                return;
+            }
+
+            DropPendingControlSchemeChange(seat.SeatId);
+            FireControlSchemeChanged(session, seat, rep, oldSchemeId, newSchemeId);
+        }
+
+        private void FlushPendingControlSchemeChanges(MapId mapId)
+        {
+            if (_flushingControlSchemeChanges || _pendingControlSchemeChanges.Count == 0)
+            {
+                return;
+            }
+
+            _flushingControlSchemeChanges = true;
+            try
+            {
+                ClientLocalSeatRegistry? seats = GetService(CoreServiceKeys.ClientLocalSeatRegistry);
+                for (int i = _pendingControlSchemeChanges.Count - 1; i >= 0; i--)
+                {
+                    PendingControlSchemeChange pending = _pendingControlSchemeChanges[i];
+                    if (pending.MapId != mapId)
+                    {
+                        continue;
+                    }
+
+                    if (seats == null || !seats.TryGet(pending.SeatId, out ClientLocalSeat seat) ||
+                        !TryResolveSchemeChangeTarget(seat, out MapSession session, out Entity rep) ||
+                        session.MapId != mapId)
+                    {
+                        _pendingControlSchemeChanges.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (!TriggerManager.HasMapEventSubscribers(mapId, GameEvents.ControlSchemeChanged))
+                    {
+                        continue;
+                    }
+
+                    _pendingControlSchemeChanges.RemoveAt(i);
+                    FireControlSchemeChanged(session, seat, rep, pending.OldSchemeId, pending.NewSchemeId);
+                }
+            }
+            finally
+            {
+                _flushingControlSchemeChanges = false;
+            }
+        }
+
+        private void StashPendingControlSchemeChange(string seatId, MapId mapId, int oldSchemeId, int newSchemeId)
+        {
+            for (int i = 0; i < _pendingControlSchemeChanges.Count; i++)
+            {
+                if (!string.Equals(_pendingControlSchemeChanges[i].SeatId, seatId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                PendingControlSchemeChange updated = _pendingControlSchemeChanges[i];
+                updated.MapId = mapId;
+                updated.OldSchemeId = oldSchemeId;
+                updated.NewSchemeId = newSchemeId;
+                _pendingControlSchemeChanges[i] = updated;
+                return;
+            }
+
+            _pendingControlSchemeChanges.Add(new PendingControlSchemeChange
+            {
+                SeatId = seatId,
+                MapId = mapId,
+                OldSchemeId = oldSchemeId,
+                NewSchemeId = newSchemeId,
+            });
+        }
+
+        private void DropPendingControlSchemeChange(string seatId)
+        {
+            for (int i = _pendingControlSchemeChanges.Count - 1; i >= 0; i--)
+            {
+                if (string.Equals(_pendingControlSchemeChanges[i].SeatId, seatId, StringComparison.Ordinal))
+                {
+                    _pendingControlSchemeChanges.RemoveAt(i);
+                }
+            }
+        }
+
+        private bool TryResolveSchemeChangeTarget(ClientLocalSeat seat, out MapSession session, out Entity rep)
+        {
+            session = null!;
+            rep = Entity.Null;
+            if (!seat.HasPossession)
+            {
+                return false;
+            }
+
+            rep = seat.PossessedRep;
+            if (!World.IsAlive(rep) || !World.TryGet(rep, out MapEntity mapEntity))
+            {
+                return false;
+            }
+
+            MapSession? found = MapSessions?.GetSession(mapEntity.MapId);
+            if (found == null)
+            {
+                return false;
+            }
+
+            session = found;
+            return true;
+        }
+
+        private void FireControlSchemeChanged(MapSession session, ClientLocalSeat seat, Entity rep, int oldSchemeId, int newSchemeId)
+        {
+            ControlSchemeRuntime schemes = GetService(CoreServiceKeys.ControlSchemeRuntime)
+                ?? throw new InvalidOperationException(
+                    "CONTROL_SCHEME.ERR.ChangedWithoutRuntime: control scheme runtime is not registered.");
+            string newName = schemes.SchemeIdRegistry.GetName(newSchemeId);
+            if (string.IsNullOrEmpty(newName))
+            {
+                throw new InvalidOperationException(
+                    $"CONTROL_SCHEME.ERR.ChangedUnnamed: scheme id {newSchemeId} has no name.");
+            }
+
+            int oldKey = 0;
+            if (oldSchemeId != 0)
+            {
+                string oldName = schemes.SchemeIdRegistry.GetName(oldSchemeId);
+                if (string.IsNullOrEmpty(oldName))
+                {
+                    throw new InvalidOperationException(
+                        $"CONTROL_SCHEME.ERR.ChangedUnnamed: scheme id {oldSchemeId} has no name.");
+                }
+
+                oldKey = ConfigKeyRegistry.Register(oldName);
+            }
+
+            ScriptContext ctx = CreateContext();
+            ctx.Set(CoreServiceKeys.MapId, session.MapId);
+            ctx.Set(CoreServiceKeys.MapSession, session);
+            if (session.MapConfig?.Tags != null)
+            {
+                ctx.Set(CoreServiceKeys.MapTags, session.MapConfig.Tags);
+            }
+
+            ctx.Set(MapTriggerEventPayloadKeys.SeatId, seat.SeatId);
+            ctx.Set(MapTriggerEventPayloadKeys.Rep, rep);
+            ctx.Set(MapTriggerEventPayloadKeys.OldSchemeId, oldKey);
+            ctx.Set(MapTriggerEventPayloadKeys.NewSchemeId, ConfigKeyRegistry.Register(newName));
+            ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, rep);
+            TriggerManager.FireMapEvent(session.MapId, GameEvents.ControlSchemeChanged, ctx);
+        }
+
+        private void WireEntityCollectionMembershipEvents(EntityCollectionStore store)
+        {
+            store.MembershipNotifyProbe = owner =>
+            {
+                if (!World.IsAlive(owner) || !World.TryGet(owner, out MapEntity mapEntity))
+                {
+                    return false;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                return session != null &&
+                    TriggerManager.HasMapEventSubscribers(session.MapId, GameEvents.EntityCollectionMembershipChanged);
+            };
+            store.MembershipChanged = (owner, keyId, member, _) =>
+            {
+                if (!World.IsAlive(owner) || !World.TryGet(owner, out MapEntity mapEntity))
+                {
+                    return;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                if (session == null ||
+                    !TriggerManager.HasMapEventSubscribers(session.MapId, GameEvents.EntityCollectionMembershipChanged))
+                {
+                    return;
+                }
+
+                string keyName = store.KeyRegistry.GetName(keyId);
+                if (string.IsNullOrEmpty(keyName))
+                {
+                    throw new InvalidOperationException(
+                        $"COLLECTION.ERR.MembershipEventUnknownKey: collection key id {keyId} has no name.");
+                }
+
+                ScriptContext ctx = CreateContext();
+                ctx.Set(CoreServiceKeys.MapId, session.MapId);
+                ctx.Set(CoreServiceKeys.MapSession, session);
+                if (session.MapConfig?.Tags != null)
+                {
+                    ctx.Set(CoreServiceKeys.MapTags, session.MapConfig.Tags);
+                }
+
+                ctx.Set(MapTriggerEventPayloadKeys.CollectionKeyId, ConfigKeyRegistry.Register(keyName));
+                ctx.Set(MapTriggerEventPayloadKeys.MemberEntity, member);
+                ctx.Set(MapTriggerEventPayloadKeys.OwnerEntity, owner);
+                ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, owner);
+                TriggerManager.FireMapEvent(session.MapId, GameEvents.EntityCollectionMembershipChanged, ctx);
+            };
+        }
+
+        private void WireContextLifecycleEvents(
+            InteractionContextInstanceRuntime runtime,
+            InteractionContextProfileRegistry profiles)
+        {
+            runtime.ContextLifecycleDispatcher = (kind, subject, profileId) =>
+            {
+                EventKey eventKey = kind == PresentationEventKind.ContextActivated
+                    ? GameEvents.ContextActivated
+                    : kind == PresentationEventKind.ContextDeactivated
+                        ? GameEvents.ContextDeactivated
+                        : throw new InvalidOperationException(
+                            $"GAS.GRAPH.ERR.ContextLifecycleKind: {kind} is not a context lifecycle.");
+                if (!World.IsAlive(subject) || !World.TryGet(subject, out MapEntity mapEntity))
+                {
+                    return;
+                }
+
+                MapSession? session = MapSessions?.GetSession(mapEntity.MapId);
+                if (session == null || !TriggerManager.HasMapEventSubscribers(session.MapId, eventKey))
+                {
+                    return;
+                }
+
+                string name = profiles.ProfileIdRegistry.GetName(profileId);
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.ContextLifecycleUnnamed: profile id {profileId} has no name.");
+                }
+
+                ScriptContext ctx = CreateContext();
+                ctx.Set(CoreServiceKeys.MapId, session.MapId);
+                ctx.Set(CoreServiceKeys.MapSession, session);
+                if (session.MapConfig?.Tags != null)
+                {
+                    ctx.Set(CoreServiceKeys.MapTags, session.MapConfig.Tags);
+                }
+
+                ctx.Set(MapTriggerEventPayloadKeys.SourceEntity, subject);
+                ctx.Set(MapTriggerEventPayloadKeys.ContextKeyId, ConfigKeyRegistry.Register(name));
+                TriggerManager.FireMapEvent(session.MapId, eventKey, ctx);
+            };
         }
 
         private void WireMapVariableChangedDispatcher(MapSession session)
@@ -547,11 +838,83 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            RequireLocalSeatsWhenMapConsumesLocalInput(session);
+
             ScriptContext finalCtx = CreateMapEventContext(session);
             Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {session.MapId.Value}...");
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
             CaptureFocusedParticipantOverrides(session);
             TryActivateNetworkRuntime();
+        }
+
+        /// <summary>
+        /// Local input is the registered <see cref="PlayerInputHandler"/> (the same gate
+        /// <c>InputRuntimeSystem</c> uses). An authoritative server does not consume it.
+        /// A headless boot has no handler at map load and does not need seats.
+        /// </summary>
+        private void RequireLocalSeatsWhenMapConsumesLocalInput(MapSession session)
+        {
+            if (GetService(CoreServiceKeys.NetworkProcessRole) == NetworkProcessRole.AuthoritativeServer)
+            {
+                return;
+            }
+
+            if (GetService(CoreServiceKeys.InputHandler) is not PlayerInputHandler)
+            {
+                return;
+            }
+
+            if (!MapConsumesLocalInput(session))
+            {
+                return;
+            }
+
+            string mapId = session.MapId.Value;
+            string gameId = MergedConfig?.DefaultCoreMod ?? string.Empty;
+            if (!GlobalContext.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not ClientLocalSeatRegistry seats ||
+                seats.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"LOCAL_INPUT.ERR.SeatsRequired: Map '{mapId}' of game '{gameId}' consumes local input and requires a published local seat with controlSchemeId and a possessed representative.");
+            }
+
+            IReadOnlyList<string> seatIds = seats.SeatIds;
+            for (int i = 0; i < seatIds.Count; i++)
+            {
+                ClientLocalSeat seat = seats.Require(seatIds[i]);
+                if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                {
+                    throw new InvalidOperationException(
+                        $"LOCAL_INPUT.ERR.SeatScheme: Map '{mapId}' of game '{gameId}' local seat '{seat.SeatId}' requires controlSchemeId.");
+                }
+
+                if (!seat.HasPossession || !World.IsAlive(seat.PossessedRep))
+                {
+                    throw new InvalidOperationException(
+                        $"LOCAL_INPUT.ERR.SeatPossession: Map '{mapId}' of game '{gameId}' local seat '{seat.SeatId}' requires a possessed representative.");
+                }
+            }
+        }
+
+        private bool MapConsumesLocalInput(MapSession session)
+        {
+            if (World.CountEntities(in LocalInputConsumingContextQuery) > 0)
+            {
+                return true;
+            }
+
+            IReadOnlyList<Trigger> triggers = session.Triggers;
+            for (int i = 0; i < triggers.Count; i++)
+            {
+                if (triggers[i] is TriggerGraphMountTrigger mount &&
+                    !string.IsNullOrWhiteSpace(mount.ActionId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void SetSessionParticipants(MapSession session, ParticipantBindingResult participants)

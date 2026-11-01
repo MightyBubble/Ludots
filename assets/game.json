@@ -42,5 +42,6 @@
     "channelLevels": {},
     "fileLogging": false,
     "logFilePath": "ludots.log"
-  }
+  },
+  "controlSchemePreferencePath": "user://control-scheme.json"
 }

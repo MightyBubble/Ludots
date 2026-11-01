@@ -31,8 +31,8 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     {
         "EntityInfoPanelsMod",
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
+        "AimInteractionMod",
         "InteractionShowcaseMod",
     };
 
@@ -91,7 +91,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
                 attributes);
         }
 
-        ReplaceCommandSource(collections, local, selected);
+        ReplaceCommandSource(engine, collections, local, selected);
         Tick(engine, 4);
 
         UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Interaction showcase scene should be mounted.");
@@ -146,7 +146,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             string.Join(Environment.NewLine, new[]
             {
                 "{\"step\":\"load-map\",\"action\":\"capture\",\"detail\":\"Loaded interaction_showcase_hub with UIRoot enabled.\"}",
-                $"{{\"step\":\"seed-command-source\",\"action\":\"mutate\",\"detail\":\"Bound {commandSourceCount} categorized entities to collection.command.source.\"}}",
+                $"{{\"step\":\"seed-command-source\",\"action\":\"mutate\",\"detail\":\"Bound {commandSourceCount} categorized entities to command source.\"}}",
                 "{\"step\":\"scroll-panel\",\"action\":\"scroll\",\"detail\":\"Scrolled the entity collection panel and advanced the virtual window.\"}",
                 $"{{\"step\":\"export-screenshot\",\"action\":\"capture\",\"detail\":\"Wrote screens/{Path.GetFileName(screenshotPath)}.\"}}",
             }));
@@ -157,7 +157,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             {
                 "flowchart TD",
                 "    A[Load interaction_showcase_hub] --> B[Seed 72 categorized command-source entities]",
-                "    B --> C[Publish collection.command.source]",
+                "    B --> C[Publish command source]",
                 "    C --> D[Mount command roster dock in Interaction showcase UI]",
                 "    D --> E[Verify virtual window total rows > visible rows]",
                 "    E --> F[Scroll collection host]",
@@ -165,10 +165,10 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
             }));
     }
 
-    private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
+    private static void ReplaceCommandSource(GameEngine engine, EntityCollectionStore collections, Entity owner, ReadOnlySpan<Entity> members)
     {
         var descriptor = EntityCollectionDescriptor.Create(
-            "collection.command.source",
+            InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             owner,
@@ -185,7 +185,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
         var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
         PresentationAcceptanceUiHostInstaller.Install(engine, 1600f, 900f);
         engine.Start();
@@ -202,10 +202,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
     {
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);

@@ -160,6 +160,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? Rotation { get; set; }
         public int? Length { get; set; }
         public string? Origin { get; set; }
+        public string? DirectionSource { get; set; }
         public int? GraphProgramId { get; set; }
     }
 

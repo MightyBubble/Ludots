@@ -2,6 +2,8 @@ namespace InteractionShowcaseMod
 {
     public static class InteractionShowcaseIds
     {
+        public const string ToolbarPanelId = "interaction-showcase";
+
         public const string HubMapId = "interaction_showcase_hub";
         public const string StressMapId = "interaction_showcase_stress";
 
@@ -13,10 +15,6 @@ namespace InteractionShowcaseMod
         public const string IndicatorModeId = "Interaction.Mode.Indicator";
         public const string ActionModeId = "Interaction.Mode.Action";
 
-        public const string WowModeActionId = "InteractionModeWoW";
-        public const string LolModeActionId = "InteractionModeLoL";
-        public const string Sc2ModeActionId = "InteractionModeSC2";
-        public const string IndicatorModeActionId = "InteractionModeIndicator";
         public const string ActionModeActionId = "InteractionModeAction";
         public const string SelectionGroupRecall1ActionId = "SelectionGroupRecall1";
         public const string SelectionGroupRecall2ActionId = "SelectionGroupRecall2";
@@ -59,15 +57,6 @@ namespace InteractionShowcaseMod
         {
             return string.Equals(mapId, HubMapId, System.StringComparison.OrdinalIgnoreCase)
                 || string.Equals(mapId, StressMapId, System.StringComparison.OrdinalIgnoreCase);
-        }
-
-        public static bool IsShowcaseMode(string? modeId)
-        {
-            return string.Equals(modeId, WowModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, LolModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, Sc2ModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, IndicatorModeId, System.StringComparison.OrdinalIgnoreCase)
-                || string.Equals(modeId, ActionModeId, System.StringComparison.OrdinalIgnoreCase);
         }
 
         public static string DescribeMap(string? mapId)

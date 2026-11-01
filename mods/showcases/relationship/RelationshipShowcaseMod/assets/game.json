@@ -1,7 +1,3 @@
 {
-  "startupMapId": "relationship_showcase",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "RelationshipShowcase.Controls"
-  ]
+  "startupMapId": "relationship_showcase"
 }

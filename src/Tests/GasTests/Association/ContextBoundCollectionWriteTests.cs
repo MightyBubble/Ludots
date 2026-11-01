@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Registry;
 using NUnit.Framework;
@@ -42,7 +43,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             harness.Ownership.EnsureOwnership(p2Rep, m99);
 
-            int mountedKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int mountedKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, mountedKey, stackalloc Entity[] { m01, m02, m99 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -72,7 +73,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p2Rep, m99);
             harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
 
-            int mountedKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int mountedKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, mountedKey, stackalloc Entity[] { m01, m02, m99 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -101,7 +102,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);
 
-            int mountedKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int mountedKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, mountedKey, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             Span<Entity> rows = stackalloc Entity[8];
@@ -129,7 +130,7 @@ namespace Ludots.Tests.GAS
             harness.Ownership.EnsureOwnership(p1Rep, m05);
             harness.Ownership.EnsureOwnership(p1Rep, m06);
 
-            int commandKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int commandKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, commandKey, stackalloc Entity[] { m01, m02 }, EntityCollectionSourceKind.UiAcquisition);
 
             // Ability context declares no filter profile: explicit 0 = pass-through, no fallback lookup.
@@ -149,7 +150,7 @@ namespace Ludots.Tests.GAS
             // Exec reclaim restores the saved base context (no steady-state fallback exists);
             // the unmount-then-bare-commit form retired with the Default profile.
             harness.UnmountContext(p1Rep);
-            int restoredKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int restoredKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, restoredKey, stackalloc Entity[] { m01 }, EntityCollectionSourceKind.UiAcquisition);
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out commandHandle), Is.True);
@@ -170,7 +171,7 @@ namespace Ludots.Tests.GAS
 
             // Context without a filter profile: raw hits pass through, so the configurer owns routability.
             // A domainless entity reaching the domain-routed command source must fail loudly (semantic guardrail).
-            int passthroughKey = harness.MountContext(p1Rep, "collection.command.source", filterProfileId: 0);
+            int passthroughKey = harness.MountContext(p1Rep, "core.selection", filterProfileId: 0);
 
             Entity[] raw = { m01, neutral };
             Assert.Throws<InvalidOperationException>(
@@ -202,12 +203,30 @@ namespace Ludots.Tests.GAS
             }
 
             harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
-            int steadyKey = harness.MountContext(p1Rep, "collection.command.source", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
+            int steadyKey = harness.MountContext(p1Rep, "core.selection", harness.Filters.ProfileIdRegistry.GetId(DefaultProfileId));
             harness.Writer.CommitCast(p1Rep, steadyKey, raw, EntityCollectionSourceKind.UiAcquisition);
 
             long allocated = MeasureCommitCastAllocations(harness, p1Rep, raw);
             allocated = Math.Min(allocated, MeasureCommitCastAllocations(harness, p1Rep, raw));
             Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CommitCast_UnboundCastRawRole_FailsRoleUnbound()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, declareCastRaw: false);
+            Entity anchor = world.Create(new PlayerIdentity { PlayerId = 1 });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() =>
+                harness.Writer.CommitCast(
+                    anchor,
+                    harness.CommandSourceKeyId,
+                    Array.Empty<Entity>(),
+                    EntityCollectionSourceKind.UiAcquisition));
+
+            Assert.That(ex!.Message, Does.Contain("RoleUnbound"));
+            Assert.That(ex.Message, Does.Contain("castRaw"));
         }
 
         private static long MeasureCommitCastAllocations(Harness harness, Entity anchor, Entity[] raw)
@@ -233,7 +252,7 @@ namespace Ludots.Tests.GAS
             public int CommandSourceKeyId;
             public int UiCastRawKeyId;
 
-            public static Harness Create(World world)
+            public static Harness Create(World world, bool declareCastRaw = true)
             {
                 var types = new RelationshipTypeRegistry();
                 var relationships = new RelationshipRuntime(
@@ -296,10 +315,10 @@ namespace Ludots.Tests.GAS
                     World = world,
                     Store = store,
                     Filters = filters,
-                    Writer = CreateApplier(world, store, filters, domains, keyRegistry),
+                    Writer = CreateApplier(world, store, filters, domains, keyRegistry, declareCastRaw),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
-                    UiCastRawKeyId = keyRegistry.Register("collection.ui.cast.raw"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
+                    UiCastRawKeyId = declareCastRaw ? keyRegistry.Register("collection.ui.cast.raw") : 0,
                 };
             }
 
@@ -308,10 +327,20 @@ namespace Ludots.Tests.GAS
                 EntityCollectionStore store,
                 FilterProfileRegistry filters,
                 ControlDomainQuery domains,
-                StringIntRegistry keyRegistry)
+                StringIntRegistry keyRegistry,
+                bool declareCastRaw)
             {
+                var roles = new Dictionary<string, string>(StringComparer.Ordinal);
+                if (declareCastRaw)
+                {
+                    roles["castRaw"] = "collection.ui.cast.raw";
+                }
+
                 var applier = new Ludots.Core.EntityCollections.CollectionApplier(world, store);
-                applier.BindInputInteraction(filters, domains, keyRegistry.Register("collection.ui.cast.raw"));
+                applier.BindInputInteraction(
+                    filters,
+                    domains,
+                    InputCollectionKeyDeclarations.ForResolvedRoles(keyRegistry, roles));
                 return applier;
             }
 

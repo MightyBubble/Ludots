@@ -37,7 +37,6 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "MapTriggerNightRaidMod",
     };
 
@@ -167,7 +166,7 @@ public sealed class MapTriggerNightRaidAcceptanceTests
     [Test]
     public void NightRaid_InterModOverride_ThresholdAndStackedFlows()
     {
-        string[] mods = { BaseMods[0], BaseMods[1], "NightRaidOverrideMod", BaseMods[2] };
+        string[] mods = { BaseMods[0], "NightRaidOverrideMod", BaseMods[1] };
         using GameEngine engine = CreateEngine(mods);
         engine.Start();
         engine.LoadMap(MapId);
@@ -346,7 +345,8 @@ public sealed class MapTriggerNightRaidAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, mods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.SetService(CoreServiceKeys.UiCaptured, false);
         return engine;
     }

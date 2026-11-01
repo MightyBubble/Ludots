@@ -9,6 +9,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Config;
 
 namespace ProgressionScopeShowcaseMod
 {
@@ -59,7 +60,7 @@ namespace ProgressionScopeShowcaseMod
             Span<Entity> selected = stackalloc Entity[1];
             selected[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 owner,

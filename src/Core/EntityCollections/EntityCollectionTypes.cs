@@ -34,7 +34,6 @@ namespace Ludots.Core.EntityCollections
         CommandPreview = 2,
         CommandSource = 3,
         Debug = 4,
-        AimAffected = 5,
     }
 
     [Flags]

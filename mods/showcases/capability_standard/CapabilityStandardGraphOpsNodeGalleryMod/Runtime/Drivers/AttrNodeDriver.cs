@@ -4,6 +4,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Platform.Abstractions;
 using Ludots.Core.Mathematics;
@@ -74,7 +75,7 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         ResolveStrikeTemplate(ctx);
         if (string.Equals(ctx.Vignette.Op, "CompareLtInt", StringComparison.Ordinal))
         {
-            _healthIntKey = ConfigKeyRegistry.Register(HealthIntKey);
+            _healthIntKey = OrderBlackboardKeyRegistry.Resolve(HealthIntKey);
         }
 
         GraphOpsNodeActorBinding.BindHud(ctx);
@@ -1065,6 +1066,11 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
         if (string.Equals(op, "LoadCaster", StringComparison.Ordinal) && result.EntityValue != ctx.Caster)
         {
             throw new InvalidOperationException("LoadCaster gallery did not resolve the caster.");
+        }
+
+        if (string.Equals(op, "ConstNullEntity", StringComparison.Ordinal) && result.EntityValue != Entity.Null)
+        {
+            throw new InvalidOperationException("ConstNullEntity gallery did not write an empty entity handle.");
         }
 
         if (string.Equals(op, "LoadExplicitTarget", StringComparison.Ordinal) ||

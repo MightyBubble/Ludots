@@ -1,114 +1,44 @@
-# Order Path Overlay and Hover Feedback
+# Order Spatial Resolution and Hover Feedback
 
-> SSOT scope: command actor move path preview, shared order world-space resolution, and sandbox hover feedback reuse.
-> This document describes the shipped runtime implemented by the current slice. It does not redefine generic camera follow, ability routing, or navigation execution beyond the parts directly used by move path and hover feedback.
+> SSOT scope: shared order world-space resolution, and how a showcase draws selection and hover without a private input mod.
+> Move-path overlay events are not an engine system. This page only describes what the repository actually runs.
 
 ## 1. Runtime Intent
 
-The current interaction stack needs two kinds of immediate visual feedback without inventing parallel pipelines:
+Two jobs stay on the existing pipelines:
 
-- command actor right-click move orders should expose a visible path preview before and during movement
-- hovered entities in `ChampionSkillSandboxMod` should expose a stable marker even outside active aiming mode
+- order code resolves a world point from `OrderSpatial` in one place
+- selection and hover rings are presenter rules on collection membership
 
-The shipped implementation keeps both behaviors on top of existing infrastructure:
+Orders enter through trigger graphs. `SubmitCommandIntent` / `SubmitCast` land in `CommandIntentBufferDrainSystem`, which calls `CompositeOrderPlanner` when a cast must move first. There is no local order-source installer.
 
-- order/runtime reuse stays inside `src/Core/Gameplay/GAS/Orders/`
-- presentation reuse stays inside `PresentationEventStream -> PresenterRuleSystem -> PresenterCommand`
-- sandbox-specific indicator policy stays inside `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs`
+## 2. Shared Spatial Resolution
 
-## 2. Reuse-First Design
+`src/Core/Gameplay/GAS/Orders/OrderWorldSpatialResolver.cs` reads `OrderSpatial`:
 
-The slice explicitly reuses these existing systems and boundaries:
+- `GetSpatialPointCount`
+- `TryResolveSpatialPointAt`
 
-- `src/Core/Gameplay/GAS/Systems/MoveToWorldCmOrderSystem.cs`
-  - remains the authoritative `moveTo` order consumer
-- `src/Core/Gameplay/GAS/Orders/CompositeOrderPlanner.cs`
-  - continues to plan cast-followed-by-move sequences, now via shared spatial resolution
-- `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs`
-  - remains the reference path for ability aim events feeding presenter rules instead of direct visual ownership in ability config
-- `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
-  - remains the single install point for generic input presentation systems
-- `src/Core/Navigation/Pathing/IPathService.cs` runtime service contract when a map exposes pathing
-  - command actor move preview prefers the existing path solve result instead of hand-building a second route planner
+`OrderSubmitter`, `CompositeOrderPlanner`, and `MovePlanStore` read points through it. Queued-order projection uses `TryResolveProjectedQueuedOrigin`.
 
-No parallel renderer, no mod-local move runtime, and no duplicate spatial parsing path were introduced.
+## 3. Selection and Hover
 
-## 3. Shared Spatial Resolution
+The champion sandbox does not poll a hover helper. `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/presenters.json` listens:
 
-`src/Core/Gameplay/GAS/Orders/OrderWorldSpatialResolver.cs` centralizes the common world-space conversions that were previously duplicated across planner/runtime call sites:
+- `EntityCollectionMemberAdded` / `Removed` on `role:commandSource` creates and destroys the selection ring
+- the same events on `collection.ui.command.hover` create and destroy the hover ring
 
-- `TryResolveSpatialTarget`
-- `TryResolveMoveDestination`
-- `TryGetEntityWorldCm`
-- `TryResolveProjectedQueuedOrigin`
+`role:commandSource` is resolved from `Input/collection_keys.json` at load. A literal collection key has no `role:` prefix. The engine root does not declare `commandSource`; the session that opens the map does.
 
-Current consumers:
+Pointer samples go through `GraphPointerSampleRuntime` (`Ludots.Core.Input.PointerSample`). A pointer region whose profile sets `pointerRouting` to `ui` is pushed by `PointerRegionContextSystem`. The minimap profile is `interaction.context.minimap`.
 
-- `src/Core/Gameplay/GAS/Orders/CompositeOrderPlanner.cs`
-- `src/Core/Gameplay/GAS/Systems/MoveToWorldCmOrderSystem.cs`
+Camera jumps submit `CameraPoseRequest`. They do not write the rig from an input consumer.
 
-This keeps queued-order projection, cast anchor planning, and move destination extraction aligned on one interpretation of `OrderSpatial`.
-
-## 4. Command Actor Move Path Preview
-
-`mods/CoreInputMod/Systems/CommandActorMovePathPresentationSystem.cs` is the generic event projection responsible for previewing move plans for the current entity collection provided by the caller.
-
-Its runtime behavior is:
-
-1. Read the current entity collection from `EntityCollectionContextRuntime`.
-2. Resolve the currently active or queued move destination through `OrderWorldSpatialResolver`.
-3. Publish `MovePathBegun` / `MovePathUpdated` / `MovePathEnded` events into `PresentationEventStream`.
-4. Let presenter rules in `mods/CoreInputMod/assets/Presentation/presenters.json` create, update, and destroy the ground overlay presenters.
-
-The system is registered in `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs` immediately before `PresenterRuleSystem`.
-
-### 4.1 Fallback Boundary
-
-Some maps, including the current champion sandbox, boot without a board/path graph. In that case command actor move path projection uses the authored order-space waypoints or final destination instead of inventing a private renderer.
-
-This keeps the UX visible on intentionally lightweight maps while preserving a single presentation route: projected events first, presenter rules second.
-
-Relevant code and evidence:
-
-- `mods/CoreInputMod/Systems/CommandActorMovePathPresentationSystem.cs`
-- `mods/CoreInputMod/assets/Presentation/presenters.json`
-- `src/Tests/GasTests/CommandActorMovePathPresentationSystemTests.cs`
-- `src/Tests/GasTests/OrderNavigationMoveRuntimeTests.cs`
-
-## 5. Hover Marker Policy
-
-`mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs` now resolves hover indicator targets with two rules:
-
-- any live hovered entity may receive the hover indicator, even when the input mapping is not currently aiming
-- the current command-source primary is suppressed, so command-source feedback and hover ring do not stack on the same actor
-
-This keeps the sandbox readable in normal selection/movement flow and avoids marker duplication noise.
-
-The hover marker still reuses the existing presenter/overlay stack:
-
-- presenter definitions live in `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/presenters.json`
-- runtime creation/destruction stays inside the existing presenter command flow
-
-## 6. Acceptance Evidence
-
-Code evidence:
+## 4. Acceptance Evidence
 
 - `src/Core/Gameplay/GAS/Orders/OrderWorldSpatialResolver.cs`
-- `mods/CoreInputMod/Systems/CommandActorMovePathPresentationSystem.cs`
-- `mods/CoreInputMod/assets/Presentation/presenters.json`
-- `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs`
-
-Test evidence:
-
-- `src/Tests/GasTests/CommandActorMovePathPresentationSystemTests.cs`
-- `src/Tests/GasTests/Production/InputOrderConvergenceValidationTests.cs`
-- `src/Tests/GasTests/Production/OrderCompositePlannerTests.cs`
-- `src/Tests/GasTests/OrderNavigationMoveRuntimeTests.cs`
-- `src/Tests/GasTests/Production/ChampionSkillSandboxConfigTests.cs`
-- `src/Tests/GasTests/Production/ChampionSkillSandboxPlayableAcceptanceTests.cs`
-
-Acceptance artifacts:
-
-- `artifacts/acceptance/champion-skill-sandbox/battle-report.md`
-- `artifacts/acceptance/champion-skill-sandbox/trace.jsonl`
-- `artifacts/acceptance/champion-skill-sandbox/path.mmd`
+- `src/Core/Gameplay/GAS/Orders/CompositeOrderPlanner.cs`
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
+- `src/Core/Input/PointerSample/GraphPointerSampleRuntime.cs`
+- `src/Tests/GasTests/Ability/OrderCompositePlannerTests.cs`
+- `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/assets/Presentation/presenters.json`

@@ -61,6 +61,29 @@ namespace Ludots.Core.Input.Interaction
         }
 
         /// <summary>
+        /// Map-event bridge set by the engine. Publish stays presentation-local; the engine
+        /// probes TriggerGraph subscribers and fires the matching map event. Null in tests
+        /// that only observe the presentation stream.
+        /// </summary>
+        public Action<PresentationEventKind, Entity, int>? ContextLifecycleDispatcher { get; set; }
+
+        /// <summary>
+        /// Config key of an installed profile. An unnamed profile id fails closed — the
+        /// mount stack must not invent a parent key.
+        /// </summary>
+        public int RequireConfigKeyId(int profileId)
+        {
+            string name = _profiles.ProfileIdRegistry.GetName(profileId);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextMountUnnamed: profile id {profileId} has no name.");
+            }
+
+            return Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(name);
+        }
+
+        /// <summary>
         /// Read contract for the active-context layout this runtime's writers own: copies the
         /// subject's active profile ids newest-first (derived instances in reverse activation
         /// order, then the base mount). Returns the count copied; destination too small fails
@@ -95,6 +118,18 @@ namespace Ludots.Core.Input.Interaction
             }
 
             return count;
+        }
+
+        /// <summary>
+        /// True when the subject carries the context named by <paramref name="contextKeyId"/>
+        /// as its base mount or an active instance. A dead subject or an unknown profile fails
+        /// closed; a known profile that is not mounted returns false.
+        /// </summary>
+        public bool IsContextActive(Entity subject, int contextKeyId)
+        {
+            RequireAliveSubject(subject, nameof(IsContextActive));
+            int profileId = RequireProfileId(contextKeyId, nameof(IsContextActive));
+            return IsActive(subject, profileId);
         }
 
         /// <summary>True when the subject carries the context as its base mount or an active instance.</summary>
@@ -179,6 +214,38 @@ namespace Ludots.Core.Input.Interaction
         {
             RequireAliveSubject(subject, nameof(Deactivate));
             int profileId = RequireProfileId(contextKeyId, nameof(Deactivate));
+            RemoveInstance(subject, profileId);
+        }
+
+        /// <summary>
+        /// Same removal as <see cref="Deactivate"/>, addressed by the profile registry id the
+        /// mount already holds. Skips the config-key lookup.
+        /// </summary>
+        public void DeactivateProfile(Entity subject, int profileId)
+        {
+            RequireAliveSubject(subject, nameof(Deactivate));
+            if (profileId <= 0 || !_profiles.IsInstalled(profileId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DeactivateContextUnknown: interaction context profile id {profileId} is not installed.");
+            }
+
+            RemoveInstance(subject, profileId);
+        }
+
+        /// <summary>True when <paramref name="profileName"/> is an installed interaction context profile.</summary>
+        public bool IsInstalledProfile(string profileName)
+        {
+            if (string.IsNullOrWhiteSpace(profileName) || !_profiles.ProfileIdRegistry.TryGetId(profileName, out int profileId))
+            {
+                return false;
+            }
+
+            return _profiles.IsInstalled(profileId);
+        }
+
+        private void RemoveInstance(Entity subject, int profileId)
+        {
             if (!_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances) ||
                 instances.IndexOf(profileId) < 0)
             {
@@ -187,7 +254,49 @@ namespace Ludots.Core.Input.Interaction
                     $"'{ProfileName(profileId)}'; base mounts belong to their own lifecycles.");
             }
 
-            CollectWithDescendants(instances, profileId, _removalScratch);
+            _removalScratch.Clear();
+            _removalScratch.Add(profileId);
+            RemoveWithDescendants(subject, ref instances);
+        }
+
+        /// <summary>
+        /// Releases derived instances whose parent is neither the base mount nor another active
+        /// instance (a foreign base writer replaced or removed the parent), together with their
+        /// descendants, exactly as <see cref="Deactivate"/> would. A child never outlives its parent.
+        /// </summary>
+        public void ReleaseOrphanedInstances(Entity subject)
+        {
+            if (!_world.IsAlive(subject) ||
+                !_world.TryGet<InteractionContextInstances>(subject, out InteractionContextInstances instances) ||
+                instances.Count == 0)
+            {
+                return;
+            }
+
+            int baseContextId = _world.TryGet<InteractionContextInstance>(subject, out InteractionContextInstance baseContext)
+                ? baseContext.ContextId
+                : 0;
+            _removalScratch.Clear();
+            for (int i = 0; i < instances.Count; i++)
+            {
+                int parentId = instances[i].ParentContextId;
+                if (parentId != 0 && parentId != baseContextId && instances.IndexOf(parentId) < 0)
+                {
+                    _removalScratch.Add(instances[i].ContextId);
+                }
+            }
+
+            if (_removalScratch.Count == 0)
+            {
+                return;
+            }
+
+            RemoveWithDescendants(subject, ref instances);
+        }
+
+        private void RemoveWithDescendants(Entity subject, ref InteractionContextInstances instances)
+        {
+            CollectDescendants(instances, _removalScratch);
             // Snapshot into a reusable buffer (not ToArray): the Deactivated slots below run
             // user graph bodies that may re-enter this runtime (a nested Deactivate reuses the
             // shared removal scratch). Keeps Deactivate allocation-free.
@@ -221,13 +330,8 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
-        private static void CollectWithDescendants(
-            in InteractionContextInstances instances,
-            int profileId,
-            List<int> removal)
+        private static void CollectDescendants(in InteractionContextInstances instances, List<int> removal)
         {
-            removal.Clear();
-            removal.Add(profileId);
             bool grew = true;
             while (grew)
             {
@@ -262,6 +366,8 @@ namespace Ludots.Core.Input.Interaction
                 throw new InvalidOperationException(
                     $"PresentationEventStream is full while publishing {kind} for context id {instance.ContextId}.");
             }
+
+            ContextLifecycleDispatcher?.Invoke(kind, subject, instance.ContextId);
         }
 
         private void RequireAliveSubject(Entity subject, string operation)

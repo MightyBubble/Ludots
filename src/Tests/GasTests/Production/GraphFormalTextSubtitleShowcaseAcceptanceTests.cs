@@ -82,10 +82,10 @@ public sealed class GraphFormalTextSubtitleShowcaseAcceptanceTests
             RepoModPaths.ResolveExplicit(repoRoot, new[]
             {
                 "LudotsCoreMod",
-                "CoreInputMod",
                 "CapabilityStandardGraphFormalTextShowcaseMod"
             }),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallDummyInput(engine);
         return engine;
     }

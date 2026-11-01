@@ -1,0 +1,150 @@
+{
+  "Id": "aim_control_schemes",
+  "World": {
+    "WidthCm": 1638400,
+    "HeightCm": 1638400,
+    "CellSizeCm": 100
+  },
+  "ContinuousHeightmapAsset": "assets/terrain/aim_control_schemes_flat.height",
+  "Tags": [
+    "showcase",
+    "aim_control_schemes"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "AimControlSchemes.Camera.Topdown",
+    "TargetXCm": 2000,
+    "TargetYCm": 2000,
+    "DistanceCm": 1600,
+    "Pitch": 62,
+    "FovYDeg": 50
+  },
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "aim-schemes-team-blue"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "aim-schemes-team-red"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "aim-schemes-hero"
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "aim_control_schemes_hero",
+      "InstanceId": "aim-schemes-hero",
+      "Overrides": {
+        "Name": {
+          "Value": "AimSchemes Hero"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2000,
+            "Y": 2000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aim_control_schemes_dummy",
+      "InstanceId": "aim-schemes-dummy-near",
+      "Overrides": {
+        "Name": {
+          "Value": "Dummy Near"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2120,
+            "Y": 2000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aim_control_schemes_dummy",
+      "InstanceId": "aim-schemes-dummy-stick",
+      "Overrides": {
+        "Name": {
+          "Value": "Dummy Stick"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2400,
+            "Y": 2000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aim_control_schemes_dummy",
+      "InstanceId": "aim-schemes-dummy-north",
+      "Overrides": {
+        "Name": {
+          "Value": "Dummy North"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 2000,
+            "Y": 2800
+          }
+        }
+      }
+    },
+    {
+      "Template": "aim_control_schemes_anchor",
+      "InstanceId": "aim-schemes-team-blue",
+      "Overrides": {
+        "Name": {
+          "Value": "Blue Team Anchor"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 100,
+            "Y": 100
+          }
+        }
+      },
+      "Relations": [
+        {
+          "To": "aim-schemes-team-blue",
+          "Type": "Friendly"
+        },
+        {
+          "To": "aim-schemes-team-red",
+          "Type": "Hostile"
+        }
+      ]
+    },
+    {
+      "Template": "aim_control_schemes_anchor",
+      "InstanceId": "aim-schemes-team-red",
+      "Overrides": {
+        "Name": {
+          "Value": "Red Team Anchor"
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 100,
+            "Y": 400
+          }
+        }
+      },
+      "Relations": [
+        {
+          "To": "aim-schemes-team-red",
+          "Type": "Friendly"
+        },
+        {
+          "To": "aim-schemes-team-blue",
+          "Type": "Hostile"
+        }
+      ]
+    }
+  ]
+}

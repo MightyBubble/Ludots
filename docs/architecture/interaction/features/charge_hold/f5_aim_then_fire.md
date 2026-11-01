@@ -61,7 +61,7 @@ Fire:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| HeldPolicy.StartEnd | ✅ 已有 | Aim 键生成 .Start/.End order 对 |
+| 按下与松开 | 交互状态 | 按下激活 `pref.aim.cast_mode` 指向的手势状态，松开确认走 `graph.aim.release_confirm` |
 | AbilityActivationRequireTags | ✅ 已有 | Fire 技能门控在 "aiming" tag |
 | GameplayTagContainer | ✅ 已有 | 标签授予/移除 |
 | CameraBlendSystem | ✅ 已有 | 相机切换（参见 CameraAcceptanceMod） |

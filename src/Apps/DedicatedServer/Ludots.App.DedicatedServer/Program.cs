@@ -14,9 +14,13 @@ try
     string hostArtifactBaseDirectory = Path.GetDirectoryName(resolvedBootstrapPath)
         ?? throw new InvalidOperationException(
             $"Resolved launcher bootstrap has no parent directory: {resolvedBootstrapPath}");
+    string userDataRoot = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "Ludots");
     GameBootstrapResult bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
         baseDirectory,
-        resolvedBootstrapPath);
+        resolvedBootstrapPath,
+        userDataRoot);
     if (bootstrap.NetworkHost?.ResolveRole() != NetworkProcessRole.AuthoritativeServer)
     {
         throw new InvalidOperationException(

@@ -284,7 +284,7 @@ namespace Ludots.Tests.GAS
             host.Update(1f / 30f); // buffer empty + within range → engages and fires
             That(effects.Count, Is.EqualTo(1), "first engage tick fires the damage effect");
             That(world.Get<BlackboardIntBuffer>(actor).TryGet(
-                Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("Brain.Attack.Cooldown"), out int cd), Is.True);
+                OrderBlackboardKeyRegistry.Resolve("Brain.Attack.Cooldown"), out int cd), Is.True);
             That(cd, Is.EqualTo(30), "cooldown resets to 30 after firing");
 
             for (int i = 0; i < 31; i++)
@@ -385,7 +385,7 @@ namespace Ludots.Tests.GAS
             world.Set(actor, Ludots.Core.Components.WorldPositionCm.FromCm(1000, 0));
             host.Update(1f / 30f);
             var bb = world.Get<BlackboardIntBuffer>(actor);
-            int ticksKey = Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register("Brain.Transport.Ticks");
+            int ticksKey = OrderBlackboardKeyRegistry.Resolve("Brain.Transport.Ticks");
             That(host.TryGetLeafStateName(actor, out string arrivedState) && arrivedState == "loading", Is.True,
                 "arrival at source enters the loading state");
             // loading.enter seeds 60 ticks; the HFSM entry tick also runs the leaf onTick, which

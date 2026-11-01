@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using Ludots.Core.Gameplay.Relationships;
 using Arch.Core;
 using Arch.System;
-using CoreInputMod.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -19,6 +18,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
@@ -296,7 +296,6 @@ namespace Ludots.Tests.Architecture.Governance
             {
                 Path.Combine(repoRoot, "src", "Core", "Input", "Selection"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems"),
                 Path.Combine(repoRoot, "mods", "capabilities", "participant_view", "ParticipantViewCapabilityMod", "Runtime"),
                 Path.Combine(repoRoot, "mods", "capabilities", "participant_view", "ParticipantViewCapabilityMod", "UI")
             };
@@ -599,7 +598,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] directories =
             {
                 Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "docs", "architecture", "interaction")
             };
 
@@ -634,12 +632,43 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void Engine_CarriesNoDefaultSkillBarOverlay()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] forbidden = { "SkillBarOverlay", "SkillBarEnabledKey", "SkillBarKeyLabelsKey", "skillBarVisible" };
+            var hits = new List<string>();
+            foreach (string root in new[] { Path.Combine(repoRoot, "src"), Path.Combine(repoRoot, "mods"), Path.Combine(repoRoot, "assets") })
+            {
+                foreach (string file in Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+                {
+                    string normalized = file.Replace('\\', '/');
+                    string ext = Path.GetExtension(file);
+                    if (normalized.Contains("/bin/") ||
+                        normalized.Contains("/obj/") ||
+                        normalized.EndsWith("/ArchitectureGuardTests.cs", StringComparison.Ordinal) ||
+                        (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(hits, Is.Empty,
+                "The engine draws no default skill bar; a game that wants one declares its own panel:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
         public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPresenters()
         {
             var repoRoot = FindRepoRoot();
             string modsDir = Path.Combine(repoRoot, "mods");
             Assert.That(Directory.Exists(modsDir), Is.True, $"Missing {modsDir}");
 
+            string retiredKindList = string.Concat("target", "Kinds");
             string[] forbiddenKeys =
             {
                 "indicator",
@@ -647,7 +676,8 @@ namespace Ludots.Tests.Architecture.Governance
                 "areaPresenterId",
                 "rangeCirclePresenterId",
                 "previewPresenterId",
-                "presenterId"
+                "presenterId",
+                retiredKindList,
             };
 
             var hits = new List<string>();
@@ -665,7 +695,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action presenter rules:\n" +
+                    "Ability configs must not declare removed aim visuals or a targeting kind list. Visuals belong in presenter rules. Targeting rules belong in the TriggerGraphs the ability references:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -683,13 +713,68 @@ namespace Ludots.Tests.Architecture.Governance
         }
 
         [Test]
+        public void Core_HasNoAbilityAimNames_AndPresentationEventsStayGeneric()
+        {
+            string repoRoot = FindRepoRoot();
+            string eventKindPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Platform",
+                "Ludots.Platform.Abstractions",
+                "PresentationEventKind.cs");
+            Assert.That(File.Exists(eventKindPath), Is.True, eventKindPath);
+            Assert.That(
+                File.ReadAllText(eventKindPath),
+                Does.Not.Contain("Aim"),
+                "Presentation event kinds stay generic. Aim visuals follow context and collection events.");
+
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "src", "Platform"),
+            };
+            var hits = new List<string>();
+            string retiredOp = string.Concat("AbilityAccepts", "TargetKind");
+            string[] forbidden = { "AbilityAim", retiredOp };
+            for (int i = 0; i < roots.Length; i++)
+            {
+                foreach (string file in Directory.EnumerateFiles(roots[i], "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Retired ability-aim names and the targeting-kind graph op must not return:\n" +
+                string.Join("\n", hits));
+
+            string registry = File.ReadAllText(Path.Combine(
+                repoRoot, "src", "Core", "Gameplay", "GAS", "AbilityDefinitionRegistry.cs"));
+            string loader = File.ReadAllText(Path.Combine(
+                repoRoot, "src", "Core", "Gameplay", "GAS", "Config", "AbilityExecLoader.cs"));
+            Assert.That(registry, Does.Not.Contain("TargetKinds"));
+            Assert.That(loader, Does.Not.Contain("TargetKinds"));
+            Assert.That(
+                loader,
+                Does.Contain("Targeting rules belong in the TriggerGraphs this ability references."));
+        }
+
+        [Test]
         public void Epic322_AbilityAimOverlayNaming_IsRemoved()
         {
             var repoRoot = FindRepoRoot();
             string[] directories =
             {
                 Path.Combine(repoRoot, "src", "Core", "Input"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "docs")
             };
             string[] forbidden =
@@ -726,6 +811,55 @@ namespace Ludots.Tests.Architecture.Governance
                 "Epic #322 ability aim presentation is an event/collection projection consumed by presenter rules; overlay-named entry points must not return:\n" +
                     string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void MobaAndInteractionShowcases_DoNotAuthorRetiredAimCastMechanics()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "mods", "showcases", "moba_demo"),
+                Path.Combine(repoRoot, "mods", "showcases", "interaction")
+            };
+            string[] forbidden =
+            {
+                "AbilityAim",
+                "CastCommit",
+                "smart_cast",
+                "indicator_cast",
+                "press_release"
+            };
+            var hits = new List<string>();
+            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
+            {
+                string dir = directories[dirIndex];
+                Assert.That(Directory.Exists(dir), Is.True, $"Missing {dir}");
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/bin/", StringComparison.Ordinal) ||
+                        relative.Contains("/obj/", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    string ext = Path.GetExtension(file);
+                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(ext, ".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "MOBA and interaction showcases cast through AimInteractionMod. Retired aim/cast mechanism names must not return:\n" +
+                string.Join("\n", hits));
         }
 
         [Test]
@@ -899,7 +1033,7 @@ namespace Ludots.Tests.Architecture.Governance
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
+                Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "CommandIntentBufferDrainSystem.cs")
             };
             string[] forbidden =
             {
@@ -1182,7 +1316,7 @@ namespace Ludots.Tests.Architecture.Governance
             Type[] types =
             {
                 typeof(SpatialBoundsUtility),
-                typeof(LocalOrderSourceHelper),
+                typeof(CommandIntentBufferDrainSystem),
                 typeof(AxisMoveOrderSystem),
                 typeof(AuthoritativeInputSnapshotSystem),
                 typeof(AuthoritativePointerButtonSnapshotSystem),
@@ -1198,7 +1332,7 @@ namespace Ludots.Tests.Architecture.Governance
             string[] files =
             {
                 Path.Combine(repoRoot, "src", "Core", "Spatial", "SpatialBoundsUtility.cs"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "CommandIntentBufferDrainSystem.cs"),
             };
             for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
             {
@@ -1245,7 +1379,6 @@ namespace Ludots.Tests.Architecture.Governance
             string[] roots =
             {
                 Path.Combine(repoRoot, "src", "Core"),
-                Path.Combine(repoRoot, "mods", "CoreInputMod"),
             };
             var hits = new List<string>();
             for (int rootIndex = 0; rootIndex < roots.Length; rootIndex++)
@@ -2823,6 +2956,38 @@ namespace Ludots.Tests.Architecture.Governance
                 }
              }
         }
+
+        [Test]
+        public void Core_MustNotDetectTestHostOrResolveApplicationData()
+        {
+            string coreRoot = Path.Combine(FindRepoRootForGuards(), "src", "Core");
+            Assert.That(Directory.Exists(coreRoot), Is.True);
+            var hits = new List<string>();
+            foreach (string file in Directory.GetFiles(coreRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                    file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach ((int lineNumber, string text) in Ludots.Tests.Architecture.SourceTextScanner.ReadCodeLines(file))
+                {
+                    if (CoreHostProbePattern.IsMatch(text))
+                    {
+                        hits.Add($"{Path.GetRelativePath(coreRoot, file)}:{lineNumber}:{text.Trim()}");
+                    }
+                }
+            }
+
+            Assert.That(hits, Is.Empty,
+                "src/Core must not detect the test host or call SpecialFolder.ApplicationData.\n" +
+                string.Join("\n", hits));
+        }
+
+        private static readonly Regex CoreHostProbePattern = new(
+            @"\bnunit\b|IsTestHost|SpecialFolder\.ApplicationData",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
         private static string FindRepoRootForGuards()
         {

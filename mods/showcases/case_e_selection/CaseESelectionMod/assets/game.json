@@ -5,8 +5,11 @@
   "windowHeight": 900,
   "windowResizable": true,
   "targetFps": 60,
-  "commandSource": { "acquisition": { "enabled": false } },
-  "startupInputContexts": ["Default_Gameplay"],
+  "commandSource": {
+    "acquisition": {
+      "enabled": false
+    }
+  },
   "startupLocalSeats": [
     {
       "seatId": "seat.0",

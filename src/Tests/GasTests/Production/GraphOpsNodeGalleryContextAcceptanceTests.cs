@@ -126,6 +126,32 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
     }
 
     [Test]
+    public void IsContextActiveVignette_QuotesAnActiveContext()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("IsContextActive");
+        runtime.EnsureWorld();
+        float before = runtime.Context.ActorHealth[1];
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.Detail, Does.Contain("成立"));
+        Assert.That(runtime.Context.ActorHealth[1], Is.LessThan(before));
+    }
+
+    [Test]
+    public void LoadEntityFacingVignette_QuotesTheTargetFacingDegrees()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("LoadEntityFacing");
+        runtime.EnsureWorld();
+        float before = runtime.Context.ActorHealth[1];
+        runtime.Tick(0.35f);
+
+        Assert.That(runtime.Metrics.Detail, Does.Contain("90"), "the caption quotes the target facing in degrees");
+        Assert.That(runtime.Context.ActorHealth[1], Is.LessThan(before), "the facing degrees settle as damage");
+    }
+
+    [Test]
     public void LoadEntityPosXVignette_QuotesTheTargetCentimeterX()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();
@@ -273,6 +299,35 @@ public sealed class GraphOpsNodeGalleryContextAcceptanceTests
             Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>()
                 .With.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.Id)).EqualTo("Camera.GraphOps.CloseUp")
                 .And.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.ReplaceActiveStack)).True);
+        foreach (string phrase in runtime.Vignette.AssertDetailContains)
+        {
+            Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);
+        }
+    }
+
+    [Test]
+    public void ApplyMapDefaultCameraVignette_RequestsTheMapCamera()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ApplyMapDefaultCamera");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+
+        Assert.That(
+            runtime.Context.Globals![Ludots.Core.Scripting.CoreServiceKeys.VirtualCameraRequest.Name],
+            Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>()
+                .With.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.Id)).EqualTo("Camera.Profile.GraphOpsGallery")
+                .And.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.ReplaceActiveStack)).True
+                .And.Property(nameof(Ludots.Core.Gameplay.Camera.VirtualCameraRequest.BlendDurationSeconds)).EqualTo(0f));
+        var pose = runtime.Context.Globals[Ludots.Core.Scripting.CoreServiceKeys.CameraPoseRequest.Name]
+            as Ludots.Core.Gameplay.Camera.CameraPoseRequest;
+        Assert.That(pose, Is.Not.Null);
+        Assert.That(pose!.VirtualCameraId, Is.EqualTo("Camera.Profile.GraphOpsGallery"));
+        Assert.That(pose.DistanceCm, Is.EqualTo(2600f));
+        Assert.That(pose.Pitch, Is.EqualTo(75f));
+        Assert.That(pose.Yaw, Is.EqualTo(180f));
+        Assert.That(pose.FovYDeg, Is.EqualTo(50f));
+        Assert.That(pose.TargetCm, Is.EqualTo(new System.Numerics.Vector2(0f, 0f)));
         foreach (string phrase in runtime.Vignette.AssertDetailContains)
         {
             Assert.That(runtime.Metrics.Detail, Does.Contain(phrase), runtime.Metrics.Detail);

@@ -8,7 +8,7 @@
 
 玩家按下技能键（PressedThisFrame），系统取光标下或预选的敌方单位作为目标，立即发出 CastAbility 订单。订单验证通过后，GAS 在当前 Tick 生成 Effect，OnCalculate 阶段将施法者的 BaseDamage 属性乘以配置系数写入 Blackboard（DamageAmount），OnApply Listener 读取 Armor 做减伤计算并写入 FinalDamage，OnApply Main 将 FinalDamage 以负数 delta 应用到目标的 Health 属性。
 
-与 AoE 伤害的区别：目标是单一 Entity（由 InputOrderMapping.targetType=Entity 保证），不涉及范围查询。
+与 AoE 伤害的区别：目标是单一单位，技能引用 `graph.aim.rule.unit_only`，不走范围查询。
 
 ---
 
@@ -16,24 +16,12 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: `Entity`
-- **InteractionMode**: `SmartCast`（推荐）/ `TargetFirst`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_q.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Q",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "Entity",
-  "isSkillMapping": true,
-  "castModeOverride": null,              // null = 跟随全局 InteractionMode
-  "autoTargetPolicy": "NearestEnemyInRange",
-  "autoTargetRangeCm": 600
-}
-```
+目标规则图是 `graph.aim.rule.unit_only`，拾取图是 `graph.aim.pick.hostile`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
-SmartCast 模式下：按键瞬间取光标下最近敌方单位；若光标下无有效目标则按 `autoTargetPolicy` 回退到射程内最近敌方单位。TargetFirst 模式下：先点选目标，再按键确认。
+
+即时手势 `interaction.context.aim.smart` 在激活时提交。先选再放要另加一个偏好取值和状态。
 
 ---
 
@@ -97,11 +85,11 @@ Effect 模板示例：
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 | BlackboardFloatBuffer | `src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs` | ✅ 已有 |
 | GraphOps | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | FilterProfileRegistry / target filter profiles | `src/Core/Input/Interaction/` | ✅ 已有 |
 | TargetFilter.Hostile | `src/Core/Gameplay/GAS/TargetFilter.cs` | ✅ 已有 |
 | ModifyAttributeAdd (op 210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
-| AutoTargetPolicy.NearestEnemyInRange | `src/Core/Input/Orders/AutoTargetPolicy.cs` | ✅ 已有 |
+| `graph.aim.pick.hostile` | `mods/capabilities/input/AimInteractionMod` | 半径写在技能引用的拾取图 |
 
 ---
 
@@ -115,7 +103,7 @@ Effect 模板示例：
 
 - **DO**: 伤害公式走 `OnCalculate` Graph + Blackboard，不在 `OnApply` 里硬编码数值。
 - **DO**: 护甲减伤实现为 `OnApply Listener`（priority=200），使护盾等其他 Listener 可在更低优先级介入。
-- **DO**: SmartCast 配合 `autoTargetPolicy` 保证光标离目标稍远时仍可命中，提升操作容错。
+- **DO**: 光标附近的敌方单位由 `graph.aim.pick.hostile` 的半径决定，半径写在技能引用的拾取图里。
 - **DON'T**: 不允许在 Graph 内直接修改 HP 字段（绕过 Modifier 聚合），必须走 `ModifyAttributeAdd`。
 - **DON'T**: 不允许在 Graph 阶段做结构变更（如创建伤害数字实体），伤害浮字由表现层 Observer 响应 HP 变化事件驱动。
 - **DON'T**: CC Tag（Status.Stunned 等）不能由 Graph 直接写位，必须通过 `GrantedTags` + Effect 生命周期管理。
@@ -128,7 +116,7 @@ Effect 模板示例：
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 玩家按 Q 键（`PressedThisFrame`），SmartCast，光标悬停敌方单位，目标 HP=500, Armor=50, 施法者 BaseDamage=200 |
+| **输入** | 玩家按 Q 键（`PressedThisFrame`），偏好 `interaction.context.aim.smart`，光标悬停敌方单位，目标 HP=500, Armor=50, 施法者 BaseDamage=200 |
 | **预期输出** | `DamageAmount = 200 × 1.5 = 300`；`FinalDamage = 300 × 100/(100+50) = 200`；目标 HP 降至 300 |
 | **Log 关键字** | `[GAS] ApplyEffect Effect.Ability.C1.Main -> source=<sid> target=<tid> FinalDamage=200` |
 | **截图要求** | 伤害浮字"200"出现在目标头顶，目标血条对应减少 |
@@ -148,8 +136,8 @@ Effect 模板示例：
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 目标距施法者 > `autoTargetRangeCm`（600cm），光标未悬停任何单位 |
-| **预期输出** | SmartCast 回退无有效目标，订单不生成；TargetFirst 模式下显示"目标超出射程"提示 |
+| **输入** | 目标距施法者超过拾取图半径 600cm，光标未悬停任何单位 |
+| **预期输出** | `graph.aim.pick.hostile` 没有敌方单位，订单不生成 |
 | **Log 关键字** | `[Input] OrderDiscarded reason=OutOfRange` |
 | **截图要求** | UI 提示文字出现，角色无动作 |
 | **多帧录屏** | 按键帧 + 静止帧 |

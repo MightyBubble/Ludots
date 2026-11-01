@@ -818,7 +818,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_UnknownPresentationModeHint_IsRejected()
+        public void CompileAbility_BlankPresentationModeHintKey_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -832,14 +832,14 @@ namespace Ludots.Tests.GAS
                       },
                       "presentation": {
                         "modeHints": {
-                          "SmartCastTypo": "bad mode"
+                          " ": "bad mode"
                         }
                       }
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("presentation.modeHints.SmartCastTypo"));
-            That(ex.Message, Does.Contain("unknown interaction mode"));
+            That(ex!.Message, Does.Contain("presentation.modeHints. "));
+            That(ex.Message, Does.Contain("non-empty mode key"));
         }
 
         [Test]

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.Systems;
 using EntityCommandPanelMod.Runtime;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
@@ -13,6 +12,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Config;
 
 namespace EntityCommandPanelShowcaseMod.Runtime
 {
@@ -35,10 +35,10 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private const string AbilityProjectionSummary = "Ability profile projects the command owners contributing to distinct ability buttons.";
         private const string InactiveProjectionSummary = "Inactive aggregation profile projection.";
 
+        private const string AggregationToolbarContributorId = "entity-command-panel.aggregation";
+
         private readonly AggregationProfileToolbarProvider _aggregationToolbar = new();
-        private IEntityCommandPanelToolbarProvider? _previousToolbarProvider;
         private bool _toolbarInstalled;
-        private bool _showcaseHudSuppressed;
         private int _autoProfileTimelineFrame;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -89,7 +89,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private void EnableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
-            SuppressNonEssentialHud(engine);
             CloseInteractionEntityInfoPanels(context);
             ClosePinnedPanels(context);
             _autoProfileTimelineFrame = 0;
@@ -110,7 +109,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private void DisableShowcase(ScriptContext context, GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
-            RestoreSuppressedHud(engine);
             ClearProfileProjectionCollections(engine);
             UninstallAggregationProfileToolbar(engine);
             ClosePinnedPanels(context);
@@ -141,28 +139,6 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             Execute(context, new CloseEntityCommandPanelCommand(AggregationAlias));
         }
 
-        private void SuppressNonEssentialHud(GameEngine engine)
-        {
-            if (_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
-            _showcaseHudSuppressed = true;
-        }
-
-        private void RestoreSuppressedHud(GameEngine engine)
-        {
-            if (!_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
-            _showcaseHudSuppressed = false;
-        }
-
         private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
@@ -188,13 +164,10 @@ namespace EntityCommandPanelShowcaseMod.Runtime
                 return;
             }
 
-            IEntityCommandPanelToolbarProvider? existing = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-            if (!ReferenceEquals(existing, _aggregationToolbar))
-            {
-                _previousToolbarProvider = existing;
-            }
-
-            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _aggregationToolbar);
+            EntityCommandPanelToolbarComposer.Require(engine).RegisterContributor(
+                EntityCommandPanelToolbarComposer.CommandPanelId,
+                AggregationToolbarContributorId,
+                _aggregationToolbar);
             _toolbarInstalled = true;
         }
 
@@ -206,20 +179,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
                 return;
             }
 
-            IEntityCommandPanelToolbarProvider? current = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-            if (ReferenceEquals(current, _aggregationToolbar))
-            {
-                if (_previousToolbarProvider != null)
-                {
-                    engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _previousToolbarProvider);
-                }
-                else
-                {
-                    engine.RemoveService(CoreServiceKeys.EntityCommandPanelToolbarProvider);
-                }
-            }
-
-            _previousToolbarProvider = null;
+            EntityCommandPanelToolbarComposer.Require(engine).UnregisterContributor(AggregationToolbarContributorId);
             _toolbarInstalled = false;
         }
 
@@ -259,7 +219,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 localPlayer,

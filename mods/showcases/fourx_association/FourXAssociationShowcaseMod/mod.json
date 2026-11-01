@@ -6,7 +6,6 @@
   "priority": 140,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "EntityCommandPanelMod": "^1.0.0",
     "AssociationStressShowcaseMod": "^1.0.0",
     "FogVisionDecayShowcaseMod": "^1.0.0",
@@ -17,5 +16,13 @@
     "TeamResearchShowcaseMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "fourx", "entity-association", "knowledge", "exchange", "progression", "ownership"]
+  "tags": [
+    "showcase",
+    "fourx",
+    "entity-association",
+    "knowledge",
+    "exchange",
+    "progression",
+    "ownership"
+  ]
 }

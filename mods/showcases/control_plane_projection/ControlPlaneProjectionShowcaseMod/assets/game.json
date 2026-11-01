@@ -9,10 +9,6 @@
     "required": true,
     "provider": "ultralight"
   },
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "ControlPlaneProjection.Controls"
-  ],
   "commandSource": {
     "targetFilter": {
       "relationFilter": "All"
@@ -25,7 +21,8 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

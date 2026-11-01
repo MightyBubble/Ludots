@@ -25,6 +25,13 @@ namespace Ludots.Core.Config
                 throw new InvalidOperationException("GameConfig.startupLocalSeats[].playerId must be positive.");
             }
 
+            if (string.IsNullOrWhiteSpace(ControlSchemeId) ||
+                !string.Equals(ControlSchemeId, ControlSchemeId.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.startupLocalSeats[].controlSchemeId must be a non-empty string.");
+            }
+
             return new LocalSeatLaunchBinding(SeatId.Trim(), PlayerId, ControlSchemeId);
         }
     }

@@ -1,9 +1,5 @@
 {
   "startupMapId": "crowd_physics_arena",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "CrowdPhysicsArena.Controls"
-  ],
   "windowTitle": "Ludots Engine - Capability Standard Crowd Physics Arena",
   "targetFps": 0,
   "gasRuntimeCapacity": {
@@ -56,7 +52,8 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

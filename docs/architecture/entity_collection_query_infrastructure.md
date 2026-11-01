@@ -6,9 +6,9 @@ Selection retirement boundary:
 
 - Formal `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, `OrderSelectionReference`, `SelectionRequest`, and `SelectionResponse` are retired as official selection APIs.
 - User-facing copy may still say "selection" as shorthand for the default command source, but runtime authority is `EntityCollectionStore`.
-- The default commandable set is `(owner, EntityCollectionKeys.CommandSource)` / `collection.command.source`.
-- UI acquisition may keep a preview collection, but committed command intent writes `collection.command.source`; it must not fall back to `SelectionRuntime`.
-- Presentation rules use `EntityCollectionMemberAdded` / `EntityCollectionMemberRemoved` with collection keys such as `collection.command.source`.
+- The commandable set is `(owner, commandSource)`. `commandSource` is a role in `Input/collection_keys.json`; the merged value is the collection name. Shared graphs author the role token and fail at load when it is unbound.
+- UI acquisition may keep a preview collection, but committed command intent writes that bound collection; it must not fall back to `SelectionRuntime`.
+- Presentation rules use `EntityCollectionMemberAdded` / `EntityCollectionMemberRemoved` with the same bound collection key.
 
 ## Scope
 
@@ -67,14 +67,14 @@ These are descriptors for collection consumers. They are not permission checks a
 
 ## Command Source Boundary
 
-`EntityCollectionStore` is the authoritative model for reusable entity sets. The default command source is `EntityCollectionKeys.CommandSource` (`collection.command.source`).
+`EntityCollectionStore` is the authoritative model for reusable entity sets. The command source is the `commandSource` role in `Input/collection_keys.json`. The merged value is the collection name.
 
-UI click and box acquisition write acquisition results into `EntityCollectionStore`. Replace/add/toggle command-source mutations publish the committed actor set to `(owner, collection.command.source)` with `EntityCollectionRoleKind.CommandSource`.
+UI click and box acquisition write acquisition results into `EntityCollectionStore`. Replace/add/toggle command-source mutations publish the committed actor set to `(owner, <bound commandSource>)` with `EntityCollectionRoleKind.CommandSource`.
 
 This separation is intentional:
 
 - UI acquisition is input/query state.
-- `collection.command.source` is the gameplay-facing default command set.
+- The bound `commandSource` collection is the gameplay-facing command set.
 - Display/query collections can be inspected or sampled without mutating command authority.
 
 Missing collection services or missing collection keys must fail explicitly at the consuming boundary. Silent fallback to `SelectionRuntime`, `SelectionSetKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, or old global selected-entity state is forbidden.

@@ -1,9 +1,5 @@
 {
   "startupMapId": "entry",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "Moba_Gameplay"
-  ],
   "windowWidth": 1280,
   "windowHeight": 720,
   "windowTitle": "Ludots Engine",

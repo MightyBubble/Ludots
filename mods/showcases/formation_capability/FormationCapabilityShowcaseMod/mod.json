@@ -6,11 +6,15 @@
   "priority": -2000,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0",
     "MassNavigationMod": "^1.0.0",
     "SelectionInteractionMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["navigation", "mass-navigation", "formation-capability", "showcase"]
+  "tags": [
+    "navigation",
+    "mass-navigation",
+    "formation-capability",
+    "showcase"
+  ]
 }

@@ -27,7 +27,6 @@ public sealed class CapabilityStandardPhysics2DAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         ShowcaseModId
     };

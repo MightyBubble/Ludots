@@ -13,7 +13,7 @@ namespace RoadNetworkShowcaseMod.UI
             "Road Network Showcase",
             "Road command ready. Use the command action near a road or fort.",
             "Command source 0 | Primary <none> | Owner <none>",
-            "Input ground=<none>\nInput order=<none>",
+            "Snapshot file=<pending>",
             "Chunks 0 | Nodes 0",
             "Legend: Query=command source/order, Plan=active order plus nav plan, Pick=route waypoint, Move=intent sink to nav, Check=arrival and timeout state.",
             System.Array.Empty<RoadNetworkShowcaseActorPanelState>());

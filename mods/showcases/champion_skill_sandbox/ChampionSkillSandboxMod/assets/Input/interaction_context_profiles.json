@@ -5,7 +5,11 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command",
+        "Stop",
+        "QueueModifier",
+        "Aim.Slot.Release"
       ],
       "triggers": [
         {
@@ -13,6 +17,40 @@
         },
         {
           "trigger": "graph.core.hover_tick"
+        },
+        {
+          "trigger": "graph.champion.move"
+        },
+        {
+          "trigger": "graph.champion.stop"
+        },
+        {
+          "trigger": "graph.champion.held_channel_end"
+        },
+        {
+          "trigger": "graph.champion.bind_aim_actor"
+        },
+        {
+          "trigger": "graph.champion.arm_hostile_assist"
+        },
+        {
+          "trigger": "graph.champion.restore_default_pick"
+        },
+        {
+          "trigger": "graph.champion.toolbar"
+        }
+      ],
+      "onActivated": [
+        "graph.champion.bind_aim_actor",
+        "graph.aim.pick.hostile",
+        "graph.aim.enter"
+      ]
+    },
+    {
+      "id": "interaction.context.aim.cast",
+      "triggers": [
+        {
+          "trigger": "graph.champion.apply_scheme_cast_default"
         }
       ]
     }

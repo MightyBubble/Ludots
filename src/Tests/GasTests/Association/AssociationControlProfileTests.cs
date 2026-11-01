@@ -16,6 +16,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -938,7 +939,9 @@ namespace Ludots.Tests.GAS
                 applier.BindInputInteraction(
                     new Ludots.Core.Input.Interaction.FilterProfileRegistry(filterProfileIds, world, tagOps),
                     domains,
-                    keyRegistry.Register("collection.ui.cast.raw"));
+                    InputCollectionKeyDeclarations.ForResolvedRoles(
+                        keyRegistry,
+                        new Dictionary<string, string> { ["castRaw"] = "collection.ui.cast.raw" }));
                 return new Harness
                 {
                     Changes = changes,
@@ -955,7 +958,7 @@ namespace Ludots.Tests.GAS
                     ControlsTypeId = controlsTypeId,
                     AllyTypeId = allyTypeId,
                     GrantedFlagId = grantedFlagId,
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                 };
             }
 

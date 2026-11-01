@@ -43,5 +43,8 @@ namespace Ludots.Core.Presentation.Presenters
 
         /// <summary>True when the event Magnitude is zero or below.</summary>
         EventMagnitudeNonPositive = 11,
+
+        /// <summary>True when the command's resolved owner has a VisualTransform.</summary>
+        OwnerHasVisualTransform = 12,
     }
 }

@@ -1386,7 +1386,6 @@ public sealed class LauncherService
         {
             ResolveGameJsonSetting("defaultCoreMod", fragments),
             ResolveGameJsonSetting("startupMapId", fragments),
-            ResolveGameJsonSetting("startupInputContexts", fragments),
             ResolveGameJsonSetting("browserRuntime", fragments)
         };
         var warnings = BuildPlanWarnings(roots, settings);

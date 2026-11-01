@@ -45,6 +45,10 @@ namespace Ludots.Core.GraphRuntime
         public TriggerGraphEntryFilters ParsedFilters { get; set; }
         /// <summary>Normalized refire policy ("ignore"/"restart"); default "ignore".</summary>
         public string NormalizedRefire { get; set; } = TriggerGraphEntry.RefireIgnore;
+        /// <summary>Authoring <c>budget</c>. Empty, or <see cref="TriggerGraphEntry.BudgetSingleSlice"/>.</summary>
+        public string? Budget { get; set; }
+        /// <summary>Normalized budget token; empty when the entry has no slice requirement.</summary>
+        public string NormalizedBudget { get; set; } = string.Empty;
         /// <summary>Normalized hook target produced by entry validation; null = plain dispatch entry.</summary>
         public TriggerGraphHookTargetConfig? ParsedHook { get; set; }
     }
@@ -254,15 +258,19 @@ namespace Ludots.Core.GraphRuntime
         public string? PresentationSurface { get; set; }
         /// <summary>InvokeArgs staging key for StoreArgInt/Float/Entity and the InvokeGraph call contract.</summary>
         public string? ArgKey { get; set; }
-        /// <summary>Interaction mode id symbol for SetInteractionMode; resolved against the installed interaction mode map at run time.</summary>
+        /// <summary>Interaction mode symbol for SetInteractionMode. The patcher stores a config-key id.</summary>
         public string? Mode { get; set; }
+        /// <summary>Preference key symbol for IsPref / SetPref / ActivateContextFromPref.</summary>
+        public string? Key { get; set; }
+        /// <summary>Preference value symbol for IsPref / SetPref.</summary>
+        public string? Value { get; set; }
         /// <summary>Interaction context profile id symbol for ActivateContext/DeactivateContext; resolved against the installed context profiles at run time.</summary>
         public string? Context { get; set; }
         /// <summary>Optional parent interaction context profile id symbol for ActivateContext; omit for a root-level derived context.</summary>
         public string? ParentContext { get; set; }
         /// <summary>Virtual camera id symbol for ActivateVirtualCamera; must name a <c>Camera/virtual_cameras.json</c> entry.</summary>
         public string? Camera { get; set; }
-        /// <summary>Seat id symbol for the aimsource family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
+        /// <summary>Seat id symbol for the pointer-sample family (ScreenPointToGround/ScreenPointToEntity/ScreenRegionToEntities); the answer is given under that seat's present binding.</summary>
         public string? Seat { get; set; }
         /// <summary>Pick radius in pixels for ScreenPointToEntity (authored literal).</summary>
         public float PickRadiusPx { get; set; }
@@ -286,6 +294,8 @@ namespace Ludots.Core.GraphRuntime
         public int Day { get; set; }
         /// <summary>Symbol for LoadConfigKey. Resolved with ConfigKeyRegistry.GetId; an unknown name fails.</summary>
         public string? Symbol { get; set; }
+        /// <summary>Message symbol for Fail. The runtime throws GAS.GRAPH.ERR.{message} and names the running graph.</summary>
+        public string? Message { get; set; }
         /// <summary>TimeFlow domain name for ReadTimeFlow* / AcquireTimeFlow*. Must already be registered.</summary>
         public string? Domain { get; set; }
         public float RadiusCm { get; set; }
@@ -383,6 +393,11 @@ namespace Ludots.Core.GraphRuntime
         public const string List = "list";
         public const string TeamId = "teamId";
         public const string Source = "source";
+        /// <summary>
+        /// DispatchMapEvent ability-id route. An int, not a schema parameter:
+        /// a schema parameter with this name is rejected.
+        /// </summary>
+        public const string Ability = "ability";
         public const string Min = "min";
         public const string Max = "max";
         public const string Tolerance = "tolerance";

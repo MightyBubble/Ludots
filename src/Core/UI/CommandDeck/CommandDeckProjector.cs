@@ -203,8 +203,8 @@ namespace Ludots.Core.UI.CommandDeck
         }
 
         /// <summary>
-        /// Materialize ControlPlaneView members into a dedicated collection key so domain
-        /// <c>collection.command.source</c> rows are not overwritten. Returns the materialization key
+        /// Materialize ControlPlaneView members into a dedicated collection key so the
+        /// profile source collection is not overwritten. Returns the materialization key
         /// used as the panel source instanceKey.
         /// </summary>
         private string EnsureControlPlaneMaterialized(CommandDeckProfile profile, Entity owner)

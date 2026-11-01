@@ -5,11 +5,20 @@
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
-        "Select.End"
+        "Select.End",
+        "Command",
+        "Stop",
+        "QueueModifier"
       ],
       "triggers": [
         {
           "trigger": "graph.core.select_begin"
+        },
+        {
+          "trigger": "graph.road.command_commit"
+        },
+        {
+          "trigger": "graph.road.stop"
         }
       ]
     }

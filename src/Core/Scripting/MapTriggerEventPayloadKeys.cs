@@ -38,7 +38,15 @@ namespace Ludots.Core.Scripting
         public const string Action = "MapTrigger.Action";                        // string
         public const string PointerScreenX = "MapTrigger.PointerScreenX";        // float (window px)
         public const string PointerScreenY = "MapTrigger.PointerScreenY";        // float (window px)
+        // Value-change dispatches (Axis2D firesOn change, and PointerMoved) stamp the
+        // watched vector here. PointerMoved's watched vector is the pointer, so these
+        // match PointerScreenX/Y. Button dispatches omit them.
+        public const string ActionValueX = "MapTrigger.ActionValueX";            // float
+        public const string ActionValueY = "MapTrigger.ActionValueY";            // float
         public const string Modifiers = "MapTrigger.Modifiers";                  // int (bitmask)
+        // Stamped only when the firing binding declared intValue. Button dispatches
+        // without that parameter omit the key; graphs that LoadEntryPayloadInt it fail closed.
+        public const string BindingInt = "MapTrigger.BindingInt";                // int
         public const string SourceMapId = "MapTrigger.SourceMapId";              // MapId (cross-map/global dispatch transport metadata)
         public const string CalendarId = "Calendar.CalendarId";                  // int (ConfigKey id)
         public const string CalendarDayIndex = "Calendar.DayIndex";              // int
@@ -49,6 +57,15 @@ namespace Ludots.Core.Scripting
         public const string CalendarPhaseIndex = "Calendar.PhaseIndex";          // int
         // fires a schema-less map event carrying the final entity set plus the set semantics;
         public const string FieldLayer = "MapTrigger.FieldLayer";                // string (field layer key)
+        public const string CollectionKeyId = "MapTrigger.CollectionKeyId";      // int (ConfigKey id of the collection key)
+        public const string MemberEntity = "MapTrigger.MemberEntity";            // Entity
+        public const string OwnerEntity = "MapTrigger.OwnerEntity";              // Entity
+        public const string ContextKeyId = "MapTrigger.ContextKeyId";            // int (ConfigKey id of the interaction context profile)
+        public const string SeatId = "MapTrigger.SeatId";                        // string
+        // Control-scheme ids on ControlSchemeChanged. ConfigKey of the scheme name, same
+        // symbol-to-int compile path as ContextKeyId. OldSchemeId is 0 when no scheme was active.
+        public const string OldSchemeId = "MapTrigger.OldSchemeId";              // int (ConfigKey id)
+        public const string NewSchemeId = "MapTrigger.NewSchemeId";              // int (ConfigKey id)
 
         /// <summary>
         /// Whether a string is one of the constants above (reflection-built once); the

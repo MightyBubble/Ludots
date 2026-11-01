@@ -1,0 +1,38 @@
+{
+  "op": "DeactivateOwnContext",
+  "driver": "linear",
+  "title": "关掉当前这个交互状态",
+  "beat": "图关掉正在跑自己的那个交互状态。",
+  "detailTemplate": "关掉了，木桩从{healthBefore}掉到{healthAfter}。",
+  "assertDetailContains": [
+    "关掉了"
+  ],
+  "featuredNodeId": "close",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "graphSettled"
+  }
+}

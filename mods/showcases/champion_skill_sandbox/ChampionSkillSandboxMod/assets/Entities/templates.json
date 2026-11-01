@@ -55,11 +55,14 @@
           "Ability.Champion.Ezreal.TrueshotBarrage"
         ]
       },
-      "GameplayTagContainer": {},
+      "GameplayTagContainer": {
+        "tags": ["Champion.Input.NearestHostileAssist"]
+      },
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -112,7 +115,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -168,7 +172,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -210,7 +215,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -248,15 +254,14 @@
           "Ability.Champion.SpellEngineer.GuidedLaser"
         ]
       },
-      "AbilityExecAimSync": {
-        "abilitySlot": 3,
-        "syncFacing": true
+      "GameplayTagContainer": {
+        "tags": ["Champion.Input.HoldToChannel"]
       },
-      "GameplayTagContainer": {},
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -484,7 +489,7 @@
       "GameplayTagContainer": {},
       "ManifestationMotion2D": {
         "followParentPosition": true,
-        "facingSource": "ParentExecutionTarget",
+        "facingSource": "ParentCastFacing",
         "sweepDegreesPerSecond": 0.0,
         "forwardOffsetCm": 450
       },
@@ -601,7 +606,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -654,7 +660,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -707,7 +714,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -760,7 +768,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -813,7 +822,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -866,7 +876,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -919,7 +930,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   },
   {
@@ -972,7 +984,8 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "BlackboardFloatBuffer": {}
     }
   }
 ]

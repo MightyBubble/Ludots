@@ -1,0 +1,12 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.default",
+      "inputContexts": [
+        "Camera.Rig",
+        "Frontline.Gameplay",
+        "Frontline.RoomControls"
+      ]
+    }
+  ]
+}

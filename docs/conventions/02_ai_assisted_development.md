@@ -119,7 +119,7 @@ Agent 在收到任务后、写第一行代码前，必须依次做出以下三�
 
 *   `DiagnosticsOverlayMod`：调试 UI 从 RaylibHostLoop 硬编码提取为独立 Mod（Issue #18）
 *   `GmConsoleMod`：GM 控制台从散落的调试代码提取为独立 Mod
-*   `CoreInputMod`：输入映射从 MobaDemoMod 提取为公共 Mod，多个 Demo Mod 依赖
+*   `AimInteractionMod`：瞄准施放抽成能力 mod，冠军沙盒、MOBA、交互展示、`aim_control_schemes` 四个游戏共用
 
 **本仓库的反面案例**：
 

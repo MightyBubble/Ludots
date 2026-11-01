@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Config;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Client;
@@ -127,7 +128,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private Entity[] SnapshotCommandSource()
         {
             return TryResolveLocalCommandSourceOwner(out Entity owner)
-                ? EntityCollectionContextRuntime.Snapshot(_globals, owner, "collection.command.source")
+                ? EntityCollectionContextRuntime.Snapshot(_globals, owner, InputCollectionKeyDeclarations.RequireRole(_globals, "commandSource"))
                 : Array.Empty<Entity>();
         }
 

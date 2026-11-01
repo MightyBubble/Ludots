@@ -6,9 +6,15 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
-  "tags": ["showcase", "timeflow", "capability-standard", "mass-navigation", "physics2d", "gas"]
+  "tags": [
+    "showcase",
+    "timeflow",
+    "capability-standard",
+    "mass-navigation",
+    "physics2d",
+    "gas"
+  ]
 }

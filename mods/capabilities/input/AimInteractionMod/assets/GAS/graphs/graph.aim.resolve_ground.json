@@ -1,0 +1,389 @@
+[
+  {
+    "id": "graph.aim.resolve_ground",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "resolve",
+        "event": "AimBind",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "actors",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "halt0",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "read_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "load_range",
+        "op": "LoadAbilityCastRange"
+      },
+      {
+        "id": "write_range",
+        "op": "WriteBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
+      },
+      {
+        "id": "invoke_stick",
+        "op": "InvokeGraph",
+        "functionName": "graph.aim.apply_stick"
+      },
+      {
+        "id": "read_valid",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "valid_eq",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "valid_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "read_x",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.x_cm"
+      },
+      {
+        "id": "read_y",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.point.y_cm"
+      },
+      {
+        "id": "set_pos",
+        "op": "SetTargetPos"
+      },
+      {
+        "id": "read_range",
+        "op": "ReadBlackboardFloat",
+        "blackboardKey": "aim.range_cm"
+      },
+      {
+        "id": "clamp",
+        "op": "ClampTargetToRange"
+      },
+      {
+        "id": "q_ground",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "submit_ground",
+        "op": "SubmitCast",
+        "orderTypeKey": "castAbility",
+        "queue": "onQueueModifier"
+      },
+      {
+        "id": "halt1",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "actors"
+      },
+      {
+        "from": "actors",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "read_slot"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "next",
+        "to": "load_range"
+      },
+      {
+        "from": "load_range",
+        "fromPort": "next",
+        "to": "write_range"
+      },
+      {
+        "from": "write_range",
+        "fromPort": "next",
+        "to": "invoke_stick"
+      },
+      {
+        "from": "invoke_stick",
+        "fromPort": "next",
+        "to": "read_valid"
+      },
+      {
+        "from": "read_valid",
+        "fromPort": "next",
+        "to": "valid_eq"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "next",
+        "to": "valid_jump"
+      },
+      {
+        "from": "valid_jump",
+        "fromPort": "true",
+        "to": "read_x"
+      },
+      {
+        "from": "valid_jump",
+        "fromPort": "false",
+        "to": "halt0"
+      },
+      {
+        "from": "read_x",
+        "fromPort": "next",
+        "to": "read_y"
+      },
+      {
+        "from": "read_y",
+        "fromPort": "next",
+        "to": "set_pos"
+      },
+      {
+        "from": "set_pos",
+        "fromPort": "next",
+        "to": "read_range"
+      },
+      {
+        "from": "read_range",
+        "fromPort": "next",
+        "to": "clamp"
+      },
+      {
+        "from": "clamp",
+        "fromPort": "next",
+        "to": "q_ground"
+      },
+      {
+        "from": "q_ground",
+        "fromPort": "next",
+        "to": "submit_ground"
+      },
+      {
+        "from": "submit_ground",
+        "fromPort": "next",
+        "to": "halt1"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "halt0",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt1",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "actors",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "read_valid",
+        "fromPort": "value",
+        "to": "valid_eq",
+        "toPort": "a"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "valid_eq",
+        "toPort": "b"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "value",
+        "to": "valid_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_x",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_y",
+        "toPort": "source"
+      },
+      {
+        "from": "read_x",
+        "fromPort": "value",
+        "to": "set_pos",
+        "toPort": "a"
+      },
+      {
+        "from": "read_y",
+        "fromPort": "value",
+        "to": "set_pos",
+        "toPort": "b"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_ground",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "submit_ground",
+        "toPort": "value"
+      },
+      {
+        "from": "valid_eq",
+        "fromPort": "value",
+        "to": "submit_ground",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "read_range",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "clamp",
+        "toPort": "a"
+      },
+      {
+        "from": "read_range",
+        "fromPort": "value",
+        "to": "clamp",
+        "toPort": "b"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "load_range",
+        "toPort": "source"
+      },
+      {
+        "from": "read_slot",
+        "fromPort": "value",
+        "to": "load_range",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_range",
+        "toPort": "source"
+      },
+      {
+        "from": "load_range",
+        "fromPort": "value",
+        "to": "write_range",
+        "toPort": "value"
+      }
+    ]
+  }
+]

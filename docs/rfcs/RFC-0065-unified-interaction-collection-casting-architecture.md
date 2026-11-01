@@ -262,7 +262,7 @@ genre 差异（星际右键指挥 / 红警左键指挥 / 暗黑左键攻击 + WA
 
 | 层 | 内容 | 载体 | 现状 |
 |----|------|------|------|
-| 物理绑定 | `<Mouse>/rightButton` → action `"Command"` | `default_input.json` bindings（IMC） | ✅ 已数据化；`"Select"/"Command"` 字面量只存在于 `InteractionActionBindings` 默认常量，消费者读可配置 property |
+| 物理绑定 | `<Mouse>/rightButton` → action `"Command"` | `default_input.json` bindings（IMC） | ✅ 已数据化；action id 写在 IMC binding 和交互上下文 profile 的 `bindings` 上 |
 | 控制方案 | **ControlScheme** = 一组 IMC context 的命名组合——纯设备键位档案（`scheme.sc2_classic` / `scheme.wasd_move`）；下单偏好见 InteractionPref（DEC-14 修订） | 拟新增 catalog | ❌ 无 |
 | action → op | frame 的 `frameActions`（DEC-13） | InteractionContextProfile | 本 Epic 落地 |
 | intent → order | CommandIntentProfile（DEC-14） | 拟新增 | ❌ 无 target 侧 |
@@ -567,7 +567,7 @@ profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push �
 
 ```text
 <Mouse>/rightButton                        （default_input.json binding，scheme.sc2_classic 的 IMC）
-  → InputAction "Command"                  （action id 本身是数据，InteractionActionBindings 可换）
+  → InputAction "Command"                  （action id 本身是数据，写在 IMC binding 和交互上下文 profile 的 bindings 上）
     → 栈顶 default frame：frameActions 无精确匹配 → 落入 representative InteractionPref 的玩家默认
       → intent.command.rts_default         （frame 显式声明 commandIntentId 时 frame 值优先）
         → per-actor 规则表：命中 priority=10（target.hasEntity=false）

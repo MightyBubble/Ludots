@@ -44,6 +44,12 @@ namespace Ludots.Core.Client
         public uint SchemeRevision { get; internal set; }
 
         /// <summary>
+        /// Invoked by the owning runtime when this channel's scheme id changes.
+        /// Arguments are seat id, previous scheme id (0 when none), and the new scheme id.
+        /// </summary>
+        internal Action<string, int, int>? OnSchemeChanged { get; set; }
+
+        /// <summary>
         /// The channel scheme's axis move declaration, resolved from the shared control scheme
         /// catalog. Returns false when the seat has no activated scheme or that scheme declares
         /// no axis move.
@@ -74,9 +80,14 @@ namespace Ludots.Core.Client
                 Handler.PushContext(activation.InputContexts[i]);
             }
 
+            int previousSchemeId = ActiveSchemeId;
             _activeSchemeContexts = activation.InputContexts;
             ActiveSchemeId = schemeId;
             SchemeRevision++;
+            if (previousSchemeId != schemeId)
+            {
+                OnSchemeChanged?.Invoke(SeatId, previousSchemeId, schemeId);
+            }
         }
     }
 
@@ -96,7 +107,6 @@ namespace Ludots.Core.Client
         private readonly IDictionary<string, object> _globals;
         private readonly ControlSchemeRuntime _schemes;
         private readonly InputConfigRoot _inputConfig;
-        private readonly IReadOnlyList<string> _startupInputContexts;
         private readonly Dictionary<string, ClientLocalSeatInputChannel> _channels = new(StringComparer.Ordinal);
         private readonly List<ClientLocalSeatInputChannel> _orderedChannels = new();
         private EmptyInputBackend? _emptyBackend;
@@ -104,16 +114,21 @@ namespace Ludots.Core.Client
         public ClientLocalSeatInputRuntime(
             IDictionary<string, object> globals,
             ControlSchemeRuntime schemes,
-            InputConfigRoot inputConfig,
-            IReadOnlyList<string>? startupInputContexts = null)
+            InputConfigRoot inputConfig)
         {
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _schemes = schemes ?? throw new ArgumentNullException(nameof(schemes));
             _inputConfig = inputConfig ?? throw new ArgumentNullException(nameof(inputConfig));
-            _startupInputContexts = startupInputContexts ?? Array.Empty<string>();
         }
 
         public int ChannelCount => _orderedChannels.Count;
+
+        /// <summary>
+        /// Invoked when a multi-seat channel's scheme id changes. Arguments are seat id,
+        /// previous scheme id (0 when none), and the new scheme id. The sole seat has no
+        /// channel; its switch is <see cref="ControlSchemeRuntime.SchemeChanged"/>.
+        /// </summary>
+        public Action<string, int, int>? SeatSchemeChanged { get; set; }
 
         public bool TryGetChannel(string seatId, out ClientLocalSeatInputChannel channel)
         {
@@ -144,25 +159,24 @@ namespace Ludots.Core.Client
             for (int i = 0; i < ids.Count; i++)
             {
                 ClientLocalSeat seat = seats.Require(ids[i]);
-                var handler = new PlayerInputHandler(backend, _inputConfig);
-                for (int c = 0; c < _startupInputContexts.Count; c++)
+                if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
                 {
-                    handler.PushContext(_startupInputContexts[c]);
+                    throw new InvalidOperationException(
+                        $"ClientLocalSeat '{seat.SeatId}' requires controlSchemeId.");
                 }
 
+                var handler = new PlayerInputHandler(backend, _inputConfig);
                 var channel = new ClientLocalSeatInputChannel(
                     seat.SeatId,
                     handler,
                     new AuthoritativeInputAccumulator(),
                     new FrozenInputActionReader(),
                     _schemes);
+                channel.OnSchemeChanged = (id, oldSchemeId, newSchemeId) =>
+                    SeatSchemeChanged?.Invoke(id, oldSchemeId, newSchemeId);
                 _channels.Add(seat.SeatId, channel);
                 _orderedChannels.Add(channel);
-
-                if (!string.IsNullOrWhiteSpace(seat.ControlSchemeId))
-                {
-                    ActivateDeclaredScheme(seat, channel);
-                }
+                ActivateDeclaredScheme(seat, channel);
             }
         }
 

@@ -1,12 +1,40 @@
 {
   "actions": [
-    { "id": "UxPrototype.Command", "name": "UxPrototype_Command", "type": "Button" },
-    { "id": "Stop", "name": "UxPrototype_Stop", "type": "Button" },
-    { "id": "QueueModifier", "name": "UxPrototype_QueueModifier", "type": "Button" },
-    { "id": "ModePlay", "name": "UxPrototype_ModePlay", "type": "Button" },
-    { "id": "ModeRoad", "name": "UxPrototype_ModeRoad", "type": "Button" },
-    { "id": "ModeObstacle", "name": "UxPrototype_ModeObstacle", "type": "Button" },
-    { "id": "ModeNavmesh", "name": "UxPrototype_ModeNavmesh", "type": "Button" }
+    {
+      "id": "UxPrototype.Command",
+      "name": "UxPrototype_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Stop",
+      "name": "UxPrototype_Stop",
+      "type": "Button"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "UxPrototype_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "ModePlay",
+      "name": "UxPrototype_ModePlay",
+      "type": "Button"
+    },
+    {
+      "id": "ModeRoad",
+      "name": "UxPrototype_ModeRoad",
+      "type": "Button"
+    },
+    {
+      "id": "ModeObstacle",
+      "name": "UxPrototype_ModeObstacle",
+      "type": "Button"
+    },
+    {
+      "id": "ModeNavmesh",
+      "name": "UxPrototype_ModeNavmesh",
+      "type": "Button"
+    }
   ],
   "contexts": [
     {
@@ -14,13 +42,42 @@
       "name": "UX Prototype Controls",
       "priority": 85,
       "bindings": [
-        { "actionId": "UxPrototype.Command", "path": "<Mouse>/rightButton" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
-        { "actionId": "ModePlay", "path": "<Keyboard>/f1" },
-        { "actionId": "ModeRoad", "path": "<Keyboard>/f2" },
-        { "actionId": "ModeObstacle", "path": "<Keyboard>/f3" },
-        { "actionId": "ModeNavmesh", "path": "<Keyboard>/f4" }
+        {
+          "actionId": "UxPrototype.Command",
+          "path": "<Mouse>/rightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "ModePlay",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "ModeRoad",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "ModeObstacle",
+          "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "ModeNavmesh",
+          "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
       ]
     }
   ]

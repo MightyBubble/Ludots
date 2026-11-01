@@ -59,7 +59,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         /// <summary>
         /// Read a float from the owner entity's <c>BlackboardFloatBuffer</c>.
-        /// <see cref="ValueRef.SourceId"/> is the ConfigKeyRegistry id of the blackboard key.
+        /// <see cref="ValueRef.SourceId"/> is the <c>OrderBlackboardKeyRegistry</c> id of the blackboard key.
         /// </summary>
         OwnerBlackboardFloat = 9,
 
@@ -68,6 +68,17 @@ namespace Ludots.Core.Presentation.Presenters
 
         /// <summary>Read the live authoritative pointer screen Y (window px).</summary>
         PointerScreenY = 11,
+    }
+
+    /// <summary>
+    /// Scale of a bound float. <see cref="LogicCm"/> uses the same centimeter-to-meter
+    /// scale as a world-position anchor (<see cref="Ludots.Platform.Abstractions.WorldUnits.CmToM"/>).
+    /// Angles and colors stay <see cref="None"/>.
+    /// </summary>
+    public enum ValueUnit : byte
+    {
+        None = 0,
+        LogicCm = 1,
     }
 
     /// <summary>
@@ -100,6 +111,9 @@ namespace Ludots.Core.Presentation.Presenters
         /// remains a hard fail-fast contract error.
         /// </summary>
         public bool Optional;
+
+        /// <summary>Scale applied after the source is read. Constants are already in the consumer's unit.</summary>
+        public ValueUnit Unit;
 
         public static ValueRef FromConstant(float value) => new()
         {
@@ -135,10 +149,11 @@ namespace Ludots.Core.Presentation.Presenters
             Source = ValueSourceKind.FacingDegrees
         };
 
-        public static ValueRef FromOwnerBlackboardFloat(int blackboardKeyId) => new()
+        public static ValueRef FromOwnerBlackboardFloat(int blackboardKeyId, ValueUnit unit = ValueUnit.None) => new()
         {
             Source = ValueSourceKind.OwnerBlackboardFloat,
-            SourceId = blackboardKeyId
+            SourceId = blackboardKeyId,
+            Unit = unit,
         };
 
         public static ValueRef FromPointerScreenX() => new()

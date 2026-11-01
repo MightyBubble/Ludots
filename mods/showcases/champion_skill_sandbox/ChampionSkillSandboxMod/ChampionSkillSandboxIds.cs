@@ -1,5 +1,4 @@
 using System;
-using EntityCommandPanelMod.UI;
 
 namespace ChampionSkillSandboxMod
 {
@@ -9,14 +8,8 @@ namespace ChampionSkillSandboxMod
         public const string StressMapId = "champion_skill_stress";
         public const string InputContextId = "ChampionSkillSandbox.Controls";
 
-        public const string SmartCastModeId = "ChampionSkillSandbox.Mode.SmartCast";
-        public const string IndicatorModeId = "ChampionSkillSandbox.Mode.Indicator";
-        public const string PressReleaseModeId = "ChampionSkillSandbox.Mode.PressReleaseAim";
         public const string TacticalCameraId = "ChampionSkillSandbox.Camera.Tactical";
 
-        public const string SmartCastActionId = "CastModeSmart";
-        public const string IndicatorActionId = "CastModeIndicator";
-        public const string PressReleaseActionId = "CastModePressRelease";
         public const string ResetCameraActionId = "ResetCamera";
         public const string FreeCameraToolbarButtonId = "ChampionSkillSandbox.Camera.Free";
         public const string FollowSelectionToolbarButtonId = "ChampionSkillSandbox.Camera.Selection";
@@ -34,9 +27,6 @@ namespace ChampionSkillSandboxMod
         public const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         public const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         public const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
-        public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
-        public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
-        public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
         public const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
         public const string RosterKeyChannel = "ChampionSkillSandbox.Collection.ActiveKey";
         public const string EzrealAlphaName = "Ezreal Alpha";
@@ -73,20 +63,6 @@ namespace ChampionSkillSandboxMod
             return string.Equals(mapId, StressMapId, StringComparison.Ordinal);
         }
 
-        public static bool IsSandboxMode(string? modeId)
-        {
-            return string.Equals(modeId, SmartCastModeId, StringComparison.Ordinal) ||
-                   string.Equals(modeId, IndicatorModeId, StringComparison.Ordinal) ||
-                   string.Equals(modeId, PressReleaseModeId, StringComparison.Ordinal);
-        }
-
-        public static bool IsCameraFollowMode(string? buttonId)
-        {
-            return string.Equals(buttonId, FreeCameraToolbarButtonId, StringComparison.Ordinal) ||
-                   string.Equals(buttonId, FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
-                   string.Equals(buttonId, FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal);
-        }
-
         public static bool IsSelectionViewButton(string? buttonId)
         {
             return string.Equals(buttonId, PlayerSelectionToolbarButtonId, StringComparison.Ordinal) ||
@@ -119,11 +95,6 @@ namespace ChampionSkillSandboxMod
             }
 
             return "P1 Live";
-        }
-
-        public static string ResolveDefaultShowcaseThemeId()
-        {
-            return EntityCommandPanelShowcaseTheme.ClassicId;
         }
     }
 }

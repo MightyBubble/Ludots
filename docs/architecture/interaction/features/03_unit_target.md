@@ -10,26 +10,22 @@
 
 ## Ludots 映射
 
-```
-InputOrderMapping:
-  actionId: "SkillQ"
-  trigger: PressedThisFrame
-  orderTypeKey: "castAbility"
-  targetType: Entity
-  isSkillMapping: true
-  argsTemplate: { i0: 0 }  // ability slot
-```
+目标规则图是 `graph.aim.rule.unit_only`，拾取图是 `graph.aim.pick.hostile`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
-### InteractionMode 变体:
 
-| Mode | 行为 |
+### 手势
+
+手势不写在技能上。玩家偏好 `pref.aim.cast_mode` 的取值就是交互状态：
+
+| 取值 | 行为 |
 |------|------|
-| TargetFirst | 先选单位, 按键即施放 |
-| SmartCast | 按键时取光标下单位, 立即施放 |
-| AimCast | 按键进入选取模式, 点击确认 |
-| SmartCastWithIndicator | 按住显示范围, 松开施放 |
+| `interaction.context.aim.smart` | 按下后该状态激活即提交，然后关掉自己 |
+| `interaction.context.aim.click` | 按下进入瞄准，再点确认 |
+| `interaction.context.aim.release` | 按下进入瞄准，松开确认 |
 
-所有模式已在 `InputOrderMappingSystem` 中实现。
+先选再放要另加一个取值和对应状态，规则图不用改。
+
+
 
 ## 实现方案
 
@@ -45,7 +41,7 @@ AbilityExecSpec:
       configParams: [{ key: "damage", value: 200 }]
 ```
 
-**TargetFilter**: 在 Order 提交前由 `InputOrderMappingSystem` 检查, 或在 Effect 的 `TargetFilter` 配置中指定 `Hostile`
+**TargetFilter**: 敌我由技能引用的拾取图写入 `aim.pick.relationship`，规则图再读。
 
 ### C2: 友方单位 — 治疗/增益
 
@@ -149,9 +145,9 @@ AbilityExecSpec:
 
 | 组件 | 状态 |
 |------|------|
-| InputOrderMapping.Entity | ✅ 已有 |
-| CastModeType (4种) | ✅ 已有 |
-| AutoTargetPolicy | ✅ 已有 (NearestInRange, NearestEnemyInRange) |
+| `graph.aim.rule.unit_only` | AimInteractionMod |
+| `pref.aim.cast_mode` | 三个手势状态 |
+| `graph.aim.pick.hostile` | AimInteractionMod，半径写在技能引用的拾取图 |
 | FilterProfileRegistry / target filter profiles | ✅ 已有 |
 | GetRelationship() | ✅ 已有 |
 | QueryFilterLayer | ✅ 已有 |

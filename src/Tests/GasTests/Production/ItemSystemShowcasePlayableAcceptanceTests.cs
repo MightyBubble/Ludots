@@ -557,7 +557,7 @@ public sealed class ItemSystemShowcasePlayableAcceptanceTests
         var modPaths = RepoModPaths.ResolveExplicit(repoRoot, mods is { Length: > 0 } ? mods : AcceptanceMods);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
         AcceptanceUiHostInstaller.Install(engine);
 

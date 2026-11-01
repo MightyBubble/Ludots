@@ -13,6 +13,7 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.Core.Modding;
 using Ludots.UI.Surface;
+using Ludots.Core.Input.Config;
 
 namespace CameraShowcaseMod.Runtime
 {
@@ -116,7 +117,7 @@ namespace CameraShowcaseMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,

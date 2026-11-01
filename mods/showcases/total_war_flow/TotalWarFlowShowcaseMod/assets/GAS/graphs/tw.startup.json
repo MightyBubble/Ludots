@@ -19,7 +19,8 @@
       {
         "id": "on",
         "op": "ActivateContext",
-        "context": "interaction.context.tw.campaign"
+        "context": "interaction.context.tw.campaign",
+        "parentContext": "core.graph.parent.unconstrained"
       },
       {
         "id": "ok",
@@ -33,7 +34,8 @@
       {
         "id": "sel",
         "op": "ActivateContext",
-        "context": "interaction.context.tw.selection"
+        "context": "interaction.context.tw.selection",
+        "parentContext": "core.graph.parent.unconstrained"
       }
     ],
     "controlEdges": [

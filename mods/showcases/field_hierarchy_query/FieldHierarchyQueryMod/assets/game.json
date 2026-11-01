@@ -1,13 +1,10 @@
 {
   "startupMapId": "field_hierarchy_query",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "FieldHierarchyQuery.Controls"
-  ],
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ],
   "windowTitle": "Ludots - Field Hierarchy Query",

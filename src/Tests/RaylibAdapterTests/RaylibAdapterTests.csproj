@@ -20,10 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\EngineUserData.cs" Link="EngineUserData.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\instanced_batch\InstancedBatchDemoMod\InstancedBatchDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\Client\Ludots.Raylib.SceneKit\Ludots.Raylib.SceneKit.csproj" />
     <ProjectReference Include="..\..\Content\Ludots.Content.EngineGallery\Ludots.Content.EngineGallery.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />

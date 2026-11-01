@@ -13,6 +13,7 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace RtsRedAlertLikeShowcaseMod.Systems;
 
@@ -71,7 +72,7 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
                    _engine.World,
                    _engine.GlobalContext,
                    owner,
-                   "collection.command.source",
+                   InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource"),
                    out entity);
     }
 

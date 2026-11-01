@@ -1,5 +1,5 @@
 > Update required / superseded selection boundary: examples mentioning SelectionRuntime are historical.
-> Current command/selection shorthand flows through EntityCollectionStore and `collection.command.source`.
+> Current command/selection shorthand flows through EntityCollectionStore and the `commandSource` role in `Input/collection_keys.json`.
 # Spatial Geometry SSOT
 
 ## Scope
@@ -85,9 +85,8 @@ For command-source acquisition:
 
 ```text
 CommandSourceSelectableTag + SpatialBounds/SpatialFootprint2D
-  -> CommandSourceAcquisitionSystem
-  -> SpatialBoundsUtility
-  -> EntityCollectionStore[collection.command.source]
+  -> selection graph WriteCollection
+  -> EntityCollectionStore[commandSource]
 ```
 
 For GAS hit or target regions:

@@ -1172,16 +1172,18 @@ namespace Ludots.Core.Persistence
                 for (int i = 0; i < launchContext.LocalSeats.Count; i++)
                 {
                     LocalSeatLaunchBinding seat = launchContext.LocalSeats[i];
+                    if (string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                    {
+                        throw new SaveContextException(
+                            $"launchContext.localSeats[{i}].controlSchemeId is required.");
+                    }
+
                     var seatObj = new JsonObject
                     {
                         ["seatId"] = seat.SeatId,
                         ["playerId"] = seat.PlayerId,
+                        ["controlSchemeId"] = seat.ControlSchemeId,
                     };
-                    if (!string.IsNullOrWhiteSpace(seat.ControlSchemeId))
-                    {
-                        seatObj["controlSchemeId"] = seat.ControlSchemeId;
-                    }
-
                     seats.Add(seatObj);
                 }
 
@@ -1231,6 +1233,12 @@ namespace Ludots.Core.Persistence
                     int playerId = seatObj["playerId"]?.GetValue<int>()
                         ?? throw new SaveContextException($"launchContext.localSeats[{i}].playerId is required.");
                     string? controlSchemeId = seatObj["controlSchemeId"]?.GetValue<string>();
+                    if (string.IsNullOrWhiteSpace(controlSchemeId))
+                    {
+                        throw new SaveContextException(
+                            $"launchContext.localSeats[{i}].controlSchemeId is required.");
+                    }
+
                     seats[i] = new LocalSeatLaunchBinding(seatId, playerId, controlSchemeId);
                 }
             }

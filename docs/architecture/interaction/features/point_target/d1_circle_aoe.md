@@ -6,7 +6,7 @@
 
 ## 机制描述
 
-玩家按下技能键后进入 AimCast 瞄准阶段，地面出现圆形指示器随光标移动；松开或二次点击确认落点，立即对圆形范围内所有敌方单位执行一次伤害结算。与单体指向技能的区别在于：目标是"位置"而非"单位"，且命中数量不固定。
+玩家按下技能键后，偏好若是 `interaction.context.aim.click` 或 `interaction.context.aim.release`，激活时跑 `graph.aim.indicate`，地面圆形指示器跟指针走。点击确认走 `graph.aim.confirm`，松开确认走 `graph.aim.release_confirm`。确认后对圆形范围内所有敌方单位做一次伤害结算。目标是位置，规则图是 `graph.aim.rule.ground_only`，命中数量不固定。
 
 ---
 
@@ -14,21 +14,10 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: `Position`
-- **InteractionMode**: `AimCast`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_D1.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_D1",
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "Position",
-  "isSkillMapping": true,
-  "castModeOverride": null,           // 跟随全局 InteractionMode（默认 AimCast）
-  "autoTargetPolicy": null
-}
-```
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 
@@ -115,7 +104,7 @@ Effect 模板示例：
 | QueryFilterRelationship | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` (op 113) | ✅ 已有 |
 | SpatialBlackboardKey | `src/Core/Input/Orders/OrderArgs.cs` | ✅ 已有 |
 | EffectTemplateRegistry | `src/Core/Gameplay/GAS/EffectTemplateRegistry.cs` | ✅ 已有 |
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | GroundOverlay Presenter | `src/Core/Presentation/Presenters/GroundOverlayPresenter.cs` | ✅ 已有 |
 
 ---
@@ -144,11 +133,11 @@ Effect 模板示例：
 
 | 项 | 内容 |
 |----|------|
-| **输入** | 玩家按 D1 键，AimCast 瞄准后确认落点；落点周围 250cm 内有 3 个敌方单位，HP 均为 500，Armor=50 |
+| **输入** | 玩家按 D1 键，`interaction.context.aim.click` 显示指示器后确认落点；落点周围 250cm 内有 3 个敌方单位，HP 均为 500，Armor=50 |
 | **预期输出** | 3 个目标各扣 `BaseDamage × 1.5 × 100/150` 的 HP；地面圆形范围外单位 HP 不变 |
 | **Log 关键字** | `[GAS] ApplyEffect Effect.Ability.D1.Damage -> source=<sid> target=<tid> FinalDamage=<v>`（出现 3 次） |
 | **截图要求** | 圆形地面指示器半径与实际命中范围一致；3 个伤害浮字同时出现 |
-| **多帧录屏** | F0: 按键 → F1: AimCast 指示器出现 → F2: 确认落点 → F3: Search Effect Propose → F4: FanOut Apply → F5: HP 变化 × 3 → F6: 浮字出现 |
+| **多帧录屏** | F0: 按键 → F1: `graph.aim.indicate` 指示器出现 → F2: 确认落点 → F3: Search Effect Propose → F4: FanOut Apply → F5: HP 变化 × 3 → F6: 浮字出现 |
 
 ### 场景 2: 落点范围内无目标
 
@@ -165,7 +154,7 @@ Effect 模板示例：
 | 项 | 内容 |
 |----|------|
 | **输入** | Mana < Cost（施法者法力值不足） |
-| **预期输出** | 技能激活失败；AimCast 阶段不进入；UI 显示法力不足提示 |
+| **预期输出** | 技能激活失败；`interaction.context.aim.click` 不激活；UI 显示法力不足提示 |
 | **Log 关键字** | `[GAS] AbilityActivationFailed reason=InsufficientMana abilityId=D1` |
 | **截图要求** | 技能按钮闪烁红色，无地面指示器出现 |
 | **多帧录屏** | F0: 按键 → F0 同帧: 激活失败日志 → 后续帧静止 |
@@ -238,7 +227,7 @@ public void D1_InsufficientMana_ActivationFailed()
    - `artifacts/acceptance/point_target/d1_edge.png`
 4. 多帧录屏：
    - `artifacts/acceptance/point_target/d1_60frames.gif`
-   - 标注关键帧：按键帧（F0）、AimCast 指示器帧（F1）、确认帧（F2）、FanOut Apply 帧（F4）、HP 变化帧（F5）、浮字帧（F6）
+   - 标注关键帧：按键帧（F0）、指示器帧（F1）、确认帧（F2）、FanOut Apply 帧（F4）、HP 变化帧（F5）、浮字帧（F6）
 
 ---
 

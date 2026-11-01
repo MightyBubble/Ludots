@@ -713,7 +713,6 @@ public sealed class MapLoadLifecycleOrderingTests
                 """
                 {
                   "startupMapId": "lifecycle_ordering",
-                  "startupInputContexts": [],
                   "presentation": {
                     "presenterInstanceCapacity": 16,
                     "gasPresentationEventCapacity": 16,
@@ -796,9 +795,11 @@ public sealed class MapLoadLifecycleOrderingTests
                 new List<string>
                 {
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                    Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                     Path.Combine(Root, "TestLifecycleMod")
                 },
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             return engine;
         }
 

@@ -4,7 +4,7 @@
 
 ## 1. 定位
 
-命令意图档案回答"这次指针命令对每个选中演员变成什么单"：按演员条件与目标条件分规则，把命令路由到订单类型或技能槽——输入映射（ord-06）的组路由大脑。
+命令意图档案回答"这次指针命令对每个选中演员变成什么单"：按演员条件与目标条件分规则，把命令路由到订单类型或技能槽——交互状态下令图（`SubmitCommandIntent`）的组路由大脑。
 
 ## 2. 产品承诺
 
@@ -22,4 +22,4 @@
 
 规则引用未注册的订单类型或槽位来源、条件形状非法——启动失败并指明档案与规则序号。
 
-**相关文档**：[配置说明](../config/input-01-command-intent.md) · [ord-06](ord-06-input-mappings.md) · [input-02](input-02-cast-dispatch.md)
+**相关文档**：[配置说明](../config/input-01-command-intent.md) · [input-03](input-03-interaction-context.md) · [input-02](input-02-cast-dispatch.md)

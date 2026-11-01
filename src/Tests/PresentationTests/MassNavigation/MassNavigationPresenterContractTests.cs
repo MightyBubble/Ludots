@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.Presentation
 {
@@ -472,7 +473,6 @@ namespace Ludots.Tests.Presentation
                 Is.False,
                 "Command marker lifecycle is now generic entity-collection presentation events plus presenter rules.");
             Assert.That(File.Exists(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs")), Is.False);
-            Assert.That(File.Exists(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "MassNavigationSelectionPresenterSyncSystem.cs")), Is.False);
         }
 
         [Test]
@@ -866,13 +866,13 @@ namespace Ludots.Tests.Presentation
                     JsonObject? evt = rule?["event"]?.AsObject();
                     JsonObject? command = rule?["command"]?.AsObject();
                     return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
-                           string.Equals(evt?["key"]?.GetValue<string>(), "collection.command.source", StringComparison.Ordinal) &&
+                           string.Equals(evt?["key"]?.GetValue<string>(), "role:commandSource", StringComparison.Ordinal) &&
                            string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
                            string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
                 });
 
             Assert.That(match, Is.Not.Null,
-                $"Presenter '{definitionId}' must map {eventKind} for {"collection.command.source"} to {commandKind} '{markerDefinitionId}'.");
+                $"Presenter '{definitionId}' must map {eventKind} for {"role:commandSource"} to {commandKind} '{markerDefinitionId}'.");
             JsonObject commandObj = match!["command"]!.AsObject();
             Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
                 $"Presenter '{definitionId}' must scope command marker lifecycle by source stable id.");

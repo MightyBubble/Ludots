@@ -13,22 +13,10 @@
 
 - **Trigger**: `PressedThisFrame` / `ReleasedThisFrame` / `Held`
 - **TargetType**: `None` / `Entity` / `Position` / `Direction` / `Vector`
-- **InteractionMode**: `TargetFirst` / `SmartCast` / `AimCast` / `SmartCastWithIndicator`
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/<ability_id>.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Q",                        // 对应 InputAction ID
-  "trigger": "PressedThisFrame",                  // InputTriggerType
-  "orderTypeKey": "castAbility",                  // 对应 OrderTypeRegistry 中的 key
-  "targetType": "Entity",                      // OrderTargetType
-  "isSkillMapping": true,                         // 受 InteractionMode 影响
-  "castModeOverride": null,                       // null = 跟随全局 InteractionMode
-  "autoTargetPolicy": "NearestEnemyInRange",      // 可选，SmartCast 无悬停目标时的回退策略
-  "autoTargetRangeCm": 600
-}
-```
+目标规则图是 `graph.aim.rule.unit_only`，拾取图是 `graph.aim.pick.hostile`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 ---
 

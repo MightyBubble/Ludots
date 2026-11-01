@@ -101,11 +101,103 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         /// <summary>
+        /// True when the rep's resolved preference for <paramref name="keyId"/> equals
+        /// <paramref name="valueId"/>. A negative <paramref name="slot"/> reads the player
+        /// pair and does not require an ability on <paramref name="actor"/>. A non-negative
+        /// slot uses the ability at that slot on the actor: an ability pair wins, else the
+        /// player pair. A resolved value of 0 fails closed. An empty non-negative slot fails closed.
+        /// </summary>
+        bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
+        }
+
+        /// <summary>
+        /// Writes one player-level preference onto <paramref name="rep"/>.
+        /// The rep must already carry InteractionPref. Does not write an ability-template pair.
+        /// </summary>
+        void SetPref(Entity rep, int keyId, int valueId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
+        }
+
+        /// <summary>
+        /// Activates the interaction context profile named by the resolved preference value
+        /// for <paramref name="keyId"/>, under <paramref name="parentContextKeyId"/>.
+        /// The key must be context-valued. An unset preference fails closed.
+        /// </summary>
+        void ActivateContextFromPref(Entity rep, Entity actor, int slot, int keyId, int parentContextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable");
+        }
+
+        /// <summary>
+        /// Deactivates the interaction context whose mount is running the current graph.
+        /// Fails closed when no context mount is on the stack.
+        /// </summary>
+        void DeactivateOwnContext()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DeactivateOwnContextOutsideMount");
+        }
+
+        /// <summary>Push the context mount that is about to run a graph. Paired with <see cref="PopContextMount"/>.</summary>
+        void PushContextMount(Entity subject, int profileId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackUnavailable");
+        }
+
+        /// <summary>Pop the context mount pushed around the graph that just returned.</summary>
+        void PopContextMount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackUnavailable");
+        }
+
+        /// <summary>
+        /// Reads <c>targeting.castRangeCm</c> of the ability on <paramref name="actor"/> at
+        /// <paramref name="slot"/>. An empty slot fails closed.
+        /// </summary>
+        float LoadAbilityCastRange(Entity actor, int slot)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
+        }
+
+        /// <summary>
+        /// First field of the '|'-joined <paramref name="fields"/> list that an EffectClip /
+        /// EffectSignal effect of the ability at <paramref name="slot"/> carries (value greater than 0).
+        /// No field carried, the winning field carried by more than one effect, or an empty slot fails closed.
+        /// </summary>
+        float LoadAbilityEffectFloat(Entity actor, int slot, string fields)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.AbilityDefinitionsUnavailable");
+        }
+
+        /// <summary>
+        /// Ability id resolved for <paramref name="actor"/> at <paramref name="slot"/>.
+        /// A dead actor or an empty slot fails closed. Does not read the ability definition.
+        /// </summary>
+        int LoadSlotAbilityId(Entity actor, int slot)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
+        }
+
+        /// <summary>
+        /// Same resolution as <see cref="LoadSlotAbilityId"/>. A dead actor fails closed.
+        /// An actor with no ability in the slot returns false and writes 0.
+        /// </summary>
+        bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LoadSlotAbilityIdUnavailable");
+        }
+
+        /// <summary>
         /// Activates an interaction context instance on the subject: context and
-        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). Idempotent-failure
-        /// on an already-active context; fail-closed on dead subjects, unknown key ids, and
-        /// declared parents that are not active. Default rejects — the engine binds a context
-        /// instance runtime to serve it.
+        /// parent are ConfigKeyRegistry ids (parent 0 = no parent constraint). The graph
+        /// encoding uses <c>0xFFFF</c> for "the mount currently running this graph"; the
+        /// engine resolves that sentinel before the kernel sees it, and a graph outside any
+        /// mount fails closed. Idempotent-failure on an already-active context; fail-closed
+        /// on dead subjects, unknown key ids, and declared parents that are not active.
+        /// Default rejects — the engine binds a context instance runtime to serve it.
         /// </summary>
         void ActivateContext(Entity subject, int contextKeyId, int parentContextKeyId)
         {
@@ -118,6 +210,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Fail-closed when the context is not mounted as an instance.
         /// </summary>
         void DeactivateContext(Entity subject, int contextKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+        }
+
+        /// <summary>
+        /// True when <paramref name="subject"/> carries the interaction context named by
+        /// <paramref name="contextKeyId"/> (base mount or derived instance). A dead subject
+        /// or an unknown profile fails closed; a known inactive profile returns false.
+        /// </summary>
+        bool IsContextActive(Entity subject, int contextKeyId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
         }
@@ -164,6 +266,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// reads <paramref name="rep"/>'s collection.
         /// </summary>
         void ActivateVirtualCamera(Entity rep, int cameraKeyId)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+        }
+
+        /// <summary>
+        /// Replaces the local camera stack with the current map DefaultCamera and applies its pose at blend zero.
+        /// A collection follow reads <paramref name="rep"/>.
+        /// </summary>
+        void ApplyMapDefaultCamera(Entity rep)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
         }
@@ -627,9 +738,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// come from the StoreArg* staging table keyed by the event schema's payload keys;
         /// TriggerManager.ValidateFirePayload backstops missing/mistyped parameters.
         /// selfSource stamps MapTrigger.SourceEntity when the schema declares it (Entity.Null
-        /// for map-domain dispatch). Optional bridge — requires a bound TriggerManager.
+        /// for map-domain dispatch). A positive <paramref name="abilityId"/> is the ability route:
+        /// MapTrigger.AbilityId and SourceEntity are stamped as transport metadata even when the
+        /// schema does not declare them. Optional bridge — requires a bound TriggerManager.
         /// </summary>
-        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs, int abilityId)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
         }
@@ -643,6 +756,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void FireGlobalEventPayload(int eventKeyId, MapId originMapId, GraphEntryPayloadTable? stagedArgs)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.TriggerBridgeUnavailable");
+        }
+
+        /// <summary>
+        /// Opens one submit-count slot for the DispatchMapEvent that is about to fire.
+        /// SubmitCast and SubmitCommandIntent calls completed before the matching
+        /// <see cref="EndDispatchSubmitCount"/> increment that slot. A nested dispatch
+        /// opens its own slot; those calls do not increment the outer one.
+        /// </summary>
+        void BeginDispatchSubmitCount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DispatchSubmitCountUnavailable");
+        }
+
+        /// <summary>
+        /// Closes the innermost submit-count slot and returns how many SubmitCast and
+        /// SubmitCommandIntent calls it recorded. Engage submits are not recorded.
+        /// Calls made with no open slot are not recorded.
+        /// </summary>
+        int EndDispatchSubmitCount()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.DispatchSubmitCountUnavailable");
         }
 
         /// <summary>
@@ -820,7 +954,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return false;
         }
 
-        // ── Aimsource pure helpers (input/command chain aim graphs) ──
+        // ── Pointer sample pure helpers (input graphs) ──
 
         /// <summary>
         /// Resolves a screen point against the authoritative ground (camera ray +
@@ -831,7 +965,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
             groundCm = default;
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         /// <summary>
@@ -842,7 +976,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         /// <summary>
@@ -853,12 +987,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         bool TryReadLivePointerScreen(out float screenX, out float screenY)
         {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
+        }
+
+        int QueryMinimapRegion(float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        bool TryMinimapScreenToWorld(float screenX, float screenY, out IntVector2 worldCm)
+        {
+            worldCm = default;
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapJumpCamera(IntVector2 worldCm)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapSetZoomFromPointer(float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapApplyWheelZoom(float wheelDelta, float screenX, float screenY)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapTogglePreset()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
+        }
+
+        void MinimapToggleRotate()
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
         }
     }
 

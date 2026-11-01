@@ -178,6 +178,7 @@ namespace Ludots.Tests.Gas.Graph
                 ValueEdges = new List<GraphControlFlowValueEdge>
                 {
                     new("hook_const", "value", "hook_fire", "amount"),
+                    new("hook_const", "value", "hook_done", "value"),
                 },
             };
         }
@@ -249,7 +250,7 @@ namespace Ludots.Tests.Gas.Graph
                 new(SecondCallerGraphId, late),
                 new(CallerGraphId, early),
             };
-            TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas);
+            TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents));
 
             RunProbe probe = ExecuteWovenTarget(programs, schemas);
 
@@ -258,6 +259,65 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(probe.HookAmounts, Is.EqualTo(new[] { 50, 100 }),
                 "same-priority ties would fall back to compile order; distinct priorities must order ascending");
             Assert.That(probe.TargetAfterAmounts, Is.EqualTo(new[] { 12 }));
+        }
+
+        [Test]
+        public void Weave_CrossModTarget_FailsNamingBothModsAndTheGraph()
+        {
+            var schemas = BuildRegistry();
+            var programs = new GraphProgramRegistry();
+            GraphControlFlowDocument target = TargetDocument();
+            GraphControlFlowDocument caller = HookCallerDocument(CallerGraphId, "hookAnchor");
+            Register(programs, target, schemas);
+            Register(programs, caller, schemas);
+            var documents = new List<KeyValuePair<string, GraphControlFlowDocument>>
+            {
+                new(TargetGraphId, target),
+                new(CallerGraphId, caller),
+            };
+            var mods = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                [TargetGraphId] = "AimInteractionMod",
+                [CallerGraphId] = "ChampionSkillSandboxMod",
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: mods));
+
+            Assert.That(ex!.Message, Does.Contain("ChampionSkillSandboxMod"));
+            Assert.That(ex.Message, Does.Contain("AimInteractionMod"));
+            Assert.That(ex.Message, Does.Contain(TargetGraphId));
+            Assert.That(ex.Message, Does.Contain(CallerGraphId));
+        }
+
+        [Test]
+        public void Weave_HooksWithoutOwningMods_FailsClosed()
+        {
+            var schemas = BuildRegistry();
+            var programs = new GraphProgramRegistry();
+            GraphControlFlowDocument target = TargetDocument();
+            GraphControlFlowDocument caller = HookCallerDocument(CallerGraphId, "hookAnchor");
+            Register(programs, target, schemas);
+            Register(programs, caller, schemas);
+            var documents = new List<KeyValuePair<string, GraphControlFlowDocument>>
+            {
+                new(TargetGraphId, target),
+                new(CallerGraphId, caller),
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas));
+            Assert.That(ex!.Message, Does.Contain("owning mod"));
+        }
+
+        [Test]
+        public void OwningMod_ReadsTheSourceUriPrefix()
+        {
+            Assert.That(
+                TriggerGraphHookWeaver.OwningMod("ChampionSkillSandboxMod:assets/GAS/graphs.json"),
+                Is.EqualTo("ChampionSkillSandboxMod"));
+            Assert.That(TriggerGraphHookWeaver.OwningMod("Core:GAS/graphs.json"), Is.EqualTo("Core"));
+            Assert.That(TriggerGraphHookWeaver.OwningMod(""), Is.EqualTo(string.Empty));
         }
 
         // ── Fail-closed authoring mistakes ──
@@ -279,7 +339,7 @@ namespace Ludots.Tests.Gas.Graph
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas));
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents)));
             Assert.That(ex!.Message, Does.Contain("hotspot"), "the diagnostic must name the missing anchor");
         }
 
@@ -301,7 +361,7 @@ namespace Ludots.Tests.Gas.Graph
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas));
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents)));
             Assert.That(ex!.Message, Does.Contain("ghost_node"), "the diagnostic must name the missing node id");
         }
 
@@ -330,7 +390,7 @@ namespace Ludots.Tests.Gas.Graph
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas));
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents)));
             Assert.That(ex!.Message, Does.Contain(TriggerGraphHookWeaver.HookCycleError));
         }
 
@@ -377,7 +437,7 @@ namespace Ludots.Tests.Gas.Graph
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas));
+                TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents)));
             Assert.That(ex!.Message, Does.Contain("no incoming control edge"),
                 "entry-root anchors cannot be re-rooted and must fail closed");
         }
@@ -470,7 +530,7 @@ namespace Ludots.Tests.Gas.Graph
                 new(TargetGraphId, target),
                 new(CallerGraphId, caller),
             };
-            TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas);
+            TriggerGraphHookWeaver.Weave(programs, documents, new StubResolver(), schemas, owningMods: SameMod(documents));
 
             RunProbe probe = ExecuteWovenTarget(programs, schemas, out manager);
             return probe;
@@ -500,6 +560,18 @@ namespace Ludots.Tests.Gas.Graph
             int graphId = GraphIdRegistry.GetId(TargetGraphId);
             ExecuteGraph(programs, graphId, world, caster, api, mapId);
             return probe;
+        }
+
+        private static Dictionary<string, string> SameMod(
+            IReadOnlyList<KeyValuePair<string, GraphControlFlowDocument>> documents)
+        {
+            var mods = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            for (int i = 0; i < documents.Count; i++)
+            {
+                mods[documents[i].Key] = "TestMod";
+            }
+
+            return mods;
         }
 
         private static void ExecuteGraph(

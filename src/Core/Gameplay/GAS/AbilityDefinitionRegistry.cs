@@ -6,25 +6,6 @@ using Ludots.Core.Input.Orders;
 
 namespace Ludots.Core.Gameplay.GAS
 {
-    public struct AbilityInputBindingOverride
-    {
-        public bool HasTrigger;
-        public InputTriggerType Trigger;
-        public bool HasHeldPolicy;
-        public HeldPolicy HeldPolicy;
-        public bool HasCastModeOverride;
-        public CastModeType CastModeOverride;
-        public bool HasTargetType;
-        public OrderTargetType TargetType;
-        public bool HasModifierBehavior;
-        public ModifierSubmitBehavior ModifierBehavior;
-        public bool HasAutoTargetPolicy;
-        public AutoTargetPolicy AutoTargetPolicy;
-        public bool HasAutoTargetRangeCm;
-        public int AutoTargetRangeCm;
-        public string? AutoTargetRelation;
-    }
-
     public sealed class AbilityPresentationConfig
     {
         public string DisplayName { get; init; } = string.Empty;
@@ -93,8 +74,12 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityTargetingConfig
     {
+        /// <summary>
+        /// Approach distance in centimeters. <c>CompositeOrderPlanner</c> reads it when a cast order
+        /// is beyond this distance and inserts a move to the edge. Zero opts that cast out of the approach.
+        /// Activation and order validation run their graphs and do not read this field.
+        /// </summary>
         public float CastRangeCm;
-        public int ImpactEffectTemplateId;
     }
 
     /// <summary>
@@ -147,8 +132,6 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityTargetingConfig Targeting;
         public bool HasPresentation;
         public AbilityPresentationConfig? Presentation;
-        public bool HasInputBindingOverride;
-        public AbilityInputBindingOverride InputBindingOverride;
 
         public int UseProgressionRequirementId;
         public bool HasUseProgressionRequirement;

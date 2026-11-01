@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using ChampionSkillSandboxMod.Runtime;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -27,7 +27,6 @@ namespace ChampionSkillSandboxMod.Systems
         private readonly GameEngine _engine;
         private readonly OrderQueue _orders;
         private readonly CompositeOrderPlanner _planner;
-        private readonly ChampionSkillStressTelemetry _telemetry;
         private readonly int _castAbilityOrderTypeId;
         private readonly int _healthAttributeId;
         private readonly List<StressUnitState> _teamA = new();
@@ -36,12 +35,10 @@ namespace ChampionSkillSandboxMod.Systems
 
         public ChampionSkillStressCombatSystem(
             GameEngine engine,
-            OrderQueue orders,
-            ChampionSkillStressTelemetry telemetry)
+            OrderQueue orders)
         {
             _engine = engine;
             _orders = orders;
-            _telemetry = telemetry;
 
             GameConfig config = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.GameConfig)
                 ?? throw new InvalidOperationException("ChampionSkillStressCombatSystem requires GameConfig.");
@@ -67,7 +64,6 @@ namespace ChampionSkillSandboxMod.Systems
         {
             if (!ChampionSkillSandboxIds.IsStressMap(_engine.CurrentMapSession?.MapId.Value))
             {
-                _telemetry.Reset();
                 _tick = 0;
                 return;
             }
@@ -75,20 +71,17 @@ namespace ChampionSkillSandboxMod.Systems
             _tick++;
             CollectUnits();
 
-            int ordersIssued = 0;
-            ordersIssued += IssueOrders(_teamA, _teamB, playerId: 1);
-            ordersIssued += IssueOrders(_teamB, _teamA, playerId: 2);
+            IssueOrders(_teamA, _teamB, playerId: 1);
+            IssueOrders(_teamB, _teamA, playerId: 2);
 
             int projectileCount = CountProjectiles();
-            _telemetry.IsActive = true;
-            _telemetry.LiveTeamA = _teamA.Count;
-            _telemetry.LiveTeamB = _teamB.Count;
-            _telemetry.ProjectileCount = projectileCount;
-            _telemetry.QueueDepth = _orders.Count;
-            _telemetry.OrdersIssued += ordersIssued;
-            if (projectileCount > _telemetry.PeakProjectileCount)
+            MapVariableStore variables = _engine.CurrentMapSession!.Variables
+                ?? throw new InvalidOperationException("champion_skill_stress requires map variables.");
+            variables.WriteInt("stress.proj", projectileCount);
+            int peak = variables.ReadInt("stress.projPeak");
+            if (projectileCount > peak)
             {
-                _telemetry.PeakProjectileCount = projectileCount;
+                variables.WriteInt("stress.projPeak", projectileCount);
             }
         }
 

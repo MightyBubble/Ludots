@@ -1,12 +1,9 @@
 {
   "schemes": [
     {
-      "id": "scheme.default",
-      "inputContexts": []
-    },
-    {
       "id": "scheme.wasd_move",
       "inputContexts": [
+        "Camera.Rig",
         "WasdSandbox.Controls"
       ],
       "axisMove": {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Input;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -423,6 +424,7 @@ namespace Ludots.Core.Presentation.Minimap
                 screenMarkers.BeginFrame();
                 ResetBounds();
                 _projectionSeeded = false;
+                PublishPointerRegions(engine);
                 return;
             }
 
@@ -439,6 +441,7 @@ namespace Ludots.Core.Presentation.Minimap
             ZoomBand = ResolveZoomBand(_halfExtentCm, in bounds);
             UpdateCameraFrustum(engine);
             ProjectMarkers(engine, markers, screenMarkers);
+            PublishPointerRegions(engine);
         }
 
         public void Render(ScreenOverlayBuffer overlay)
@@ -601,10 +604,67 @@ namespace Ludots.Core.Presentation.Minimap
             var clamped = new Vector2(
                 Math.Clamp(worldCm.X, bounds.Left, bounds.Right),
                 Math.Clamp(worldCm.Y, bounds.Top, bounds.Bottom));
-            Client.ClientLocalSeatAccess.ResolveFirstPresentBindingCamera(engine)
-                .ApplyPose(new CameraPoseRequest { TargetCm = clamped });
+            // CameraRuntimeSystem is the only per-tick State writer. It applies this request
+            // after action graphs in the same fixed step.
+            engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest { TargetCm = clamped });
             _cameraTargetXcm = clamped.X;
             _cameraTargetYcm = clamped.Y;
+        }
+
+        private const string PointerRegionSourceId = "presentation.minimap";
+
+        private void PublishPointerRegions(GameEngine engine)
+        {
+            if (!ReferenceEquals(engine.GetService(CoreServiceKeys.MinimapRuntime), this))
+            {
+                return;
+            }
+
+            PointerRegionContextRegistry registry = engine.GetService(CoreServiceKeys.PointerRegionContextRegistry)
+                ?? throw new InvalidOperationException(
+                    "POINTER_REGION.ERR.RegistryMissing: PointerRegionContextRegistry is required to publish the minimap.");
+            if (!Visible)
+            {
+                registry.Clear(PointerRegionSourceId);
+                return;
+            }
+
+            string contextId = _config.InteractionContextId;
+            var rects = new List<PointerRegionRect>(4)
+            {
+                new(contextId, _fieldX, _fieldY, _fieldX + _fieldSize, _fieldY + _fieldSize),
+            };
+            if (_config.ZoomSliderEnabled)
+            {
+                rects.Add(new PointerRegionRect(
+                    contextId,
+                    _zoomSliderX - ZoomSliderHitPadding,
+                    _zoomSliderY - ZoomSliderHitPadding,
+                    _zoomSliderX + _zoomSliderWidth + ZoomSliderHitPadding,
+                    _zoomSliderY + ZoomSliderHeight + ZoomSliderHitPadding));
+            }
+
+            if (_config.ModeToggleEnabled)
+            {
+                rects.Add(ToggleRect(contextId, _presetToggleX, _presetToggleY));
+            }
+
+            if (_config.RotateToggleEnabled)
+            {
+                rects.Add(ToggleRect(contextId, _rotateToggleX, _rotateToggleY));
+            }
+
+            registry.Publish(PointerRegionSourceId, rects);
+        }
+
+        private static PointerRegionRect ToggleRect(string contextId, int x, int y)
+        {
+            return new PointerRegionRect(
+                contextId,
+                x - ToggleButtonHitPadding,
+                y - ToggleButtonHitPadding,
+                x + ToggleButtonWidth + ToggleButtonHitPadding,
+                y + ToggleButtonHeight + ToggleButtonHitPadding);
         }
 
         public void SetViewport(float centerXcm, float centerYcm, float halfExtentCm)

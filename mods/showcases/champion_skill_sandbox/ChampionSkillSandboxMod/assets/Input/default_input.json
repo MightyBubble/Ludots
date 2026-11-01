@@ -1,15 +1,46 @@
 {
   "actions": [
-    { "id": "SkillQ", "name": "ChampionSkillSandbox_SkillQ", "type": "Button" },
-    { "id": "SkillW", "name": "ChampionSkillSandbox_SkillW", "type": "Button" },
-    { "id": "SkillE", "name": "ChampionSkillSandbox_SkillE", "type": "Button" },
-    { "id": "SkillR", "name": "ChampionSkillSandbox_SkillR", "type": "Button" },
-    { "id": "Stop", "name": "ChampionSkillSandbox_Stop", "type": "Button" },
-    { "id": "QueueModifier", "name": "ChampionSkillSandbox_QueueModifier", "type": "Button" },
-    { "id": "CastModeSmart", "name": "ChampionSkillSandbox_CastModeSmart", "type": "Button" },
-    { "id": "CastModeIndicator", "name": "ChampionSkillSandbox_CastModeIndicator", "type": "Button" },
-    { "id": "CastModePressRelease", "name": "ChampionSkillSandbox_CastModePressRelease", "type": "Button" },
-    { "id": "ResetCamera", "name": "ChampionSkillSandbox_ResetCamera", "type": "Button" }
+    {
+      "id": "Command",
+      "name": "ChampionSkillSandbox_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Stop",
+      "name": "ChampionSkillSandbox_Stop",
+      "type": "Button"
+    },
+    {
+      "id": "QueueModifier",
+      "name": "ChampionSkillSandbox_QueueModifier",
+      "type": "Button"
+    },
+    {
+      "id": "ResetCamera",
+      "name": "ChampionSkillSandbox_ResetCamera",
+      "type": "Button"
+    },
+    { "id": "Champion.Camera.Free", "name": "Champion_Camera_Free", "type": "Button" },
+    { "id": "Champion.Camera.Follow", "name": "Champion_Camera_Follow", "type": "Button" },
+    { "id": "Champion.Camera.Group", "name": "Champion_Camera_Group", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Free", "name": "Champion_Camera_Stress_Free", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Follow", "name": "Champion_Camera_Stress_Follow", "type": "Button" },
+    { "id": "Champion.Camera.Stress.Group", "name": "Champion_Camera_Stress_Group", "type": "Button" },
+    { "id": "Champion.Theme.Dota2", "name": "Champion_Theme_Dota2", "type": "Button" },
+    { "id": "Champion.Theme.LoL", "name": "Champion_Theme_LoL", "type": "Button" },
+    { "id": "Champion.Theme.SC2", "name": "Champion_Theme_SC2", "type": "Button" },
+    { "id": "Champion.Stress.TeamA.Dec", "name": "Champion_Stress_TeamA_Dec", "type": "Button" },
+    { "id": "Champion.Stress.TeamA.Inc", "name": "Champion_Stress_TeamA_Inc", "type": "Button" },
+    { "id": "Champion.Stress.TeamB.Dec", "name": "Champion_Stress_TeamB_Dec", "type": "Button" },
+    { "id": "Champion.Stress.TeamB.Inc", "name": "Champion_Stress_TeamB_Inc", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Bars", "name": "Champion_Stress_Hud_Bars", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Text", "name": "Champion_Stress_Hud_Text", "type": "Button" },
+    { "id": "Champion.Stress.Hud.Float", "name": "Champion_Stress_Hud_Float", "type": "Button" },
+    { "id": "Champion.View.P1", "name": "Champion_View_P1", "type": "Button" },
+    { "id": "Champion.View.P1F", "name": "Champion_View_P1F", "type": "Button" },
+    { "id": "Champion.View.AI", "name": "Champion_View_AI", "type": "Button" },
+    { "id": "Champion.View.AIF", "name": "Champion_View_AIF", "type": "Button" },
+    { "id": "Champion.View.CMD", "name": "Champion_View_CMD", "type": "Button" }
   ],
   "contexts": [
     {
@@ -17,16 +48,42 @@
       "name": "Champion Skill Sandbox Controls",
       "priority": 90,
       "bindings": [
-        { "actionId": "SkillQ", "path": "<Keyboard>/q" },
-        { "actionId": "SkillW", "path": "<Keyboard>/w" },
-        { "actionId": "SkillE", "path": "<Keyboard>/e" },
-        { "actionId": "SkillR", "path": "<Keyboard>/r" },
-        { "actionId": "Stop", "path": "<Keyboard>/s" },
-        { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
-        { "actionId": "CastModeSmart", "path": "<Keyboard>/f1" },
-        { "actionId": "CastModeIndicator", "path": "<Keyboard>/f2" },
-        { "actionId": "CastModePressRelease", "path": "<Keyboard>/f3" },
-        { "actionId": "ResetCamera", "path": "<Keyboard>/f4" }
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Stop",
+          "path": "<Keyboard>/s"
+        },
+        {
+          "actionId": "QueueModifier",
+          "path": "<Keyboard>/leftShift"
+        },
+        {
+          "actionId": "Aim.CastMode.Smart",
+          "path": "<Keyboard>/f1"
+        },
+        {
+          "actionId": "Aim.CastMode.AimRelease",
+          "path": "<Keyboard>/f2"
+        },
+        {
+          "actionId": "Aim.CastMode.AimClick",
+          "path": "<Keyboard>/f3"
+        },
+        {
+          "actionId": "ResetCamera",
+          "path": "<Keyboard>/f4"
+        },
+        {
+          "actionId": "Select.Begin",
+          "path": "<Mouse>/LeftButton"
+        },
+        {
+          "actionId": "Select.End",
+          "path": "<Mouse>/LeftButton"
+        }
       ]
     }
   ]

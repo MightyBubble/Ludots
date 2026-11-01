@@ -16,16 +16,13 @@ namespace ChampionSkillSandboxMod.Triggers
         private const string InstalledKey = "ChampionSkillSandboxMod.Installed";
         private readonly IModContext _context;
         private readonly ChampionSkillSandboxRuntime _runtime;
-        private readonly ChampionSkillCastModeToolbarProvider _toolbarProvider;
 
         public InstallChampionSkillSandboxOnGameStartTrigger(
             IModContext context,
-            ChampionSkillSandboxRuntime runtime,
-            ChampionSkillCastModeToolbarProvider toolbarProvider)
+            ChampionSkillSandboxRuntime runtime)
         {
             _context = context;
             _runtime = runtime;
-            _toolbarProvider = toolbarProvider;
             EventKey = GameEvents.GameStart;
         }
 
@@ -45,10 +42,6 @@ namespace ChampionSkillSandboxMod.Triggers
             }
 
             engine.GlobalContext[InstalledKey] = true;
-            var stressControl = new ChampionSkillStressControlState();
-            var stressTelemetry = new ChampionSkillStressTelemetry();
-            engine.GlobalContext[ChampionSkillStressControlState.GlobalKey] = stressControl;
-            engine.GlobalContext[ChampionSkillStressTelemetry.GlobalKey] = stressTelemetry;
             engine.InsertSystemBeforeRequired<Physics2DSimulationSystem>(
                 new ChampionSkillPhysicsAuthoringSystem(engine),
                 SystemGroup.InputCollection);
@@ -63,21 +56,18 @@ namespace ChampionSkillSandboxMod.Triggers
                 if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)
                 {
                     engine.RegisterSystem(
-                        new ChampionSkillStressSpawnSystem(engine, spawnQueue, stressControl, stressTelemetry),
+                        new ChampionSkillStressSpawnSystem(engine, spawnQueue),
                         SystemGroup.InputCollection);
                     engine.RegisterSystem(
-                        new ChampionSkillStressCombatSystem(engine, orders, stressTelemetry),
+                        new ChampionSkillStressCombatSystem(engine, orders),
                         SystemGroup.InputCollection);
                 }
             }
 
-            _toolbarProvider.Bind(engine);
-            engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _toolbarProvider);
-            engine.RegisterSystem(new ChampionSkillCastModePollSystem(engine), SystemGroup.LocalInput);
             engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 
-            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime and cast mode toolbar registered.");
+            _context.Log("[ChampionSkillSandboxMod] Command panel focus runtime registered.");
             return Task.CompletedTask;
         }
     }

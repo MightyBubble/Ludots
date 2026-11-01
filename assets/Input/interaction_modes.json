@@ -8,7 +8,7 @@
       "id": "mode.targeting",
       "contexts": [
         {
-          "contextId": "Default_Gameplay",
+          "contextId": "Camera.Rig",
           "priority": 0
         }
       ]

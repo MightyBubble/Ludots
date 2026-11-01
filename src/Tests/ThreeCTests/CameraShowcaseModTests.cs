@@ -25,16 +25,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
     {
         private const int BlendSettleFrames = 20;
         private const string TestInputBackendKey = "Tests.CameraShowcaseMod.InputBackend";
-        private static readonly string[] CoreInputMods =
+        private static readonly string[] CoreMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod"
+            "CommandSourceCoreFixtureMod"
         };
 
         private static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "CameraBootstrapMod",
             "VirtualCameraShotsMod",
@@ -42,15 +41,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
         };
 
         [Test]
-        public void CoreInputMod_DefaultGameplay_ProvidesGenericCommandSourceActions()
+        public void CameraRig_DeclaresPointerPositionAndOmitsOrderActions()
         {
-            using var engine = CreateEngine(CoreInputMods);
+            using var engine = CreateEngine(CoreMods);
 
             var input = engine.GetService(CoreServiceKeys.InputHandler);
             Assert.That(input, Is.Not.Null);
-            Assert.That(input!.HasContext("Default_Gameplay"), Is.True);
-            Assert.That(input.HasAction("Command"), Is.True);
-            Assert.That(input.HasAction("Cancel"), Is.True);
+            Assert.That(input!.HasContext("Camera.Rig"), Is.True);
+            Assert.That(input.HasAction("PointerPos"), Is.True);
+            Assert.That(input.HasAction("Command"), Is.False);
+            Assert.That(input.HasAction("Cancel"), Is.False);
         }
 
         [Test]
@@ -180,7 +180,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
         public void CameraShowcaseMod_BootstrapMap_CentersBoundsWithSharedBootstrap()
         {
             using var engine = CreateEngine(ShowcaseMods);
-            LoadMap(engine, CameraShowcaseIds.BootstrapMapId);
+            // The centering pose is applied by the fixed-step camera writer. A cold process
+            // spends the first slices before that writer, so a short tick cannot observe it.
+            LoadMap(engine, CameraShowcaseIds.BootstrapMapId, frames: 40);
 
             Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.TacticalProfileId));
             Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4000f, 2500f)));
@@ -218,7 +220,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             engine.Start();
             return engine;
@@ -268,10 +270,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new TestInputBackend();
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.UiCaptured, false);
@@ -337,7 +336,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity local = GetLocalPlayer(engine);
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: local,
@@ -379,7 +378,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = Ludots.Core.Gameplay.Camera.CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = "collection.command.source",
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true
             });

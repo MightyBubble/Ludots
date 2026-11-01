@@ -12,6 +12,9 @@ namespace Ludots.Core.GraphRuntime
         public const string RefireIgnore = "ignore";
         public const string RefireRestart = "restart";
 
+        /// <summary>Entry finishes in the tick it starts. The loader checks the longest host path against the slice budget.</summary>
+        public const string BudgetSingleSlice = "single-slice";
+
         /// <summary>Payload-schema event name synthesized for action-bound entries.</summary>
         public const string InputActionSchemaEventName = "InputAction";
 
@@ -39,7 +42,8 @@ namespace Ludots.Core.GraphRuntime
             string refire,
             int priority = 0,
             bool isHookFragment = false,
-            string actionId = "")
+            string actionId = "",
+            string? budget = null)
         {
             Label = label;
             EventName = eventName;
@@ -50,6 +54,7 @@ namespace Ludots.Core.GraphRuntime
             Priority = priority;
             IsHookFragment = isHookFragment;
             ActionId = actionId ?? string.Empty;
+            Budget = string.IsNullOrWhiteSpace(budget) ? string.Empty : budget.Trim();
         }
 
         public string Label { get; }
@@ -78,6 +83,9 @@ namespace Ludots.Core.GraphRuntime
         /// ordinary event-listening entries.
         /// </summary>
         public string ActionId { get; }
+
+        /// <summary>Empty, or <see cref="BudgetSingleSlice"/>.</summary>
+        public string Budget { get; }
 
         public bool IsActionBound => !string.IsNullOrWhiteSpace(ActionId);
     }

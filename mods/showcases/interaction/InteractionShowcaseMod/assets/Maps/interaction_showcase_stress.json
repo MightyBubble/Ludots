@@ -44,5 +44,9 @@
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "interaction-stress-anchor-red" },
     { "TeamId": 2, "RepresentativeInstanceId": "interaction-stress-anchor-blue" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "interaction-stress-anchor-red" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "interaction-stress-anchor-blue" }
   ]
 }

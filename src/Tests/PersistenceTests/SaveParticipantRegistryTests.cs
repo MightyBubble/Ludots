@@ -300,7 +300,7 @@ public sealed class SaveParticipantRegistryTests
             new[]
             {
                 new LocalSeatLaunchBinding("seat.0", 1, "scheme.wasd"),
-                new LocalSeatLaunchBinding("seat.1", 2, null),
+                new LocalSeatLaunchBinding("seat.1", 2, "scheme.aim"),
             },
             new Dictionary<string, object> { ["difficulty"] = "hard" });
         source.PushFocused(new MapId("seats"));
@@ -317,8 +317,7 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(seatZero!["controlSchemeId"]!.GetValue<string>(), Is.EqualTo("scheme.wasd"));
         Assert.That(seatZero["seatId"]!.GetValue<string>(), Is.EqualTo("seat.0"));
         Assert.That(seatZero["playerId"]!.GetValue<int>(), Is.EqualTo(1));
-        Assert.That(seatOne is JsonObject { Count: > 0 } seatOneObject && seatOneObject.ContainsKey("controlSchemeId"), Is.False,
-            "an undeclared controlSchemeId is omitted instead of serialized as an empty default.");
+        Assert.That(seatOne!["controlSchemeId"]!.GetValue<string>(), Is.EqualTo("scheme.aim"));
 
         targetParticipant.RestoreState(captured);
 
@@ -330,9 +329,43 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(restored.LocalSeats[0].ControlSchemeId, Is.EqualTo("scheme.wasd"));
         Assert.That(restored.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
         Assert.That(restored.LocalSeats[1].PlayerId, Is.EqualTo(2));
-        Assert.That(restored.LocalSeats[1].ControlSchemeId, Is.Null);
+        Assert.That(restored.LocalSeats[1].ControlSchemeId, Is.EqualTo("scheme.aim"));
         Assert.That(restored.Metadata!, Is.Not.Null);
         Assert.That(restored.Metadata!["difficulty"], Is.EqualTo("hard"));
+    }
+
+    [Test]
+    public void MapSessionParticipant_RejectsLaunchContextSeatWithoutControlScheme()
+    {
+        var target = new MapSessionManager();
+        target.CreateSession(new MapId("seats"), new Ludots.Core.Config.MapConfig());
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateMapSessionsParticipant(target);
+        var missing = new JsonObject
+        {
+            ["sessions"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["mapId"] = "seats",
+                    ["state"] = MapSessionState.Active.ToString(),
+                    ["launchContext"] = new JsonObject
+                    {
+                        ["localSeats"] = new JsonArray
+                        {
+                            new JsonObject
+                            {
+                                ["seatId"] = "seat.0",
+                                ["playerId"] = 1,
+                            },
+                        },
+                    },
+                },
+            },
+            ["focusStack"] = new JsonArray { "seats" },
+        };
+
+        SaveContextException error = Assert.Throws<SaveContextException>(() => targetParticipant.RestoreState(missing));
+        Assert.That(error!.Message, Does.Contain("controlSchemeId is required"));
     }
 
     [Test]
@@ -565,8 +598,9 @@ public sealed class SaveParticipantRegistryTests
         string repoRoot = FindRepoRoot();
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
-            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-            Path.Combine(repoRoot, "assets"));
+            RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         engine.LoadStartupMap();
         return engine;
     }

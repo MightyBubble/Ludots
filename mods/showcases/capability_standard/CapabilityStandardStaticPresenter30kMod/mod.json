@@ -5,9 +5,12 @@
   "main": "bin/net9.0/CapabilityStandardStaticPresenter30kMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "presenter", "capability_static_presenter"]
+  "tags": [
+    "showcase",
+    "presenter",
+    "capability_static_presenter"
+  ]
 }

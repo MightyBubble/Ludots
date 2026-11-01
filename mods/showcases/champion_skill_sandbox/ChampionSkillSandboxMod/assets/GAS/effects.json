@@ -1004,7 +1004,8 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 900,
-      "halfWidth": 70
+      "halfWidth": 70,
+      "directionSource": "SourceCastFacing"
     },
     "targetFilter": {
       "relationFilter": "Hostile",

@@ -103,8 +103,10 @@ Startup diagnostics include:
 
 - `defaultCoreMod`
 - `startupMapId`
-- `startupInputContexts`
+- `browserRuntime`
 - conflict warnings for multi-root launches
+
+输入上下文不在启动诊断里列一份名单。宿主绑上输入处理器时，`ControlSchemeRuntime.ApplyActiveContexts` 推当前控制方案的上下文。根方案 `scheme.default` 的 `inputContexts` 是 `Camera.Rig`。本机座位要带 `controlSchemeId`。
 
 ## 4. Bootstrap Files
 
@@ -262,8 +264,6 @@ Current evidence:
 
 - `src/Core/Scripting/CoreServiceKeys.cs`
 - `src/Core/Scripting/ServiceKey.cs`
-- `mods/CoreInputMod/CoreInputServiceKeys.cs`
-- `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
 - `src/Core/Modding/ModLoader.cs`
 - `src/Core/Modding/ModLoadContext.cs`
 

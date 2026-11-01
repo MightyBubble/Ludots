@@ -8,7 +8,6 @@ using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -16,13 +15,14 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.CommandSources;
-using Ludots.Core.Input.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Config;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
@@ -61,37 +61,8 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: false);
-        }
-
-        internal static void PollCastModeSwitch(GameEngine engine)
-        {
-            // The Controls context is startup-pushed and never popped; without a map guard its
-            // F1-F3 bindings would fire this poll on any co-loaded map and hijack the camera.
-            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
-            {
-                return;
-            }
-
-            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is not Ludots.Core.Input.Runtime.IInputActionReader input)
-            {
-                return;
-            }
-
-            if (input.PressedThisFrame(ChampionSkillSandboxIds.SmartCastActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.IndicatorActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.IndicatorModeId);
-            }
-            else if (input.PressedThisFrame(ChampionSkillSandboxIds.PressReleaseActionId))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.PressReleaseModeId);
-            }
         }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -107,7 +78,6 @@ namespace ChampionSkillSandboxMod.Runtime
                 return Task.CompletedTask;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncFocusPanel(engine);
             return Task.CompletedTask;
@@ -136,11 +106,9 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            EnsureMode(engine);
             EnsureScenarioState(engine);
             SyncSelectionViews(engine, drawOverlay: true);
-            ConsumeResetCameraRequest(engine);
-            SyncCameraFollow(engine);
+            SyncHudPrefs(engine);
             SyncFocusPanel(engine);
         }
 
@@ -168,7 +136,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             Entity playerViewer = RequireSolePossessedRep(engine);
-            Entity[] snapshot = SnapshotCollection(collections, playerViewer, "collection.command.source");
+            Entity[] snapshot = SnapshotCollection(collections, playerViewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             ReplaceCollection(collections, _debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, snapshot, "Command preview");
         }
 
@@ -195,21 +163,6 @@ namespace ChampionSkillSandboxMod.Runtime
             if (!_initialCommandSourceApplied)
             {
                 _initialCommandSourceApplied = SeedInitialCommandSource(engine);
-            }
-
-            if (!engine.GlobalContext.ContainsKey(ChampionSkillSandboxIds.CameraFollowModeKey))
-            {
-                engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
-            }
-
-            if (!engine.GlobalContext.ContainsKey(ChampionSkillSandboxIds.SelectionViewChoiceKey))
-            {
-                engine.GlobalContext[ChampionSkillSandboxIds.SelectionViewChoiceKey] = ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId;
-            }
-
-            if (!engine.GlobalContext.ContainsKey(EntityCommandPanelShowcaseTheme.ContextKey))
-            {
-                engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey] = ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId();
             }
         }
 
@@ -238,7 +191,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
             CollectStressSelectionState(engine);
             PublishSelectableKnowledge(engine, playerViewer, _teamBViewer, _debugViewer);
-            BindStressCollections(collections, playerViewer, _teamBViewer, _debugViewer);
+            BindStressCollections(engine, collections, playerViewer, _teamBViewer, _debugViewer);
             ApplySelectionViewChoice(engine, collections, playerViewer, _teamBViewer, _debugViewer);
             if (drawOverlay)
             {
@@ -349,6 +302,7 @@ namespace ChampionSkillSandboxMod.Runtime
         }
 
         private void BindStressCollections(
+            GameEngine engine,
             EntityCollectionStore collections,
             Entity playerViewer,
             Entity aiViewer,
@@ -358,7 +312,7 @@ namespace ChampionSkillSandboxMod.Runtime
             ReplaceCollection(collections, aiViewer, AiTargetsCollectionKey, EntityCollectionRoleKind.Display, _teamBTargets.ToArray(), "AI command targets");
             ReplaceCollection(collections, aiViewer, AiFormationCollectionKey, EntityCollectionRoleKind.Display, _teamBFormation.ToArray(), "AI formation");
 
-            Entity[] commandSource = SnapshotCollection(collections, playerViewer, "collection.command.source");
+            Entity[] commandSource = SnapshotCollection(collections, playerViewer, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"));
             ReplaceCollection(collections, debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, commandSource, "Command preview");
         }
 
@@ -386,7 +340,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 owner == Entity.Null ||
                 string.IsNullOrWhiteSpace(key) ||
                 owner != playerViewer ||
-                (owner == playerViewer && string.Equals(key, "collection.command.source", StringComparison.Ordinal)))
+                (owner == playerViewer && string.Equals(key, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), StringComparison.Ordinal)))
             {
                 return;
             }
@@ -409,7 +363,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 playerViewer,
@@ -473,12 +427,12 @@ namespace ChampionSkillSandboxMod.Runtime
                 return false;
             }
 
-            if (collections.TryGetView(owner, "collection.command.source", out EntityCollectionView existing) &&
+            if (collections.TryGetView(owner, InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"), out EntityCollectionView existing) &&
                 existing.PrimaryEntity != Entity.Null &&
                 engine.World.IsAlive(existing.PrimaryEntity))
             {
                 engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-                engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
+                engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
                 return true;
             }
 
@@ -492,12 +446,12 @@ namespace ChampionSkillSandboxMod.Runtime
             ReplaceCollection(
                 collections,
                 owner,
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionRoleKind.CommandSource,
                 commandSourceBuffer,
                 "Initial command source");
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
-            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = "collection.command.source";
+            engine.GlobalContext[ChampionSkillSandboxIds.RosterKeyChannel] = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
             return true;
         }
 
@@ -528,127 +482,59 @@ namespace ChampionSkillSandboxMod.Runtime
             tagOps.AddTag(engine.World, entity, tagId);
         }
 
-        private void EnsureMode(GameEngine engine)
+        private static void SyncHudPrefs(GameEngine engine)
         {
-            if (!ChampionSkillSandboxIds.IsSandboxMode(ChampionSkillCastModes.GetActive(engine)))
-            {
-                ChampionSkillCastModes.TrySetActive(engine, ChampionSkillSandboxIds.SmartCastModeId);
-            }
-        }
-
-        private static void ConsumeResetCameraRequest(GameEngine engine)
-        {
-            bool requested = false;
-            if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input &&
-                input.PressedThisFrame(ChampionSkillSandboxIds.ResetCameraActionId))
-            {
-                requested = true;
-            }
-
-            if (engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ResetCameraRequestKey, out var resetObj) &&
-                resetObj is bool resetRequested &&
-                resetRequested)
-            {
-                requested = true;
-            }
-
-            engine.GlobalContext.Remove(ChampionSkillSandboxIds.ResetCameraRequestKey);
-
-            if (requested)
-            {
-                ResetCamera(engine);
-            }
-        }
-
-        private static void ResetCamera(GameEngine engine)
-        {
-            var session = engine.CurrentMapSession;
-            var cameraConfig = session?.MapConfig?.DefaultCamera;
-            var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
-            if (session == null || registry == null)
+            if (!ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value))
             {
                 return;
             }
 
-            string virtualCameraId = string.IsNullOrWhiteSpace(cameraConfig?.VirtualCameraId)
-                ? ChampionSkillSandboxIds.TacticalCameraId
-                : cameraConfig.VirtualCameraId;
-
-            if (!registry.TryGet(virtualCameraId, out var definition) || definition == null)
-            {
-                return;
-            }
-
-            engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
-            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
-                virtualCameraId,
-                blendDurationSeconds: 0f,
-                followTarget: null,
-                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
-                resetRuntimeState: true);
-
-            if (cameraConfig == null)
-            {
-                return;
-            }
-
-            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
-            {
-                VirtualCameraId = virtualCameraId,
-                TargetCm = (cameraConfig.TargetXCm.HasValue || cameraConfig.TargetYCm.HasValue)
-                    ? new Vector2(cameraConfig.TargetXCm ?? 0f, cameraConfig.TargetYCm ?? 0f)
-                    : null,
-                Yaw = cameraConfig.Yaw,
-                Pitch = cameraConfig.Pitch,
-                DistanceCm = cameraConfig.DistanceCm,
-                FovYDeg = cameraConfig.FovYDeg,
-            });
-            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SynchronizeActiveVirtualCameraBoundsAndHeight();
+            RenderDebugState debug = engine.GetService(CoreServiceKeys.RenderDebugState)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox requires RenderDebugState.");
+            Entity rep = RequireSolePossessedRep(engine);
+            debug.DrawWorldHudBars = ReadOnOffPref(engine, rep, "pref.hud.bars");
+            debug.DrawWorldHudText = ReadOnOffPref(engine, rep, "pref.hud.text");
+            debug.DrawCombatText = ReadOnOffPref(engine, rep, "pref.hud.float");
         }
 
-        private static void SyncCameraFollow(GameEngine engine)
+        private static bool ReadOnOffPref(GameEngine engine, Entity rep, string keyName)
         {
-            string followModeId = ResolveCameraFollowMode(engine);
-            string activeCameraId = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(activeCameraId))
+            string value = ReadPlayerPref(engine, rep, keyName);
+            if (string.Equals(value, "on", StringComparison.Ordinal))
             {
-                return;
+                return true;
             }
 
-            Entity commandSourceOwner = Entity.Null;
-            if (string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
-                string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal))
+            if (string.Equals(value, "off", StringComparison.Ordinal))
             {
-                commandSourceOwner = RequireSolePossessedRep(engine);
-                if (commandSourceOwner == Entity.Null || !engine.World.IsAlive(commandSourceOwner))
-                {
-                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
-                    return;
-                }
+                return false;
             }
 
-            ICameraFollowTarget? followTarget = followModeId switch
-            {
-                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionPrimary, commandSourceOwner, "collection.command.source"),
-                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionGroup, commandSourceOwner, "collection.command.source"),
-                _ => null
-            };
-
-            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
+            throw new InvalidOperationException($"preference '{keyName}' value '{value}' must be on or off.");
         }
 
-        private static string ResolveCameraFollowMode(GameEngine engine)
+        private static string ReadPlayerPref(GameEngine engine, Entity rep, string keyName)
         {
-            if (engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.CameraFollowModeKey, out var modeObj) &&
-                modeObj is string modeId &&
-                ChampionSkillSandboxIds.IsCameraFollowMode(modeId))
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox requires InteractionPrefCatalog.");
+            int keyId = catalog.Keys.GetId(keyName);
+            if (keyId == catalog.Keys.InvalidId)
             {
-                return modeId;
+                throw new InvalidOperationException($"preference '{keyName}' is not declared.");
             }
 
-            return ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                throw new InvalidOperationException($"preference '{keyName}' requires InteractionPref on the possessed rep.");
+            }
+
+            int resolved = pref.ResolvePref(0, keyId);
+            if (resolved <= 0)
+            {
+                throw new InvalidOperationException($"preference '{keyName}' is not seeded on the possessed rep.");
+            }
+
+            return catalog.ValueName(resolved);
         }
 
         private void SyncFocusPanel(GameEngine engine)
@@ -706,13 +592,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static string ResolveShowcaseTheme(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(EntityCommandPanelShowcaseTheme.ContextKey, out object? themeObj) &&
-                themeObj is string themeId)
-            {
-                return EntityCommandPanelShowcaseTheme.Normalize(themeId, ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId());
-            }
-
-            return ChampionSkillSandboxIds.ResolveDefaultShowcaseThemeId();
+            return EntityCommandPanelShowcaseTheme.ReadActive(engine);
         }
 
         private static Entity ResolvePanelTarget(GameEngine engine)
@@ -722,7 +602,7 @@ namespace ChampionSkillSandboxMod.Runtime
                     engine.World,
                     engine.GlobalContext,
                     owner,
-                    "collection.command.source",
+                    InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                     out Entity primary)
                 ? primary
                 : Entity.Null;
@@ -787,14 +667,13 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static string ResolveSelectionViewChoice(GameEngine engine)
         {
-            if (engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.SelectionViewChoiceKey, out var choiceObj) &&
-                choiceObj is string choice &&
-                ChampionSkillSandboxIds.IsSelectionViewButton(choice))
+            string choice = ReadPlayerPref(engine, RequireSolePossessedRep(engine), "pref.selection.view");
+            if (!ChampionSkillSandboxIds.IsSelectionViewButton(choice))
             {
-                return choice;
+                throw new InvalidOperationException($"preference 'pref.selection.view' value '{choice}' is not a selection view.");
             }
 
-            return ChampionSkillSandboxIds.PlayerSelectionToolbarButtonId;
+            return choice;
         }
 
         private static void AddOrderTarget(
@@ -830,7 +709,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             string choice = ResolveSelectionViewChoice(engine);
             owner = playerViewer;
-            key = "collection.command.source";
+            key = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
 
             if (string.Equals(choice, ChampionSkillSandboxIds.PlayerFormationToolbarButtonId, StringComparison.Ordinal))
             {
@@ -888,7 +767,7 @@ namespace ChampionSkillSandboxMod.Runtime
                          keyObj is string storedKey &&
                          !string.IsNullOrWhiteSpace(storedKey)
                 ? storedKey
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
 
             return owner != Entity.Null &&
                    collections.TryGet(owner, key, out handle) &&
@@ -1036,9 +915,6 @@ namespace ChampionSkillSandboxMod.Runtime
             _teamBFormation.Clear();
             _teamBTargets.Clear();
             _activeSelectionMirror.Clear();
-            engine.GlobalContext.Remove(ChampionSkillSandboxIds.ResetCameraRequestKey);
-            engine.GlobalContext.Remove(ChampionSkillSandboxIds.CameraFollowModeKey);
-            engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.ActiveCollectionOwnerKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.RosterKeyChannel);
         }

@@ -562,10 +562,10 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="684" y="302.273625" transform="rotate(-0 684 302.273625)">目标解析</text>
    </g>
    <g id="text_31">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="393.392187" transform="rotate(-0 684 393.392187)">InteractionMode</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="393.392187" transform="rotate(-0 684 393.392187)">CastPref</text>
    </g>
    <g id="text_32">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="684" y="410.273625" transform="rotate(-0 684 410.273625)">交互模式选择</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="684" y="410.273625" transform="rotate(-0 684 410.273625)">pref.aim.cast_mode</text>
    </g>
    <g id="text_33">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="684" y="501.392187" transform="rotate(-0 684 501.392187)">OrderValidator</text>
@@ -628,10 +628,10 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1238.4" y="280.673625" transform="rotate(-0 1238.4 280.673625)">编队指令</text>
    </g>
    <g id="text_53">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1238.4" y="357.392187" transform="rotate(-0 1238.4 357.392187)">MinimapInput</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1238.4" y="357.392187" transform="rotate(-0 1238.4 357.392187)">MinimapContext</text>
    </g>
    <g id="text_54">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1238.4" y="374.273625" transform="rotate(-0 1238.4 374.273625)">小地图输入</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="1238.4" y="374.273625" transform="rotate(-0 1238.4 374.273625)">interaction.context.minimap</text>
    </g>
    <g id="text_55">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="471.6" y="897.392187" transform="rotate(-0 471.6 897.392187)">Effect Feedback</text>

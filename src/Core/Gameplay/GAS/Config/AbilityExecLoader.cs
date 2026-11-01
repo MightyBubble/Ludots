@@ -117,7 +117,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["indicator"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Presenter rules.");
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm'. Aim visuals belong in Presenter rules.");
             }
 
             RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
@@ -252,10 +252,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasPresentation = def.Presentation != null;
             }
 
-            if (obj["input"] is JsonObject inputObj)
+            if (obj["input"] is not null)
             {
-                def.InputBindingOverride = CompileInputBindingOverride(inputObj, id, path);
-                def.HasInputBindingOverride = true;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' declares 'input'; key bindings and cast modes belong to interaction contexts.");
             }
 
             def.UseProgressionRequirementId = ResolveProgressionRequirement(obj, "useRequirement", id, path);
@@ -797,30 +797,31 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Ability '{id}' in '{path}' field 'targeting.castRangeCm' is required when 'targeting' is present.");
             }
 
-            if (targetingObj["impactEffect"] == null)
+            if (targetingObj["impactEffect"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' is required when 'targeting' is present.");
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' is removed. Graphs read geometry from the effects in 'exec'.");
             }
 
-            string impactEffect = targetingObj["impactEffect"]!.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(impactEffect))
+            string retiredTargetingList = string.Concat("target", "Kinds");
+            if (targetingObj[retiredTargetingList] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' must be a non-empty effect template id.");
+                    $"Ability '{id}' in '{path}' field 'targeting.{retiredTargetingList}' is removed. Targeting rules belong in the TriggerGraphs this ability references.");
             }
 
-            int impactEffectTemplateId = EffectTemplateIdRegistry.GetId(impactEffect);
-            if (impactEffectTemplateId <= 0)
+            foreach (KeyValuePair<string, JsonNode?> field in targetingObj)
             {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' references unknown effect template '{impactEffect}'.");
+                if (!string.Equals(field.Key, "castRangeCm", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'targeting.{field.Key}' is unknown. 'targeting' holds only 'castRangeCm'.");
+                }
             }
 
             var targeting = new AbilityTargetingConfig
             {
                 CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
-                ImpactEffectTemplateId = impactEffectTemplateId
             };
 
             if (targeting.CastRangeCm < 0f)
@@ -919,7 +920,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeIconGlyphs)
                 {
-                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeIconGlyphs.{modeKey}", id, path);
+                    string modeName = RequireModeKey(modeKey, $"presentation.modeIconGlyphs.{modeKey}", id, path);
                     string glyph = RequireNonEmptyString(valueNode, $"presentation.modeIconGlyphs.{modeKey}", id, path);
                     config.ModeIconGlyphOverrides[modeName] = glyph;
                 }
@@ -929,7 +930,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeHints)
                 {
-                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHints.{modeKey}", id, path);
+                    string modeName = RequireModeKey(modeKey, $"presentation.modeHints.{modeKey}", id, path);
                     string hint = RequireNonEmptyString(valueNode, $"presentation.modeHints.{modeKey}", id, path);
                     config.ModeHintOverrides[modeName] = hint;
                 }
@@ -939,7 +940,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeHintTokens)
                 {
-                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHintTokens.{modeKey}", id, path);
+                    string modeName = RequireModeKey(modeKey, $"presentation.modeHintTokens.{modeKey}", id, path);
                     string token = RequireNonEmptyString(valueNode, $"presentation.modeHintTokens.{modeKey}", id, path);
                     config.ModeHintTokenOverrides[modeName] = token;
                 }
@@ -966,147 +967,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return value.Trim();
         }
 
-        private static string RequireKnownInteractionMode(string? modeKey, string fieldPath, string id, string path)
+        private static string RequireModeKey(string? modeKey, string fieldPath, string id, string path)
         {
             if (string.IsNullOrWhiteSpace(modeKey))
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty interaction mode key.");
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty mode key.");
             }
 
-            if (!Enum.TryParse(modeKey, ignoreCase: true, out CastModeType parsed))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field '{fieldPath}' uses unknown interaction mode '{modeKey}'.");
-            }
-
-            return parsed.ToString();
-        }
-
-        private static AbilityInputBindingOverride CompileInputBindingOverride(JsonObject inputObj, string id, string path)
-        {
-            var result = new AbilityInputBindingOverride();
-            bool hasAny = false;
-
-            if (inputObj["trigger"] is JsonValue triggerNode)
-            {
-                string rawTrigger = triggerNode.GetValue<string>();
-                if (!Enum.TryParse(rawTrigger, ignoreCase: true, out InputTriggerType trigger))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.trigger uses unknown value '{rawTrigger}'.");
-                }
-
-                result.Trigger = trigger;
-                result.HasTrigger = true;
-                hasAny = true;
-            }
-
-            if (inputObj["heldPolicy"] is JsonValue heldPolicyNode)
-            {
-                string rawHeldPolicy = heldPolicyNode.GetValue<string>();
-                if (!Enum.TryParse(rawHeldPolicy, ignoreCase: true, out HeldPolicy heldPolicy))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.heldPolicy uses unknown value '{rawHeldPolicy}'.");
-                }
-
-                result.HeldPolicy = heldPolicy;
-                result.HasHeldPolicy = true;
-                hasAny = true;
-            }
-
-            if (inputObj["castModeOverride"] is JsonValue castModeNode)
-            {
-                string rawCastMode = castModeNode.GetValue<string>();
-                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out CastModeType castMode))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.castModeOverride uses unknown value '{rawCastMode}'.");
-                }
-
-                result.CastModeOverride = castMode;
-                result.HasCastModeOverride = true;
-                hasAny = true;
-            }
-
-            if (inputObj["targetType"] is JsonValue targetTypeNode)
-            {
-                string rawTargetType = targetTypeNode.GetValue<string>();
-                if (!Enum.TryParse(rawTargetType, ignoreCase: true, out OrderTargetType targetType))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.targetType uses unsupported value '{rawTargetType}'.");
-                }
-
-                result.TargetType = targetType;
-                result.HasTargetType = true;
-                hasAny = true;
-            }
-
-            if (inputObj["modifierBehavior"] is JsonValue modifierBehaviorNode)
-            {
-                string rawModifierBehavior = modifierBehaviorNode.GetValue<string>();
-                if (!Enum.TryParse(rawModifierBehavior, ignoreCase: true, out ModifierSubmitBehavior modifierBehavior) ||
-                    !Enum.IsDefined(modifierBehavior))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.modifierBehavior uses unsupported value '{rawModifierBehavior}'.");
-                }
-
-                result.ModifierBehavior = modifierBehavior;
-                result.HasModifierBehavior = true;
-                hasAny = true;
-            }
-
-            if (inputObj["autoTargetPolicy"] is JsonValue autoTargetPolicyNode)
-            {
-                string rawAutoTargetPolicy = autoTargetPolicyNode.GetValue<string>();
-                if (!Enum.TryParse(rawAutoTargetPolicy, ignoreCase: true, out AutoTargetPolicy autoTargetPolicy))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.autoTargetPolicy uses unknown value '{rawAutoTargetPolicy}'.");
-                }
-
-                result.AutoTargetPolicy = autoTargetPolicy;
-                result.HasAutoTargetPolicy = true;
-                hasAny = true;
-            }
-
-            if (inputObj["autoTargetRangeCm"] is JsonValue autoTargetRangeNode)
-            {
-                result.AutoTargetRangeCm = autoTargetRangeNode.GetValue<int>();
-                result.HasAutoTargetRangeCm = true;
-                hasAny = true;
-            }
-
-            if (inputObj["autoTargetRelation"] is JsonValue autoTargetRelationNode)
-            {
-                string relation = autoTargetRelationNode.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(relation))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.autoTargetRelation must name 'All' or a relationship type.");
-                }
-
-                result.AutoTargetRelation = relation;
-                hasAny = true;
-            }
-
-            if (result.HasAutoTargetPolicy &&
-                result.AutoTargetPolicy != AutoTargetPolicy.None &&
-                result.AutoTargetRelation == null)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' input.autoTargetPolicy {result.AutoTargetPolicy} requires input.autoTargetRelation.");
-            }
-
-            if (!hasAny)
-            {
-                throw new InvalidOperationException($"Ability '{id}' in '{path}' input must declare at least one override field.");
-            }
-
-            return result;
+            return modeKey.Trim();
         }
 
         // ──────────────── Parsing helpers ────────────────

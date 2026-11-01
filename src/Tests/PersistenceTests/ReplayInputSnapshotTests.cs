@@ -13,12 +13,12 @@ public sealed class ReplayInputSnapshotTests
     public void ReplayActionsReplaceLiveSnapshotAndAreConsumedOnce()
     {
         var snapshot = new FrozenInputActionReader();
-        snapshot.SetActionState("LiveOnly", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+        snapshot.SetActionState("LiveOnly", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false, present: true);
         var accumulator = new AuthoritativeInputAccumulator();
         var system = new AuthoritativeInputSnapshotSystem(snapshot, accumulator);
         var replay = new[]
         {
-            new AuthoritativeAction("ReplayOnly", new Vector3(2f, 0f, 0f), true, true, false),
+            new AuthoritativeAction("ReplayOnly", new Vector3(2f, 0f, 0f), true, true, false, Present: true),
         };
 
         snapshot.QueueReplayActions(replay);
@@ -41,7 +41,7 @@ public sealed class ReplayInputSnapshotTests
         var system = new AuthoritativeInputSnapshotSystem(snapshot, new AuthoritativeInputAccumulator());
         snapshot.QueueReplayActions(new[]
         {
-            new AuthoritativeAction("Stale", Vector3.UnitX, true, true, false),
+            new AuthoritativeAction("Stale", Vector3.UnitX, true, true, false, Present: true),
         });
         snapshot.ClearReplayActions();
 
@@ -58,12 +58,12 @@ public sealed class ReplayInputSnapshotTests
         var system = new AuthoritativeInputSnapshotSystem(snapshot, accumulator);
 
         snapshot.SetReplayInputIsolation(true);
-        snapshot.SetActionState("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+        snapshot.SetActionState("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false, present: true);
         system.Update(1f / 60f);
 
         Assert.That(snapshot.IsDown("Live"), Is.False);
         snapshot.SetReplayInputIsolation(false);
-        accumulator.CaptureAction("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+        accumulator.CaptureAction("Live", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false, boundByActiveContext: true);
         system.Update(1f / 60f);
 
         Assert.That(snapshot.IsDown("Live"), Is.True);

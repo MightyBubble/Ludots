@@ -1,0 +1,12 @@
+{
+  "schemes": [
+    {
+      "id": "scheme.aim.kbm",
+      "inputContexts": [
+        "Camera.Rig",
+        "Aim.Kbm",
+        "Moba_Gameplay"
+      ]
+    }
+  ]
+}

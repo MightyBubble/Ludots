@@ -194,7 +194,6 @@
         "scope": "allVisibleTemplate",
         "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
         "maximumScreenOverlapRatio": 0.5
       }
     },

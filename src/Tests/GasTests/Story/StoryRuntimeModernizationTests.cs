@@ -792,8 +792,9 @@ namespace Ludots.Tests.GAS.Story
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
-                Path.Combine(repoRoot, "assets"));
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" , "CommandSourceCoreFixtureMod"}),
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             return engine;
         }
 

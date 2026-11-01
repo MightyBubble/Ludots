@@ -39,7 +39,8 @@
       {
         "id": "activate_selecting",
         "op": "ActivateContext",
-        "context": "interaction.context.core.selecting"
+        "context": "interaction.context.core.selecting",
+        "parentContext": "core.graph.parent.unconstrained"
       },
       {
         "id": "ok",

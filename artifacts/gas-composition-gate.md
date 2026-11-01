@@ -1,42 +1,61 @@
-# GAS Composition Gate — Self Review
+# GAS Composition Gate — DispatchMapEvent 提交次数
 
-- **Task / Issue**: ScreenRegionToEntities 增加可选 `tolerance` 显式传参端口；`graph.core.select_hit` 明文接线 ConstFloat(20)。owner 裁定：点击宽容应完全图化或明文传参组装，几何过滤器不得内部读配置（#1634 剥离判断语义的后续收口）。
-- **Date**: 2026-09-22
-- **Agent / Author**: ZCode（test-red-clearing session）
+- **Task / Issue**: `DispatchMapEvent` 在同步派发结束时给出整数，等于监听方调用 `SubmitCast` 与 `SubmitCommandIntent` 的次数；先选目标图在次数为 0 时打开点击瞄准
+- **Date**: 2026-10-14
+- **Agent / Author**: cloud agent
 
-## 1. Core judgment
+## GAS Composition Gate — Self Review
 
-新变体主要交付物是（A/B/C/D）: **A**（既有 op 增加一个显式可选值输入端口 + 一条图数据接线）
+- **Task / Issue**: `DispatchMapEvent` 整数输出 + `graph.aim.target_first` 连线
+- **Date**: 2026-10-14
+- **Agent / Author**: cloud agent
 
-结论: **PASS**
+### 1. Core judgment
 
-一句话理由: 拾取宽容从几何过滤器内部配置读取改为调用方显式传参（op 可选引脚 + 图内明文 ConstFloat），零新 enum/开关/管线。
+新变体主要交付物是（A/B/C/D）: A
 
-## 2. Layer assignment
+结论: PASS
 
-| 步骤/能力 | Layer | 实现载体 |
-|-----------|-------|----------|
-| 几何过滤签名 | 0 | FilterScreenRegionEntities(…, float tolerancePixels) 纯函数参数 |
-| op 可选端口 | 0 | ScreenRegionToEntities tolerance 引脚（缺省 0xFF→0），描述表/校验/发射 |
-| 图接线 | 2 | graph.core.select_hit + ConstFloat(20)→tolerance（数据） |
-| 文档 | 3 | wiki 端口表 |
+一句话理由: 不新开 op、不新开枚举；已有 `DispatchMapEvent` 多一个整数输出，先选目标用现有比较和 `ActivateContext` 接上。
 
-## 3. Reuse list
+### 2. Layer assignment
 
-- 既有 byte.MaxValue 可选哨兵模式（SubmitCast B/C 同款）
-- 既有 ValueInputKey 可选边校验模式（ReadMapVar source 同款）
-- 既有接口默认重载模式（旧 4 参签名全兼容，测试直调不受影响）
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 派发期间的提交计数 | 0 | `GasGraphRuntimeApi` 上按嵌套深度分槽的计数，`HandleDispatchMapEvent` 写入 `I[Dst]` |
+| 次数为 0 打开点击瞄准 | 2 | `graph.aim.target_first` 连到已有的 `DeactivateOwnContext` + `ActivateContext` |
+| 规则图 | 2 | 不改 |
 
-## 4. New Layer 0 ops (if any)
+### 3. Reuse list
 
-N/A（无新 op，仅既有 op 加可选参数）
+- Handlers: `HandleDispatchMapEvent`、`HandleSubmitCast`、`HandleSubmitCommandIntent`
+- Queues / Systems: `CommandIntentSubmissionBuffer` 的 `Push` / `PushCast`；`TriggerManager.FireMapEvent` / `FireGlobalEvent` 仍同步跑完监听方
+- Resolvers / Registries: `GraphOpDescriptorTable` 的线性输出类型；`EventSchemaRegistry` 不变
+- Existing presets / graphs: `graph.aim.target_first` 里没有目标的那条 `deact_miss` → `act_click` 分支
 
-## 5. Transaction boundary
+### 4. New Layer 0 ops (if any)
 
-无（纯查询过滤参数化，无副作用）
+N/A。没有新 op。计数挂在已有派发上，因为图在派发指令返回前必须读到次数，而监听方的提交发生在这次同步 `Fire` 里面。
 
-## 6. Config SSOT
+### 5. Transaction boundary
 
-行为配置落在: graph JSON（graph.core.select_hit 的 ConstFloat(20) 明文值）
+必须原子 rollback 的步骤: 无。计数不进世界状态，派发抛错时槽位弹出，不写回放。
 
-是否新增 JSON schema: **NO**
+### 6. Config SSOT
+
+行为配置落在: graph（`mods/capabilities/input/AimInteractionMod/assets/GAS/graphs/graph.aim.target_first.json`）
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线
+
+若选了 Core enum → FAIL

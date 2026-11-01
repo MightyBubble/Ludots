@@ -6,7 +6,6 @@ using Arch.System;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -199,7 +198,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
                 ref BlackboardIntBuffer buffer = ref world.Get<BlackboardIntBuffer>(actor);
                 foreach ((string key, int value) in brain.BlackboardIntDefaults)
                 {
-                    buffer.Set(Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(key), value);
+                    buffer.Set(OrderBlackboardKeyRegistry.Resolve(key), value);
                 }
             }
 
@@ -208,7 +207,7 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
                 ref BlackboardEntityBuffer entities = ref world.Get<BlackboardEntityBuffer>(actor);
                 foreach (string key in brain.BlackboardEntityDefaults)
                 {
-                    entities.Set(Ludots.Core.Gameplay.GAS.Registry.ConfigKeyRegistry.Register(key), Entity.Null);
+                    entities.Set(OrderBlackboardKeyRegistry.Resolve(key), Entity.Null);
                 }
             }
         }
@@ -228,9 +227,9 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
     }
 
     /// <summary>
-    /// Fixed entity-blackboard keys carrying the order glue each think tick (ConfigKeyRegistry
-    /// id space, the same one graph blackboard ops resolve against). Brains read these via
-    /// ReadBlackboardInt/Entity; live debug sees them like any blackboard write.
+    /// Fixed entity-blackboard keys carrying the order glue each think tick
+    /// (<see cref="OrderBlackboardKeyRegistry"/>, the same space graph blackboard ops resolve against).
+    /// Brains read these via ReadBlackboardInt/Entity; live debug sees them like any blackboard write.
     /// </summary>
     public static class OrderGlueKeys
     {
@@ -242,17 +241,14 @@ public sealed class GraphActionBrainHostSystem : BaseSystem<World, float>
         public const string ActiveTargetName = "Order.ActiveTarget";
         public const string PlayerIdName = "Order.PlayerId";
 
-        // Resolve per access: static readonly ids bake at type-init against whichever ambient
-        // table was current; later ambient replacements (per-fixture Clears) strand compiled
-        // graph programs on stale ids (full-suite-only MissingBlackboard). Register returns the
-        // existing id for already-registered names, so this is a dictionary hit per think tick.
-        public static int ActiveTypeId => ConfigKeyRegistry.Register(ActiveTypeIdName);
-        public static int SpatialXCm => ConfigKeyRegistry.Register(SpatialXCmName);
-        public static int SpatialYCm => ConfigKeyRegistry.Register(SpatialYCmName);
-        public static int HasActive => ConfigKeyRegistry.Register(HasActiveName);
-        public static int HasPending => ConfigKeyRegistry.Register(HasPendingName);
-        public static int ActiveTarget => ConfigKeyRegistry.Register(ActiveTargetName);
-        public static int PlayerId => ConfigKeyRegistry.Register(PlayerIdName);
+        // Resolve per access. Register is idempotent, so this is a dictionary hit per think tick.
+        public static int ActiveTypeId => OrderBlackboardKeyRegistry.Resolve(ActiveTypeIdName);
+        public static int SpatialXCm => OrderBlackboardKeyRegistry.Resolve(SpatialXCmName);
+        public static int SpatialYCm => OrderBlackboardKeyRegistry.Resolve(SpatialYCmName);
+        public static int HasActive => OrderBlackboardKeyRegistry.Resolve(HasActiveName);
+        public static int HasPending => OrderBlackboardKeyRegistry.Resolve(HasPendingName);
+        public static int ActiveTarget => OrderBlackboardKeyRegistry.Resolve(ActiveTargetName);
+        public static int PlayerId => OrderBlackboardKeyRegistry.Resolve(PlayerIdName);
     }
 
     private sealed class BrainPool

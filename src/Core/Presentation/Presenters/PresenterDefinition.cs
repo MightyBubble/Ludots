@@ -140,6 +140,11 @@ namespace Ludots.Core.Presentation.Presenters
         public PresenterParamBinding[] Bindings = System.Array.Empty<PresenterParamBinding>();
         public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
         public Vector3 PositionOffset;
+        public bool HasWorldPositionBinding;
+        public int WorldPositionXKeyId;
+        public int WorldPositionYKeyId;
+        public string WorldPositionXKey = string.Empty;
+        public string WorldPositionYKey = string.Empty;
         public float DefaultLifetime;
         public int[] RequiredAttributeIds = System.Array.Empty<int>();
 

@@ -4,12 +4,29 @@ using System.Numerics;
 
 namespace Ludots.Core.Persistence
 {
+    /// <summary>
+    /// One binding edge of an action that declares <c>intValue</c>. Pressed and
+    /// Released are mutually exclusive: a folded tick keeps one record per edge
+    /// so two slots can fire without collapsing into the action's summed value.
+    /// </summary>
+    public readonly record struct InputBindingIntFire(int Value, bool Pressed, bool Released);
+
+    /// <summary>
+    /// One action in an authoritative input sample. <see cref="Present"/> is true
+    /// only when an active input context bound the action. An unbound action may
+    /// still carry a value; replay restores the bit so value-change dispatch does
+    /// not treat that value as a sample.
+    /// <see cref="IntFires"/> is null when the action has no integer binding edges
+    /// this tick. Rows stay one per action id; the integers ride on the row.
+    /// </summary>
     public readonly record struct AuthoritativeAction(
         string ActionId,
         Vector3 Value,
         bool IsDown,
         bool Pressed,
-        bool Released);
+        bool Released,
+        bool Present,
+        IReadOnlyList<InputBindingIntFire>? IntFires = null);
 
     public sealed record AuthoritativeFrame(
         long Sequence,
@@ -52,10 +69,30 @@ namespace Ludots.Core.Persistence
                     throw new SaveContextException("Authoritative frame actions must be sorted uniquely by action id.");
                 }
 
+                ValidateBindingIntFires(action, i);
                 previous = action.ActionId;
             }
 
             return this;
+        }
+
+        private static void ValidateBindingIntFires(AuthoritativeAction action, int actionIndex)
+        {
+            IReadOnlyList<InputBindingIntFire>? fires = action.IntFires;
+            if (fires == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < fires.Count; i++)
+            {
+                InputBindingIntFire fire = fires[i];
+                if (fire.Pressed == fire.Released)
+                {
+                    throw new SaveContextException(
+                        $"Authoritative frame action {actionIndex} ('{action.ActionId}') int fire {i} must set exactly one of pressed or released.");
+                }
+            }
         }
     }
 

@@ -9,20 +9,8 @@
 
 ## Ludots 映射
 
-```
-Phase 1 (自动记录):
-  永久挂载的 PeriodicEffect
-  period: 1 tick
-  → write position to ring buffer attribute
+目标规则图是 `graph.aim.rule.ground_only`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
 
-Phase 2 (召回):
-InputOrderMapping:
-  actionId: "SkillE"
-  trigger: PressedThisFrame
-  orderTypeKey: "castAbility"
-  targetType: None
-  isSkillMapping: true
-```
 
 ## 实现方案
 

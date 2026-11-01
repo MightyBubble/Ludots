@@ -1,0 +1,106 @@
+[
+  {
+    "id": "showcase.graph_op.MinimapApplyWheelZoom",
+    "kind": "Effect",
+    "entry": "delta",
+    "nodes": [
+      {
+        "id": "delta",
+        "op": "ConstFloat",
+        "floatValue": 1.0
+      },
+      {
+        "id": "x",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
+        "id": "y",
+        "op": "ConstFloat",
+        "floatValue": 0.0
+      },
+      {
+        "id": "wheel",
+        "op": "MinimapApplyWheelZoom"
+      },
+      {
+        "id": "drain",
+        "op": "ConstFloat",
+        "floatValue": -2.0
+      },
+      {
+        "id": "explicit",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "hit",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "x"
+      },
+      {
+        "from": "x",
+        "fromPort": "next",
+        "to": "y"
+      },
+      {
+        "from": "y",
+        "fromPort": "next",
+        "to": "wheel"
+      },
+      {
+        "from": "wheel",
+        "fromPort": "next",
+        "to": "drain"
+      },
+      {
+        "from": "drain",
+        "fromPort": "next",
+        "to": "explicit"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "next",
+        "to": "hit"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "wheel",
+        "toPort": "a"
+      },
+      {
+        "from": "x",
+        "fromPort": "value",
+        "to": "wheel",
+        "toPort": "b"
+      },
+      {
+        "from": "y",
+        "fromPort": "value",
+        "to": "wheel",
+        "toPort": "c"
+      },
+      {
+        "from": "drain",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "value"
+      },
+      {
+        "from": "explicit",
+        "fromPort": "value",
+        "to": "hit",
+        "toPort": "target"
+      }
+    ]
+  }
+]

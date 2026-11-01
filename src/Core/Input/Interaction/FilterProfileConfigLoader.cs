@@ -6,9 +6,8 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/filter_profiles.json</c> (RFC-0065 CTX-4). Follows the
-    /// <c>InputOrderMappingLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>, structural validation fails fast.
+    /// Loader for <c>Input/filter_profiles.json</c> (RFC-0065 CTX-4): catalog-declared DeepObject
+    /// merge through the shared <see cref="ConfigPipeline"/>, structural validation fails fast.
     /// </summary>
     public sealed class FilterProfileConfigLoader
     {

@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod.Systems;
 using InteractionShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -24,7 +23,6 @@ namespace SuperweaponContextShowcaseMod.Runtime
         private const string AutoConfirmFrameEnvKey = "LUDOTS_SUPERWEAPON_CONTEXT_AUTO_CONFIRM_FRAME";
 
         private bool _pendingTargetCommit;
-        private bool _showcaseHudSuppressed;
         private bool _markerDescriptorsReady;
         private int _autoConfirmFrame;
         private int _activeFrame;
@@ -98,7 +96,6 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _autoConfirmFrame = ReadEnvIntOrDefault(AutoConfirmFrameEnvKey, -1);
             _pendingTargetCommit = true;
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
-            SuppressNonEssentialHud(engine);
             PublishShowcaseMarkers(engine);
             BumpRevision();
         }
@@ -217,31 +214,8 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _pendingTargetCommit = false;
             ClearShowcaseMarkers(engine);
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
-            RestoreSuppressedHud(engine);
             _panelController.Clear();
             BumpRevision();
-        }
-
-        private void SuppressNonEssentialHud(GameEngine engine)
-        {
-            if (_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
-            _showcaseHudSuppressed = true;
-        }
-
-        private void RestoreSuppressedHud(GameEngine engine)
-        {
-            if (!_showcaseHudSuppressed)
-            {
-                return;
-            }
-
-            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
-            _showcaseHudSuppressed = false;
         }
 
         private int EnsureCommanderAbility(GameEngine engine)

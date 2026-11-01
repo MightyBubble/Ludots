@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -16,6 +17,7 @@ using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
@@ -135,7 +137,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Action<string>? _startDialogue;
         private Func<Span<int>, int>? _collectActiveDialogueChoices;
         private Func<int, string?>? _resolveDialogueChoiceDisplayText;
-        private IGraphAimSourceRuntime? _aimSource;
+        private IGraphPointerSampleRuntime? _pointerSample;
         private LoadedGraphRuntime? _loadedGraphRuntime;
         private Func<MapId, Gameplay.MapTriggers.MapVariableStore?>? _mapVariableStoreResolver;
         private Func<MapId, Ludots.Core.Systems.MapLoadEntityIndex?>? _placedInstanceIndexResolver;
@@ -148,14 +150,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private Gameplay.Activities.ActivityRuntimeService? _activityRuntime;
         private Gameplay.Tasks.TaskRuntimeService? _taskRuntime;
         private Ludots.Core.Input.Interaction.InteractionModeMap? _interactionModeMap;
+        private Ludots.Core.Input.Interaction.InteractionPrefCatalog? _prefCatalog;
+        private const int ContextMountStackCapacity = 8;
+        private readonly Entity[] _contextMountSubjects = new Entity[ContextMountStackCapacity];
+        private readonly int[] _contextMountProfiles = new int[ContextMountStackCapacity];
+        private int _contextMountDepth;
+        private AbilityDefinitionRegistry? _abilityDefinitions;
+        private EffectTemplateRegistry? _installedEffectTemplates;
         private Ludots.Core.Input.Interaction.InteractionContextInstanceRuntime? _contextInstances;
         private Gameplay.MapTriggers.CustomEventNameRegistry? _customEvents;
         private Func<GameEngine?>? _engineResolver;
         private Ludots.Core.Gameplay.Camera.VirtualCameraRegistry? _virtualCameras;
         private System.Collections.Generic.Dictionary<string, object>? _virtualCameraGlobals;
+        private Func<Ludots.Core.Config.CameraConfig?>? _mapDefaultCamera;
         private CalendarRuntime? _calendar;
         private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
+
+        // One slot per nested DispatchMapEvent. Listeners increment only the innermost
+        // open slot, so an outer dispatch's integer excludes submits made under a nested dispatch.
+        // Not world state: the slots exist only while Fire is on the stack.
+        private int _dispatchSubmitDepth;
+        private readonly int[] _dispatchSubmitCounts = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxInvokeDepth];
         private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -338,6 +354,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _interactionModeMap = modeMap ?? throw new ArgumentNullException(nameof(modeMap));
         }
 
+        /// <summary>Binds the preference-key catalog. Unbound calls fail closed.</summary>
+        public void BindInteractionPrefCatalog(Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog)
+        {
+            _prefCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        }
+
+        /// <summary>Binds ability definitions so slot cast range can be read. Unbound calls fail closed.</summary>
+        public void BindAbilityDefinitions(AbilityDefinitionRegistry abilityDefinitions)
+        {
+            _abilityDefinitions = abilityDefinitions ?? throw new ArgumentNullException(nameof(abilityDefinitions));
+        }
+
+        /// <summary>
+        /// Binds the installed effect templates so a graph can read a named float from the
+        /// ability's impact effect. Unbound calls fail closed. This is the catalog, not the
+        /// transient effect-execution context.
+        /// </summary>
+        public void BindEffectTemplateRegistry(EffectTemplateRegistry effectTemplates)
+        {
+            _installedEffectTemplates = effectTemplates ?? throw new ArgumentNullException(nameof(effectTemplates));
+        }
+
         /// <summary>
         /// Binds the derived interaction context kernel so graph programs can activate and
         /// deactivate derived contexts via <see cref="ActivateContext"/> /
@@ -364,6 +402,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindCommandIntentSubmissions(Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer submissions)
         {
             _commandIntentSubmissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
+        }
+
+        /// <inheritdoc />
+        public void BeginDispatchSubmitCount()
+        {
+            if (_dispatchSubmitDepth >= _dispatchSubmitCounts.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchSubmitDepthExceeded: nested DispatchMapEvent depth {_dispatchSubmitDepth + 1} exceeds {_dispatchSubmitCounts.Length}.");
+            }
+
+            _dispatchSubmitCounts[_dispatchSubmitDepth++] = 0;
+        }
+
+        /// <inheritdoc />
+        public int EndDispatchSubmitCount()
+        {
+            if (_dispatchSubmitDepth == 0)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.DispatchSubmitDepthEmpty: EndDispatchSubmitCount without a matching begin.");
+            }
+
+            return _dispatchSubmitCounts[--_dispatchSubmitDepth];
+        }
+
+        private void NoteDispatchSubmit()
+        {
+            if (_dispatchSubmitDepth == 0)
+            {
+                return;
+            }
+
+            _dispatchSubmitCounts[_dispatchSubmitDepth - 1]++;
         }
 
         /// <summary>
@@ -712,24 +784,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ?? throw new ArgumentNullException(nameof(collectActiveDialogueChoices));
         }
 
-        public void BindAimSource(IGraphAimSourceRuntime aimSource)
+        public void BindPointerSample(IGraphPointerSampleRuntime pointerSample)
         {
-            _aimSource = aimSource ?? throw new ArgumentNullException(nameof(aimSource));
+            _pointerSample = pointerSample ?? throw new ArgumentNullException(nameof(pointerSample));
         }
 
-        private IGraphAimSourceRuntime RequireAimSource()
+        private IGraphPointerSampleRuntime RequirePointerSample()
         {
-            return _aimSource ?? throw new InvalidOperationException("GAS.GRAPH.ERR.AimSourceUnavailable");
+            return _pointerSample ?? throw new InvalidOperationException("GAS.GRAPH.ERR.PointerSampleUnavailable");
         }
 
         public bool TryScreenPointToGround(float screenX, float screenY, string? seatId, out IntVector2 groundCm)
         {
-            return RequireAimSource().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
+            return RequirePointerSample().TryScreenPointToGround(screenX, screenY, seatId, out groundCm);
         }
 
         public Entity PickScreenPointEntity(ReadOnlySpan<Entity> candidates, int count, Entity owner, string? seatId, float screenX, float screenY, float radiusPixels)
         {
-            return RequireAimSource().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
+            return RequirePointerSample().PickScreenPointEntity(candidates, count, owner, seatId, screenX, screenY, radiusPixels);
         }
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId)
@@ -737,12 +809,95 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public int FilterScreenRegionEntities(Span<Entity> entities, int count, in ScreenRect rect, string? seatId, float tolerancePixels)
         {
-            return RequireAimSource().FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels);
+            return RequirePointerSample().FilterScreenRegionEntities(entities, count, in rect, seatId, tolerancePixels);
         }
 
         public bool TryReadLivePointerScreen(out float screenX, out float screenY)
         {
-            return RequireAimSource().TryReadLivePointerScreen(out screenX, out screenY);
+            return RequirePointerSample().TryReadLivePointerScreen(out screenX, out screenY);
+        }
+
+        public int QueryMinimapRegion(float screenX, float screenY)
+        {
+            MinimapRuntime runtime = RequireMinimap();
+            var point = new Vector2(screenX, screenY);
+            if (runtime.ContainsPresetToggle(point))
+            {
+                return 3;
+            }
+
+            if (runtime.ContainsRotateToggle(point))
+            {
+                return 4;
+            }
+
+            if (runtime.ContainsZoomSlider(point))
+            {
+                return 2;
+            }
+
+            if (runtime.ContainsField(point))
+            {
+                return 1;
+            }
+
+            return 0;
+        }
+
+        public bool TryMinimapScreenToWorld(float screenX, float screenY, out IntVector2 worldCm)
+        {
+            worldCm = default;
+            if (!RequireMinimap().TryScreenToWorldClamped(new Vector2(screenX, screenY), out Vector2 world))
+            {
+                return false;
+            }
+
+            worldCm = new IntVector2(
+                (int)MathF.Round(world.X, MidpointRounding.AwayFromZero),
+                (int)MathF.Round(world.Y, MidpointRounding.AwayFromZero));
+            return true;
+        }
+
+        public void MinimapJumpCamera(IntVector2 worldCm)
+        {
+            RequireMinimap().JumpCameraTo(RequireEngine(), new Vector2(worldCm.X, worldCm.Y));
+        }
+
+        public void MinimapSetZoomFromPointer(float screenX, float screenY)
+        {
+            RequireMinimap().SetZoomFromSliderPointer(new Vector2(screenX, screenY));
+        }
+
+        public void MinimapApplyWheelZoom(float wheelDelta, float screenX, float screenY)
+        {
+            RequireMinimap().ApplyWheelZoom(wheelDelta, new Vector2(screenX, screenY));
+        }
+
+        public void MinimapTogglePreset()
+        {
+            RequireMinimap().ToggleRtsFollowCameraPreset();
+        }
+
+        public void MinimapToggleRotate()
+        {
+            RequireMinimap().ToggleRotateWithCamera();
+        }
+
+        private GameEngine RequireEngine()
+        {
+            GameEngine? engine = _engineResolver?.Invoke();
+            if (engine == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.EngineUnavailable");
+            }
+
+            return engine;
+        }
+
+        private MinimapRuntime RequireMinimap()
+        {
+            return RequireEngine().GetService(CoreServiceKeys.MinimapRuntime)
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MinimapRuntimeUnavailable");
         }
 
         public void BindResolveDialogueChoiceDisplayText(Func<int, string?> resolveDialogueChoiceDisplayText)
@@ -882,7 +1037,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         /// ValidateFirePayload backstops missing required params, type mismatches, and
         /// undeclared MapTrigger.* keys.
         /// </summary>
-        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs)
+        public void FireMapEventPayload(int eventKeyId, MapId mapId, Entity selfSource, GraphEntryPayloadTable? stagedArgs, int abilityId)
         {
             RejectDerivedAttributeSideEffect(nameof(FireMapEventPayload));
             var triggerManager = _triggerManager
@@ -898,7 +1053,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             ScriptContext context = BuildDispatchContext(schema, mapId, stagedArgs);
 
-            if (selfSource != Entity.Null && selfSource != default &&
+            if (abilityId > 0)
+            {
+                context.Set(MapTriggerEventPayloadKeys.AbilityId, abilityId);
+                if (selfSource != Entity.Null && selfSource != default)
+                {
+                    context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
+                }
+            }
+            else if (selfSource != Entity.Null && selfSource != default &&
                 schema.DeclaresPayloadKey(MapTriggerEventPayloadKeys.SourceEntity))
             {
                 context.Set(MapTriggerEventPayloadKeys.SourceEntity, selfSource);
@@ -1087,6 +1250,310 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
         }
 
+        /// <inheritdoc />
+        public bool IsPref(Entity rep, Entity actor, int slot, int keyId, int valueId)
+        {
+            Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(IsPref));
+            // Negative slot: player-level pair only. The representative may be an anchor with no ability bar.
+            int abilityId = slot < 0 ? 0 : RequireSlotAbility(actor, slot, nameof(IsPref));
+            (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(IsPref));
+            int resolved = pref.ResolvePref(abilityId, keyRegistryId);
+            if (resolved == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.IsPrefUnset: rep {rep} has no value for preference '{_prefCatalog!.KeyName(keyRegistryId)}'.");
+            }
+
+            return resolved == valueRegistryId;
+        }
+
+        /// <inheritdoc />
+        public void SetPref(Entity rep, int keyId, int valueId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetPref));
+            if (_world == null || !_world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetPrefRepDead: rep {rep} is not alive.");
+            }
+
+            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.SetPrefRepHasNoPref: rep {rep} carries no InteractionPref.");
+            }
+
+            (int keyRegistryId, int valueRegistryId) = ResolveAllowedPref(keyId, valueId, nameof(SetPref));
+            pref.SetPlayerPref(keyRegistryId, valueRegistryId);
+            _world.Set(rep, pref);
+        }
+
+        /// <inheritdoc />
+        public void ActivateContextFromPref(Entity rep, Entity actor, int slot, int keyId, int parentContextKeyId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ActivateContextFromPref));
+            Ludots.Core.Input.Interaction.InteractionPref pref = RequirePref(rep, actor, nameof(ActivateContextFromPref));
+            int abilityId = RequireSlotAbility(actor, slot, nameof(ActivateContextFromPref));
+            Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog = RequirePrefCatalog();
+            string keyName = ConfigKeyRegistry.GetName(keyId);
+            if (string.IsNullOrWhiteSpace(keyName) || catalog.Keys.GetId(keyName) == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' is not installed.");
+            }
+
+            int keyRegistryId = catalog.Keys.GetId(keyName);
+            if (!catalog.IsContextValued(keyRegistryId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefNotContextValued: preference key '{keyName}' is not context-valued.");
+            }
+
+            if (parentContextKeyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefParentMissing: preference key '{keyName}' requires a parent context.");
+            }
+
+            int resolved = pref.ResolvePref(abilityId, keyRegistryId);
+            if (resolved == 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnset: rep {rep} has no value for preference '{keyName}'.");
+            }
+
+            string valueName = catalog.ValueName(resolved);
+            if (string.IsNullOrWhiteSpace(valueName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' resolved value id {resolved} has no name.");
+            }
+
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            if (!contextInstances.IsInstalledProfile(valueName))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ActivateContextFromPrefUnknown: preference key '{keyName}' value '{valueName}' is not an installed interaction context profile.");
+            }
+
+            ActivateContext(rep, ConfigKeyRegistry.Register(valueName), parentContextKeyId);
+        }
+
+        /// <inheritdoc />
+        public void DeactivateOwnContext()
+        {
+            RejectDerivedAttributeSideEffect(nameof(DeactivateOwnContext));
+            if (_contextMountDepth <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.DeactivateOwnContextOutsideMount");
+            }
+
+            Entity subject = _contextMountSubjects[_contextMountDepth - 1];
+            int profileId = _contextMountProfiles[_contextMountDepth - 1];
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            contextInstances.DeactivateProfile(subject, profileId);
+        }
+
+        /// <inheritdoc />
+        public void PushContextMount(Entity subject, int profileId)
+        {
+            if (profileId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ContextMountProfileInvalid: profile id {profileId} is not a context mount.");
+            }
+
+            if (_contextMountDepth >= ContextMountStackCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.ContextMountStackOverflow: nested context mounts exceeded {ContextMountStackCapacity}.");
+            }
+
+            _contextMountSubjects[_contextMountDepth] = subject;
+            _contextMountProfiles[_contextMountDepth] = profileId;
+            _contextMountDepth++;
+        }
+
+        /// <inheritdoc />
+        public void PopContextMount()
+        {
+            if (_contextMountDepth <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.ContextMountStackEmpty");
+            }
+
+            _contextMountDepth--;
+        }
+
+        private Ludots.Core.Input.Interaction.InteractionPref RequirePref(Entity rep, Entity actor, string opName)
+        {
+            if (_world == null || !_world.IsAlive(rep))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}RepDead: rep {rep} is not alive.");
+            }
+
+            if (!_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}ActorDead: actor {actor} is not alive.");
+            }
+
+            if (!_world.TryGet(rep, out Ludots.Core.Input.Interaction.InteractionPref pref))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}RepHasNoPref: rep {rep} carries no InteractionPref.");
+            }
+
+            return pref;
+        }
+
+        private int RequireSlotAbility(Entity actor, int slot, string opName)
+        {
+            if (!AbilitySlotResolver.TryResolve(_world!, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}SlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            return slotState.AbilityId;
+        }
+
+        private (int KeyId, int ValueId) ResolveAllowedPref(int keyConfigId, int valueConfigId, string opName)
+        {
+            Ludots.Core.Input.Interaction.InteractionPrefCatalog catalog = RequirePrefCatalog();
+            string keyName = ConfigKeyRegistry.GetName(keyConfigId);
+            string valueName = ConfigKeyRegistry.GetName(valueConfigId);
+            int keyId = string.IsNullOrWhiteSpace(keyName) ? catalog.Keys.InvalidId : catalog.Keys.GetId(keyName);
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}Unknown: preference key '{keyName}' is not installed.");
+            }
+
+            int valueId = string.IsNullOrWhiteSpace(valueName) ? catalog.Values.InvalidId : catalog.Values.GetId(valueName);
+            if (valueId == catalog.Values.InvalidId || !catalog.Allows(keyId, valueId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.{opName}Unknown: preference key '{keyName}' does not allow value '{valueName}'.");
+            }
+
+            return (keyId, valueId);
+        }
+
+        private Ludots.Core.Input.Interaction.InteractionPrefCatalog RequirePrefCatalog()
+        {
+            return _prefCatalog
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.InteractionPrefCatalogUnavailable: no preference catalog is bound to the graph runtime.");
+        }
+
+        /// <inheritdoc />
+        public float LoadAbilityCastRange(Entity actor, int slot)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeActorDead: actor {actor} is not alive.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            AbilityDefinitionRegistry definitions = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.AbilityDefinitionsUnavailable: no ability definition registry is bound to the graph runtime.");
+            if (!definitions.TryGet(slotState.AbilityId, out AbilityDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
+            }
+
+            if (!definition.HasTargeting)
+            {
+                string abilityName = AbilityIdRegistry.GetName(slotState.AbilityId);
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityCastRangeNoTargeting: ability '{abilityName}' has no targeting.castRangeCm.");
+            }
+
+            return definition.Targeting.CastRangeCm;
+        }
+
+        /// <inheritdoc />
+        public float LoadAbilityEffectFloat(Entity actor, int slot, string fields)
+        {
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatActorDead: actor {actor} is not alive.");
+            }
+
+            if (string.IsNullOrWhiteSpace(fields))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoField: LoadAbilityEffectFloat requires a non-empty field list.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            AbilityDefinitionRegistry definitions = _abilityDefinitions
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.AbilityDefinitionsUnavailable: no ability definition registry is bound to the graph runtime.");
+            if (!definitions.TryGet(slotState.AbilityId, out AbilityDefinition definition))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadAbilityEffectFloatUnknownAbility: actor {actor} slot {slot} ability {slotState.AbilityId} is not installed.");
+            }
+
+            EffectTemplateRegistry templates = _installedEffectTemplates
+                ?? throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.LoadAbilityEffectFloatNoRegistry: no effect template registry is bound to the graph runtime.");
+            return EffectTemplateNamedFloat.RequireFromExec(
+                in definition,
+                templates,
+                fields,
+                AbilityIdRegistry.GetName(slotState.AbilityId));
+        }
+
+        /// <inheritdoc />
+        public int LoadSlotAbilityId(Entity actor, int slot)
+        {
+            if (!TryLoadSlotAbilityId(actor, slot, out int abilityId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdSlotEmpty: actor {actor} slot {slot} has no ability.");
+            }
+
+            return abilityId;
+        }
+
+        public bool TryLoadSlotAbilityId(Entity actor, int slot, out int abilityId)
+        {
+            abilityId = 0;
+            if (_world == null || !_world.IsAlive(actor))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.LoadSlotAbilityIdActorDead: actor {actor} is not alive.");
+            }
+
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slot, out AbilitySlotState slotState) || slotState.AbilityId <= 0)
+            {
+                return false;
+            }
+
+            abilityId = slotState.AbilityId;
+            return true;
+        }
+
         /// <summary>
         /// Activates a derived interaction context on the subject. The kernel owns
         /// parent validation, scope creation, and the ContextActivated presentation event;
@@ -1097,6 +1564,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RejectDerivedAttributeSideEffect(nameof(ActivateContext));
             var contextInstances = _contextInstances
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            if (parentContextKeyId == ContextOpEncoding.OwnMountParent)
+            {
+                if (_contextMountDepth <= 0)
+                {
+                    throw new InvalidOperationException("GAS.GRAPH.ERR.ActivateContextOutsideMount");
+                }
+
+                parentContextKeyId = contextInstances.RequireConfigKeyId(
+                    _contextMountProfiles[_contextMountDepth - 1]);
+            }
+
             contextInstances.Activate(subject, contextKeyId, parentContextKeyId);
         }
 
@@ -1111,6 +1589,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var contextInstances = _contextInstances
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
             contextInstances.Deactivate(subject, contextKeyId);
+        }
+
+        /// <inheritdoc />
+        public bool IsContextActive(Entity subject, int contextKeyId)
+        {
+            var contextInstances = _contextInstances
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.ContextInstanceRuntimeUnavailable");
+            return contextInstances.IsContextActive(subject, contextKeyId);
         }
 
         /// <summary>
@@ -1152,6 +1638,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 groundCm,
                 submitMode,
                 layout), members);
+            NoteDispatchSubmit();
         }
 
         /// <summary>
@@ -1180,6 +1667,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 groundCm,
                 orderTypeKeyId,
                 submitMode), members);
+            NoteDispatchSubmit();
         }
 
         /// <summary>
@@ -1760,7 +2248,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public Span<Entity> QueryScreenRegionCollection(Entity owner, int collectionKeyId, scoped in ScreenRect rect, string? seatId, int depth)
         {
             if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
-            ReadOnlySpan<Entity> hits = RequireAimSource().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
+            ReadOnlySpan<Entity> hits = RequirePointerSample().QueryScreenRegion(_entityCollections.RequireSource(owner, collectionKeyId), rect, seatId);
             Span<Entity> result = GetEntityQueryBuffer(depth, hits.Length);
             hits.CopyTo(result);
             return result[..hits.Length];
@@ -2359,6 +2847,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _virtualCameraGlobals = globals ?? throw new ArgumentNullException(nameof(globals));
         }
 
+        public void BindMapDefaultCamera(Func<Ludots.Core.Config.CameraConfig?> currentMapCamera)
+        {
+            _mapDefaultCamera = currentMapCamera ?? throw new ArgumentNullException(nameof(currentMapCamera));
+        }
+
         public void ActivateVirtualCamera(Entity rep, int cameraKeyId)
         {
             RejectDerivedAttributeSideEffect(nameof(ActivateVirtualCamera));
@@ -2394,6 +2887,65 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true,
             };
+        }
+
+        public void ApplyMapDefaultCamera(Entity rep)
+        {
+            RejectDerivedAttributeSideEffect(nameof(ApplyMapDefaultCamera));
+            if (_virtualCameras == null || _virtualCameraGlobals == null || _mapDefaultCamera == null)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.VirtualCameraUnavailable");
+            }
+
+            Ludots.Core.Config.CameraConfig? cam = _mapDefaultCamera();
+            if (cam == null || string.IsNullOrWhiteSpace(cam.VirtualCameraId))
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.MapDefaultCameraMissing: the current map has no DefaultCamera.VirtualCameraId.");
+            }
+
+            string cameraId = cam.VirtualCameraId;
+            if (!_virtualCameras.TryGet(cameraId, out Ludots.Core.Gameplay.Camera.VirtualCameraDefinition definition) || definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.VirtualCameraUnknown: ApplyMapDefaultCamera names '{cameraId}', which Camera/virtual_cameras.json does not declare.");
+            }
+
+            Entity followOwner = Entity.Null;
+            if (Ludots.Core.Gameplay.Camera.CameraFollowTargetFactory.RequiresEntityCollection(definition.FollowTargetKind))
+            {
+                if (_world == null || !_world.IsAlive(rep))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.VirtualCameraFollowOwnerDead: virtual camera '{cameraId}' follows a collection, but the caster {rep} is not alive.");
+                }
+
+                followOwner = rep;
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.VirtualCameraRequest.Name] = new Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+            {
+                Id = cameraId,
+                FollowCollectionOwnerOverride = followOwner,
+                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true,
+                BlendDurationSeconds = 0f,
+            };
+            var pose = new Ludots.Core.Gameplay.Camera.CameraPoseRequest
+            {
+                VirtualCameraId = cameraId,
+                Yaw = cam.Yaw,
+                Pitch = cam.Pitch,
+                DistanceCm = cam.DistanceCm,
+                FovYDeg = cam.FovYDeg,
+            };
+            if (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+            {
+                pose.TargetCm = new Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f);
+            }
+
+            _virtualCameraGlobals[CoreServiceKeys.CameraPoseRequest.Name] = pose;
         }
 
         public void BindResponseChain(

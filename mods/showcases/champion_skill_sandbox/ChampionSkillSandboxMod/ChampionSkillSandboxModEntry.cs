@@ -14,9 +14,8 @@ namespace ChampionSkillSandboxMod
             ChampionSkillSandboxComponentAuthoring.Register(context.ModId);
 
             var runtime = new ChampionSkillSandboxRuntime();
-            var toolbarProvider = new ChampionSkillCastModeToolbarProvider();
 
-            context.OnEvent(GameEvents.GameStart, new InstallChampionSkillSandboxOnGameStartTrigger(context, runtime, toolbarProvider).ExecuteAsync);
+            context.OnEvent(GameEvents.GameStart, new InstallChampionSkillSandboxOnGameStartTrigger(context, runtime).ExecuteAsync);
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);

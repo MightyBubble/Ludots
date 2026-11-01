@@ -8,8 +8,8 @@ Do not use it as an implementation reference.
 Current architecture:
 
 - Entity groups are stored in `EntityCollectionStore`.
-- The default player command group is `EntityCollectionKeys.CommandSource` /
-  `collection.command.source`.
+- The player command group is the `commandSource` role in `Input/collection_keys.json`.
+  The merged value is the collection name.
 - Command authority must resolve actors from explicit entity collections and must fail fast
   when the expected collection or profile is missing.
 - Order payloads must be self-contained, or explicitly refer to an owner / collection key /
@@ -20,8 +20,9 @@ Current architecture:
 Current reference documents:
 
 - `docs/architecture/entity_collection_query_infrastructure.md`
-- `docs/audits/rfc_0065_pr581_workflow_closeout.md`
-- `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`
+- `gitbook/architecture/graph-capability-status.md` section 3.3.2 for aim, control schemes, and the retired input names
+
+The RFC and the closeout audit keep their decision text. They are not the current input contract.
 
 Retirement guard:
 

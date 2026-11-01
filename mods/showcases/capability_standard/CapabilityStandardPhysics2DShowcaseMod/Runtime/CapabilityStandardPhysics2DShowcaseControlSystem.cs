@@ -8,6 +8,9 @@ namespace CapabilityStandardPhysics2DShowcaseMod.Runtime;
 
 internal sealed class CapabilityStandardPhysics2DShowcaseControlSystem : ISystem<float>
 {
+    private const string CommandActionId = "Command";
+    private const string CancelActionId = "Cancel";
+
     private readonly GameEngine _engine;
     private readonly CapabilityStandardPhysics2DShowcaseRuntime _runtime;
 
@@ -47,13 +50,16 @@ internal sealed class CapabilityStandardPhysics2DShowcaseControlSystem : ISystem
             return;
         }
 
-        if (pointer.Cancel.PressedThisFrame)
+        if (PointerInteractionSnapshotReader.TryReadAction(_engine.GlobalContext, CancelActionId, out PointerActionSnapshot cancel) &&
+            cancel.PressedThisFrame)
         {
             _runtime.ClearPolygonDraft();
             return;
         }
 
-        if (pointer.Command.PressedThisFrame && pointer.HasGroundPoint)
+        if (PointerInteractionSnapshotReader.TryReadAction(_engine.GlobalContext, CommandActionId, out PointerActionSnapshot command) &&
+            command.PressedThisFrame &&
+            pointer.HasGroundPoint)
         {
             _runtime.TryAddPolygonVertexFromPointer(pointer.GroundWorldCm);
         }

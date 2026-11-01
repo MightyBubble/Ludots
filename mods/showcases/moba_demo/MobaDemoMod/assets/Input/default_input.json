@@ -1,26 +1,6 @@
 {
   "actions": [
     {
-      "id": "SkillQ",
-      "name": "Gameplay_SkillQ",
-      "type": "Button"
-    },
-    {
-      "id": "SkillW",
-      "name": "Gameplay_SkillW",
-      "type": "Button"
-    },
-    {
-      "id": "SkillE",
-      "name": "Gameplay_SkillE",
-      "type": "Button"
-    },
-    {
-      "id": "SkillR",
-      "name": "Gameplay_SkillR",
-      "type": "Button"
-    },
-    {
       "id": "Command",
       "name": "Gameplay_Command",
       "type": "Button"
@@ -29,27 +9,6 @@
       "id": "Stop",
       "name": "Gameplay_Stop",
       "type": "Button"
-    },
-    {
-      "id": "ModeLoL",
-      "name": "Gameplay_ModeLoL",
-      "type": "Button"
-    },
-    {
-      "id": "ModeSC2",
-      "name": "Gameplay_ModeSC2",
-      "type": "Button"
-    },
-    {
-      "id": "Moba.AimConfirm",
-      "name": "Gameplay_MobaAimConfirm",
-      "type": "Button"
-    },
-    {
-      "id": "Moba.AimCancel",
-      "name": "Gameplay_MobaAimCancel",
-      "type": "Button",
-      "firesOn": "release"
     },
     {
       "id": "QueueModifier",
@@ -64,22 +23,6 @@
       "priority": 50,
       "bindings": [
         {
-          "actionId": "SkillQ",
-          "path": "<Keyboard>/q"
-        },
-        {
-          "actionId": "SkillW",
-          "path": "<Keyboard>/w"
-        },
-        {
-          "actionId": "SkillE",
-          "path": "<Keyboard>/e"
-        },
-        {
-          "actionId": "SkillR",
-          "path": "<Keyboard>/r"
-        },
-        {
           "actionId": "Command",
           "path": "<Mouse>/RightButton"
         },
@@ -88,24 +31,12 @@
           "path": "<Keyboard>/s"
         },
         {
-          "actionId": "ModeLoL",
+          "actionId": "Aim.CastMode.Smart",
           "path": "<Keyboard>/F2"
         },
         {
-          "actionId": "ModeSC2",
+          "actionId": "Aim.CastMode.AimClick",
           "path": "<Keyboard>/F3"
-        },
-        {
-          "actionId": "Moba.AimConfirm",
-          "path": "<Mouse>/LeftButton"
-        },
-        {
-          "actionId": "Moba.AimCancel",
-          "path": "<Mouse>/RightButton"
-        },
-        {
-          "actionId": "Moba.AimCancel",
-          "path": "<Keyboard>/Escape"
         },
         {
           "actionId": "QueueModifier",

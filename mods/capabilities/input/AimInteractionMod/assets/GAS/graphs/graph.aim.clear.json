@@ -1,0 +1,251 @@
+[
+  {
+    "id": "graph.aim.clear",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "event": "AimBind",
+        "label": "lifecycle",
+        "start": "rep"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "c2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "q_hov",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "sub_hov",
+        "op": "WriteCollection",
+        "collectionKey": "aim.hover"
+      },
+      {
+        "id": "q_act",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "null_get",
+        "op": "ConstNullEntity"
+      },
+      {
+        "id": "write_valid",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.point.valid"
+      },
+      {
+        "id": "write_null",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "aim.target"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "q_hi",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.unit.highlight"
+      },
+      {
+        "id": "sub_hi",
+        "op": "WriteCollection",
+        "collectionKey": "aim.unit.highlight"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "c2"
+      },
+      {
+        "from": "c2",
+        "fromPort": "next",
+        "to": "q_hov"
+      },
+      {
+        "from": "q_hov",
+        "fromPort": "next",
+        "to": "sub_hov"
+      },
+      {
+        "from": "q_act",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "halt"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "next",
+        "to": "write_valid"
+      },
+      {
+        "from": "write_valid",
+        "fromPort": "next",
+        "to": "write_null"
+      },
+      {
+        "from": "write_null",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "null_get"
+      },
+      {
+        "from": "sub_hov",
+        "fromPort": "next",
+        "to": "q_hi"
+      },
+      {
+        "from": "q_hi",
+        "fromPort": "next",
+        "to": "sub_hi"
+      },
+      {
+        "from": "sub_hi",
+        "fromPort": "next",
+        "to": "q_act"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hov",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "sub_hov",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_act",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "write_valid",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "source"
+      },
+      {
+        "from": "null_get",
+        "fromPort": "value",
+        "to": "write_null",
+        "toPort": "value"
+      },
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q_hi",
+        "toPort": "source"
+      },
+      {
+        "from": "c2",
+        "fromPort": "value",
+        "to": "sub_hi",
+        "toPort": "value"
+      }
+    ]
+  }
+]

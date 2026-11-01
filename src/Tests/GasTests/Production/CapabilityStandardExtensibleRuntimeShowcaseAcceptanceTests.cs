@@ -32,7 +32,6 @@ public sealed class CapabilityStandardExtensibleRuntimeShowcaseAcceptanceTests
     private static readonly string[] BaseMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod"
     };
 

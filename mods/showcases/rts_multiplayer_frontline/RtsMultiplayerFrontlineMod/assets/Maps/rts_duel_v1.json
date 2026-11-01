@@ -14,7 +14,6 @@
   "Metadata": {
     "rts.commandSourceUi": {
       "toolbarVisible": false,
-      "skillBarVisible": false,
       "cameraFocusDistanceCm": 5200,
       "cameraFocusFovYDeg": 46,
       "cameraFocusTowardDefaultTargetCm": 1800,

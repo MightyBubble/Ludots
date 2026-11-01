@@ -1,0 +1,30 @@
+{
+  "actions": [
+    {
+      "id": "Command",
+      "name": "Physics2DShowcase_Command",
+      "type": "Button"
+    },
+    {
+      "id": "Cancel",
+      "name": "Physics2DShowcase_Cancel",
+      "type": "Button"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "Physics2DShowcase.Controls",
+      "priority": 70,
+      "bindings": [
+        {
+          "actionId": "Command",
+          "path": "<Mouse>/RightButton"
+        },
+        {
+          "actionId": "Cancel",
+          "path": "<Keyboard>/escape"
+        }
+      ]
+    }
+  ]
+}

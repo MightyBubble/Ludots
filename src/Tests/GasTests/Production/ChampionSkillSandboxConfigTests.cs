@@ -5,6 +5,7 @@ using System.IO;
 using System.Numerics;
 using System.Threading;
 using Arch.Core;
+using EntityCommandPanelMod.Runtime;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
@@ -21,6 +22,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
@@ -70,13 +72,15 @@ namespace Ludots.Tests.GAS.Production
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
         private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
         private const string RosterKeyChannel = "ChampionSkillSandbox.Collection.ActiveKey";
+        private const string BattleContextId = "interaction.context.champion.battle";
+        private const string AimCastContextId = "interaction.context.aim.cast";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "CameraProfilesMod",
             "DiagnosticsOverlayMod",
+            "AimInteractionMod",
             "EntityCommandPanelMod",
             "ChampionSkillSandboxMod"
         };
@@ -265,35 +269,35 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(CountOverlays(overlays, GroundOverlayShape.Ring), Is.GreaterThan(0), "Initial sandbox selection should render a visible ring.");
 
             var source = ResolveGasPanelSource(engine);
+            ControlSchemeRuntime schemes = engine.GetService(CoreServiceKeys.ControlSchemeRuntime)
+                ?? throw new InvalidOperationException("ControlSchemeRuntime missing.");
+            Assert.That(schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId), Is.EqualTo("scheme.aim.kbm"));
 
             var ezrealSlots = new EntityCommandPanelSlotView[8];
             int ezrealCount = source.CopySlots(FindEntityByName(engine.World, "Ezreal Cooldown"), 0, ezrealSlots);
-            Assert.That(ezrealCount, Is.EqualTo(4));
+            Assert.That(ezrealCount, Is.EqualTo(4), "Champion panel shows four ability slots; t/y are not on this loadout.");
+            string[] championKeys = { "Q", "W", "E", "R" };
+            for (int i = 0; i < ezrealCount; i++)
+            {
+                AssertChampionSlotKey(engine, ezrealSlots[i], i, championKeys[i]);
+            }
+
             Assert.That(ezrealSlots[3].DisplayLabel, Is.EqualTo("Trueshot Barrage"));
-            Assert.That(ezrealSlots[3].ActionId, Is.EqualTo("SkillR"));
             Assert.That(ezrealSlots[3].DetailLabel, Is.EqualTo("Global projectile fired by direction"));
             Assert.That(ezrealSlots[3].StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), Is.True);
-
-            var mapping = WaitForActiveInputOrderMapping(engine);
-            var ezrealRMapping = mapping.GetMapping("SkillR");
-            Assert.That(ezrealRMapping, Is.Not.Null);
-            Assert.That(ezrealRMapping!.TargetType, Is.EqualTo(OrderTargetType.Direction));
-            Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
-            Assert.That(ezrealRMapping.CursorTargetRelation, Is.EqualTo("Hostile"));
-            Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
 
             var garenSlots = new EntityCommandPanelSlotView[8];
             int garenCount = source.CopySlots(FindEntityByName(engine.World, "Garen Courage"), 0, garenSlots);
             Assert.That(garenCount, Is.EqualTo(4));
             Assert.That(garenSlots[1].DisplayLabel, Is.EqualTo("Courage"));
-            Assert.That(garenSlots[1].ActionId, Is.EqualTo("SkillW"));
+            AssertChampionSlotKey(engine, garenSlots[1], 1, "W");
             Assert.That(garenSlots[1].StateFlags.HasFlag(EntityCommandSlotStateFlags.Active), Is.True);
 
             var jayceSlots = new EntityCommandPanelSlotView[8];
             int jayceCount = source.CopySlots(FindEntityByName(engine.World, "Jayce Hammer"), 0, jayceSlots);
             Assert.That(jayceCount, Is.EqualTo(4));
             Assert.That(jayceSlots[0].DisplayLabel, Is.EqualTo("To The Skies!"));
-            Assert.That(jayceSlots[0].ActionId, Is.EqualTo("SkillQ"));
+            AssertChampionSlotKey(engine, jayceSlots[0], 0, "Q");
             Assert.That(jayceSlots[0].StateFlags.HasFlag(EntityCommandSlotStateFlags.FormOverride), Is.True);
             Assert.That(jayceSlots[3].DisplayLabel, Is.EqualTo("Mercury Cannon"));
 
@@ -314,9 +318,10 @@ namespace Ludots.Tests.GAS.Production
 
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var mapping = WaitForActiveInputOrderMapping(engine);
             Assert.That(toolbar.IsVisible, Is.True);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCast));
+            Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.smart"));
 
             var buttons = new EntityCommandPanelToolbarButtonView[5];
             int buttonCount = toolbar.CopyButtons(buttons);
@@ -325,17 +330,26 @@ namespace Ludots.Tests.GAS.Production
             buttons = new EntityCommandPanelToolbarButtonView[10];
             buttonCount = toolbar.CopyButtons(buttons);
             Assert.That(buttonCount, Is.EqualTo(10));
+            Assert.That(toolbar.Title, Is.EqualTo("Cast + Showcase"));
+            Assert.That(
+                buttons.Select(button => button.Label).ToArray(),
+                Is.EqualTo(new[] { "Quick", "Indicator", "RTS", "Free", "Follow", "Group", "Reset", "Dota2", "LoL", "SC2" }));
             Assert.That(buttons[0].ButtonId, Is.EqualTo("ChampionSkillSandbox.Mode.SmartCast"));
             Assert.That(buttons[0].Active, Is.True);
             Assert.That(buttons[3].ButtonId, Is.EqualTo(FreeCameraToolbarButtonId));
             Assert.That(buttons[3].Active, Is.True);
+            Assert.That(buttons[4].Active, Is.False);
+            Assert.That(buttons[5].Active, Is.False);
             Assert.That(buttons[6].ButtonId, Is.EqualTo(ResetCameraToolbarButtonId));
+            Assert.That(buttons[6].Active, Is.False);
             Assert.That(buttons[7].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
+            Assert.That(buttons[7].Active, Is.False);
             Assert.That(buttons[8].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
             Assert.That(buttons[8].Active, Is.False);
             Assert.That(buttons[9].ButtonId, Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
+            Assert.That(buttons[9].Active, Is.False);
             Assert.That(toolbar.Subtitle, Does.Contain("Theme Classic"));
-            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.ClassicId));
+            Assert.That(EntityCommandPanelShowcaseTheme.ReadActive(engine), Is.EqualTo(EntityCommandPanelShowcaseTheme.ClassicId));
 
             var source = ResolveGasPanelSource(engine);
             Entity ezreal = FindEntityByName(engine.World, "Ezreal Alpha");
@@ -348,8 +362,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.Indicator");
-            Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.SmartCastWithIndicator));
+            TickUntilNextFixedTick(engine);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.release"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[1].Active, Is.True);
 
@@ -359,8 +374,9 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate("ChampionSkillSandbox.Mode.PressReleaseAim");
-            Tick(engine, 1);
-            Assert.That(mapping.InteractionMode, Is.EqualTo(CastModeType.PressReleaseAimCast));
+            TickUntilNextFixedTick(engine);
+            Assert.That(IsInteractionContextActive(engine, AimCastContextId), Is.True);
+            Assert.That(ReadCastModeId(engine), Is.EqualTo("interaction.context.aim.click"));
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[2].Active, Is.True);
 
@@ -370,27 +386,31 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(slots[3].DetailLabel, Is.EqualTo("Hold to channel steerable beam, release to stop"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Sc2Id);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[9].Active, Is.True);
-            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
+            Assert.That(buttons[7].Active, Is.False);
+            Assert.That(buttons[8].Active, Is.False);
+            Assert.That(EntityCommandPanelShowcaseTheme.ReadActive(engine), Is.EqualTo(EntityCommandPanelShowcaseTheme.Sc2Id));
+            Assert.That(toolbar.Subtitle, Does.Contain("Theme SC2"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.Dota2Id);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[7].Active, Is.True);
-            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
+            Assert.That(buttons[9].Active, Is.False);
+            Assert.That(EntityCommandPanelShowcaseTheme.ReadActive(engine), Is.EqualTo(EntityCommandPanelShowcaseTheme.Dota2Id));
+            Assert.That(toolbar.Subtitle, Does.Contain("Theme Dota2"));
 
             toolbar.Activate(EntityCommandPanelShowcaseTheme.LolId);
-            Tick(engine, 1);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[8].Active, Is.True);
-            Assert.That(engine.GlobalContext[EntityCommandPanelShowcaseTheme.ContextKey], Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
+            Assert.That(buttons[7].Active, Is.False);
+            Assert.That(EntityCommandPanelShowcaseTheme.ReadActive(engine), Is.EqualTo(EntityCommandPanelShowcaseTheme.LolId));
+            Assert.That(toolbar.Subtitle, Does.Contain("Theme LoL"));
 
-            InputOrderMapping? command = mapping.GetMapping("Command");
-            Assert.That(command, Is.Not.Null);
-            Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
-            Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
+            Assert.That(IsInteractionContextActive(engine, BattleContextId), Is.True, "Battle context binds Command for right-click move.");
 
             Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
@@ -401,7 +421,7 @@ namespace Ludots.Tests.GAS.Production
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });
 
             toolbar.Activate(FollowSelectionToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.False);
             Assert.That(buttons[4].Active, Is.True);
@@ -410,7 +430,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm.HasValue, Is.True);
 
             toolbar.Activate(FollowSelectionGroupToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[5].Active, Is.True);
             engine.AuthorityCamera().Update(DeltaTime);
@@ -423,7 +443,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm!.Value.Y, Is.EqualTo(expectedGroup.Y).Within(0.01f));
 
             toolbar.Activate(FreeCameraToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             toolbar.CopyButtons(buttons);
             Assert.That(buttons[3].Active, Is.True);
             Assert.That(engine.AuthorityCamera().FollowTargetPositionCm, Is.Null);
@@ -471,6 +491,26 @@ namespace Ludots.Tests.GAS.Production
             var buttons = new EntityCommandPanelToolbarButtonView[20];
             int buttonCount = toolbar.CopyButtons(buttons);
             Assert.That(buttonCount, Is.EqualTo(19));
+            Assert.That(
+                buttons[..buttonCount].Select(button => button.Label).ToArray(),
+                Is.EqualTo(new[]
+                {
+                    "Quick", "Indicator", "RTS", "Free", "Follow", "Group", "Reset",
+                    "A-", "A+", "B-", "B+", "Bar", "Text", "Float", "P1", "P1F", "AI", "AIF", "CMD",
+                }));
+            Assert.That(buttons[3].Active, Is.True, "Free is the default camera follow.");
+            Assert.That(buttons[6].Active, Is.False, "Reset has no highlight.");
+            Assert.That(buttons[7].Active, Is.False);
+            Assert.That(buttons[8].Active, Is.False);
+            Assert.That(buttons[9].Active, Is.False);
+            Assert.That(buttons[10].Active, Is.False);
+            Assert.That(buttons[11].Active, Is.True, "HUD bars default on.");
+            Assert.That(buttons[12].Active, Is.True);
+            Assert.That(buttons[13].Active, Is.True);
+            Assert.That(buttons[14].Active, Is.True, "P1 is the default selection view.");
+            Assert.That(buttons[16].Active, Is.False);
+            Assert.That(toolbar.Subtitle, Does.Contain("P1 Live"));
+            Assert.That(toolbar.Subtitle, Does.Contain("HUD BTF"));
             string[] buttonIds = buttons[..buttonCount].Select(button => button.ButtonId).ToArray();
             Assert.That(buttonIds, Does.Contain("ChampionSkillSandbox.Stress.TeamA.Decrease"));
             Assert.That(buttonIds, Does.Contain(StressTeamAIncreaseToolbarButtonId));
@@ -526,6 +566,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 toolbar.Activate(StressTeamAIncreaseToolbarButtonId);
                 toolbar.Activate(StressTeamBIncreaseToolbarButtonId);
+                TickUntilNextFixedTick(engine);
             }
 
             TickUntil(engine, () =>
@@ -537,6 +578,26 @@ namespace Ludots.Tests.GAS.Production
             StressCounts uncapped = ReadStressCounts(engine.World);
             Assert.That(uncapped.TeamA, Is.GreaterThanOrEqualTo(272), "Stress controls should scale beyond the old 256-unit cap.");
             Assert.That(uncapped.TeamB, Is.GreaterThanOrEqualTo(272), "Stress controls should scale beyond the old 256-unit cap.");
+
+            var debug = engine.GetService(CoreServiceKeys.RenderDebugState)
+                ?? throw new InvalidOperationException("RenderDebugState missing.");
+            Assert.That(debug.DrawWorldHudBars, Is.True);
+            toolbar.Activate(StressHudBarToggleToolbarButtonId);
+            TickUntilNextFixedTick(engine);
+            Assert.That(debug.DrawWorldHudBars, Is.False);
+            Assert.That(debug.DrawWorldHudText, Is.True);
+            Assert.That(debug.DrawCombatText, Is.True);
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[11].Active, Is.False);
+            Assert.That(buttons[12].Active, Is.True);
+            Assert.That(toolbar.Subtitle, Does.Contain("HUD -TF"));
+
+            toolbar.Activate(AiTargetToolbarButtonId);
+            TickUntilNextFixedTick(engine);
+            toolbar.CopyButtons(buttons);
+            Assert.That(buttons[14].Active, Is.False);
+            Assert.That(buttons[16].Active, Is.True);
+            Assert.That(toolbar.Subtitle, Does.Contain("AI Targets"));
         }
 
         [Test]
@@ -595,13 +656,6 @@ namespace Ludots.Tests.GAS.Production
             int abilityId = AbilityIdRegistry.GetId("Ability.Champion.Ezreal.ArcaneShift");
             Assert.That(abilityId, Is.GreaterThan(0));
             Assert.That(abilities.TryGet(abilityId, out var ability), Is.True);
-            Assert.That(ability.HasInputBindingOverride, Is.True);
-            Assert.That(ability.InputBindingOverride.HasAutoTargetPolicy, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
-            Assert.That(ability.InputBindingOverride.AutoTargetRelation, Is.EqualTo("Hostile"));
-            Assert.That(ability.InputBindingOverride.HasAutoTargetRangeCm, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetRangeCm, Is.EqualTo(760));
-
             Assert.That(ability.ExecSpec.GetKind(1), Is.EqualTo(ExecItemKind.EffectSignal));
             Assert.That(
                 (ExecEffectDispatchTarget)ability.ExecSpec.GetPayloadA(1),
@@ -638,12 +692,12 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2);
 
             toolbar.Activate(PlayerSelectionToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
             Assert.That(ReadEntityName(engine.World, Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
 
             toolbar.Activate(PlayerFormationToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             string[] playerFormation = ReadViewedSelectionNames(engine);
             Assert.That(playerFormation.Length, Is.GreaterThanOrEqualTo(48));
             Assert.That(playerFormation, Does.Contain("StressWarriorA"));
@@ -652,7 +706,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, () =>
             {
                 toolbar.Activate(AiTargetToolbarButtonId);
-                Tick(engine, 2);
+                TickUntilNextFixedTick(engine);
                 return ReadViewedSelectionNames(engine).Length > 0;
             }, maxFrames: 120);
             string[] aiTargets = ReadViewedSelectionNames(engine);
@@ -660,7 +714,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(aiTargets.Any(name => name.EndsWith("A", StringComparison.Ordinal)), Is.True, "AI target selection should point at opposing team members.");
 
             toolbar.Activate(AiFormationToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             string[] aiFormation = ReadViewedSelectionNames(engine);
             Assert.That(aiFormation.Length, Is.GreaterThanOrEqualTo(48));
             Assert.That(aiFormation, Does.Contain("StressWarriorB"));
@@ -691,7 +745,7 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 4);
 
             toolbar.Activate(CommandSnapshotToolbarButtonId);
-            Tick(engine, 2);
+            TickUntilNextFixedTick(engine);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressLaserMageA" }));
         }
 
@@ -882,6 +936,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(effects.TryGet(spellGuidedLaserPersistentId, out var spellGuidedLaserPersistent), Is.True);
             Assert.That(spellGuidedLaserPersistent.PresetType, Is.EqualTo(EffectPresetType.PeriodicSearch));
             Assert.That(spellGuidedLaserPersistent.TargetDispatch.PayloadEffectTemplateId, Is.EqualTo(spellGuidedLaserHitId));
+            Assert.That(spellGuidedLaserPersistent.TargetQuery.Spatial.DirectionSource, Is.EqualTo(SpatialQueryDirectionSource.SourceCastFacing));
         }
 
         [Test]
@@ -963,6 +1018,9 @@ namespace Ludots.Tests.GAS.Production
                     new[]
                     {
                         new Ludots.Core.Hosting.ResolvedModLoadEntry("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod")),
+                        new Ludots.Core.Hosting.ResolvedModLoadEntry(
+                            "CommandSourceCoreFixtureMod",
+                            Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod")),
                         new Ludots.Core.Hosting.ResolvedModLoadEntry(modId, modDir)
                     },
                     SchemaVersion: null,
@@ -971,7 +1029,7 @@ namespace Ludots.Tests.GAS.Production
                     GraphPath: null);
 
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-                    firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot))!;
+                    firstEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot()))!;
                 Assert.That(ex.Message, Does.Contain("presentation.presenterInstanceCapacity"));
                 Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, originalSyncContext), Is.True);
 
@@ -984,13 +1042,24 @@ namespace Ludots.Tests.GAS.Production
                 """);
 
                 using var secondEngine = new GameEngine();
-                Assert.DoesNotThrow(() => secondEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot));
+                Assert.DoesNotThrow(() => secondEngine.InitializeWithConfigPipeline(failingPlan, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
                 Assert.That(ReferenceEquals(System.Threading.SynchronizationContext.Current, secondEngine.SyncContext), Is.True);
             }
             finally
             {
                 TryDelete(tempRoot);
             }
+        }
+
+        private static void AssertChampionSlotKey(GameEngine engine, EntityCommandPanelSlotView slot, int bindingInt, string key)
+        {
+            Assert.That(slot.BindsInput, Is.True);
+            Assert.That(slot.ActionId, Is.EqualTo("Aim.Slot"));
+            Assert.That(slot.HasBindingInt, Is.True);
+            Assert.That(slot.BindingInt, Is.EqualTo(bindingInt));
+            Assert.That(
+                EntityCommandPanelBindingKeys.Resolve(engine, slot.ActionId, slot.HasBindingInt, slot.BindingInt),
+                Is.EqualTo(key));
         }
 
         private static GameEngine CreateEngine()
@@ -1000,7 +1069,7 @@ namespace Ludots.Tests.GAS.Production
             var modPaths = RepoModPaths.ResolveExplicit(repoRoot, SandboxMods);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             InstallUi(engine);
             InstallHeadlessPresentation(engine);
@@ -1013,10 +1082,7 @@ namespace Ludots.Tests.GAS.Production
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var backend = new NullInputBackend(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);
@@ -1071,20 +1137,26 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0), "Sandbox map should load without trigger errors.");
         }
 
-        private static InputOrderMappingSystem WaitForActiveInputOrderMapping(GameEngine engine, int maxFrames = 24)
+        private static bool IsInteractionContextActive(GameEngine engine, string contextId)
         {
-            for (int i = 0; i < maxFrames; i++)
-            {
-                var mapping = engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-                if (mapping != null)
-                {
-                    return mapping;
-                }
+            var runtime = engine.GetService(CoreServiceKeys.InteractionContextInstances)
+                ?? throw new InvalidOperationException("InteractionContextInstances missing.");
+            var profiles = engine.GetService(CoreServiceKeys.InteractionContextProfileRegistry)
+                ?? throw new InvalidOperationException("InteractionContextProfileRegistry missing.");
+            return profiles.ProfileIdRegistry.TryGetId(contextId, out int profileId) &&
+                   runtime.IsActive(ClientLocalSeatAccess.RequireSolePossessedRep(engine), profileId);
+        }
 
-                Tick(engine, 1);
+        private static string ReadCastModeId(GameEngine engine)
+        {
+            Entity rep = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            string name = ReadAimPrefValue(engine, rep);
+            if (string.Equals(name, "<none>", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Possessed rep preference pref.aim.cast_mode is not seeded.");
             }
 
-            throw new InvalidOperationException("Active input order mapping missing.");
+            return name;
         }
 
         private static void Tick(GameEngine engine, int frames)
@@ -1094,6 +1166,12 @@ namespace Ludots.Tests.GAS.Production
                 UpdateHeadlessCamera(engine);
                 engine.Tick(DeltaTime);
             }
+        }
+
+        private static void TickUntilNextFixedTick(GameEngine engine)
+        {
+            int tick = engine.GameSession.CurrentTick;
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tick, maxFrames: 8);
         }
 
         private static void CenterMouse(IInputBackend backend)
@@ -1701,7 +1779,7 @@ namespace Ludots.Tests.GAS.Production
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -1733,7 +1811,7 @@ namespace Ludots.Tests.GAS.Production
                          keyObj is string activeKey &&
                          !string.IsNullOrWhiteSpace(activeKey)
                 ? activeKey
-                : "collection.command.source";
+                : InputCollectionKeyDeclarations.RequireRole(engine, "commandSource");
 
             if (owner == Entity.Null ||
                 !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
@@ -1951,5 +2029,31 @@ namespace Ludots.Tests.GAS.Production
             public void SetMousePosition(Vector2 position) => _mousePosition = position;
             public string GetCharBuffer() => string.Empty;
         }
-    }
+    
+        private static string ReadAimPrefValue(GameEngine engine, Entity rep)
+        {
+            InteractionPrefCatalog catalog = engine.GetService(CoreServiceKeys.InteractionPrefCatalog)
+                ?? throw new InvalidOperationException("InteractionPrefCatalog missing.");
+            if (!engine.World.TryGet(rep, out InteractionPref pref))
+            {
+                return "<none>";
+            }
+
+            int keyId = catalog.Keys.GetId("pref.aim.cast_mode");
+            if (keyId == catalog.Keys.InvalidId)
+            {
+                throw new InvalidOperationException("pref.aim.cast_mode is not declared.");
+            }
+
+            int valueId = pref.ResolvePref(0, keyId);
+            if (valueId <= 0)
+            {
+                return "<none>";
+            }
+
+            string name = catalog.Values.GetName(valueId);
+            return string.IsNullOrEmpty(name) ? "<none>" : name;
+        }
+
+}
 }

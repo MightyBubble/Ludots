@@ -687,7 +687,6 @@ namespace Ludots.Tests.Gas.Graph
                     """
                     {
                       "startupMapId": "map_trigger_mount_probe",
-                      "startupInputContexts": [],
                       "presentation": {
                         "presenterInstanceCapacity": 16,
                         "gasPresentationEventCapacity": 16,
@@ -797,9 +796,11 @@ namespace Ludots.Tests.Gas.Graph
                     new List<string>
                     {
                         Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                        Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod"),
                         Path.Combine(Root, ModId),
                     },
-                    Path.Combine(repoRoot, "assets"));
+                    Path.Combine(repoRoot, "assets"),
+                    Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 return engine;
             }
 

@@ -8,6 +8,7 @@ namespace Ludots.Core.Input.Runtime
         public InputActionDef Definition { get; }
         
         public Vector3 Value { get; private set; }
+        public bool BoundByActiveContext { get; set; }
         public bool Triggered { get; private set; }
         public bool PressedThisFrame { get; private set; }
         public bool ReleasedThisFrame { get; private set; }

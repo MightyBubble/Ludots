@@ -240,6 +240,29 @@ namespace Ludots.Core.Gameplay.MapTriggers
         public TriggerMountOwner Owner { get; internal set; }
         internal bool IsActionRegistered { get; set; }
 
+        // First present vector dispatches, including zero. A later tick that is not
+        // present leaves the sample in place, so the same vector after a gap does not
+        // dispatch again. Registration clears it so a re-added mount samples once more.
+        private bool _actionValueSampled;
+        private System.Numerics.Vector2 _lastActionValue;
+
+        internal void ClearActionValueSample()
+        {
+            _actionValueSampled = false;
+        }
+
+        internal bool ConsumeActionValueSample(System.Numerics.Vector2 value)
+        {
+            if (!_actionValueSampled || _lastActionValue != value)
+            {
+                _actionValueSampled = true;
+                _lastActionValue = value;
+                return true;
+            }
+
+            return false;
+        }
+
         public GraphDebugTrace DebugTrace => _debugTrace;
 
         public GraphExecutionCursor Cursor => _cursor;
@@ -592,8 +615,15 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
 
             GraphSliceResult result;
+            bool contextMountPushed = false;
             try
             {
+                if (Owner.Kind == TriggerMountOwnerKind.InteractionContext)
+                {
+                    dependencies.GraphApi.PushContextMount(Owner.Subject, Owner.OwnerId);
+                    contextMountPushed = true;
+                }
+
                 result = GraphExecutor.ExecuteScriptSlice(
                     dependencies.Engine.World,
                     _runCaster,
@@ -619,6 +649,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             }
             finally
             {
+                if (contextMountPushed)
+                {
+                    dependencies.GraphApi.PopContextMount();
+                }
+
                 if (callbacks != null)
                 {
                     callbacks.PopResumeTarget(this);

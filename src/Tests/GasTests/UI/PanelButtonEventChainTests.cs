@@ -373,6 +373,7 @@ namespace Ludots.Tests.GasTests.UI
                 var schemes = new ControlSchemeRuntime(
                     new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                     orderTypes,
+                    new ClientControlSchemePreferenceStore(Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json")),
                     inputConfig: inputConfig);
                 schemes.Install(new ControlSchemesConfig
                 {

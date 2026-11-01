@@ -5,13 +5,18 @@ using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -97,6 +102,113 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TrySwitch_NotifiesPreviousAndNewIds_SameIdStaysSilent()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var seen = new List<(int OldId, int NewId)>();
+            harness.Runtime.SchemeChanged = (oldId, newId) => seen.Add((oldId, newId));
+
+            int schemeA = harness.SchemeId(SchemeA);
+            int schemeB = harness.SchemeId(SchemeB);
+            Assert.That(harness.Runtime.TrySwitch(schemeB), Is.True);
+            Assert.That(seen, Is.EqualTo(new[] { (schemeA, schemeB) }));
+
+            Assert.That(harness.Runtime.TrySwitch(schemeB), Is.True);
+            Assert.That(seen, Has.Count.EqualTo(1), "a same-id switch does not publish another change.");
+        }
+
+        [Test]
+        public void ChangedMapping_UnknownSchemeFilter_FailsAtValidate()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            RegisterCompiled(programs, CompileSchemeGraph("""
+                {
+                  "id": "graph.test.scheme_changed_missing",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "missing",
+                      "event": "ControlSchemeChanged",
+                      "start": "act",
+                      "filters": { "payload": { "MapTrigger.NewSchemeId": "scheme.not.installed" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+            Assert.That(error!.Message, Does.Contain("CONTROL_SCHEME.ERR.ChangedMappingUnknownScheme"));
+            Assert.That(error.Message, Does.Contain("scheme.not.installed"));
+            Assert.That(error.Message, Does.Contain("graph.test.scheme_changed_missing"));
+        }
+
+        [Test]
+        public void ChangedMapping_InstalledSchemeFilter_Passes()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            RegisterCompiled(programs, CompileSchemeGraph($$"""
+                {
+                  "id": "graph.test.scheme_changed_installed",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "installed",
+                      "event": "ControlSchemeChanged",
+                      "start": "act",
+                      "filters": { "payload": { "MapTrigger.NewSchemeId": "{{SchemeA}}" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """));
+
+            Assert.DoesNotThrow(() => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+        }
+
+        [Test]
+        public void ChangedMapping_NonIntSchemeFilter_FailsAtValidate()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            int graphId = GraphIdRegistry.Register("graph.test.scheme_changed_non_int");
+            var filter = new TriggerGraphEntryPayloadFilter(MapTriggerEventPayloadKeys.NewSchemeId, SchemeA, null);
+            var entry = new TriggerGraphEntry(
+                "non-int",
+                GameEvents.ControlSchemeChanged.Value,
+                startPc: 0,
+                once: false,
+                new TriggerGraphEntryFilters(null, null, null, null, null, payload: new[] { filter }));
+            programs.Register(
+                graphId,
+                new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                null,
+                new[] { entry });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+            Assert.That(error!.Message, Does.Contain("CONTROL_SCHEME.ERR.ChangedMappingUnknownScheme"));
+            Assert.That(error.Message, Does.Contain("graph.test.scheme_changed_non_int"));
+        }
+
+        [Test]
         public void TrySwitch_DisallowedOrUninstalledScheme_RefusedAndStateUnchanged()
         {
             using var world = World.Create();
@@ -126,7 +238,7 @@ namespace Ludots.Tests.GAS
             // Headless: no input handler exists; only preference bookkeeping runs.
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Preferences.ActiveSchemeId, Is.EqualTo(SchemeB),
-                "the active scheme choice must persist into the CTX-8 preference store.");
+                "the active scheme choice must persist into the scheme preference store.");
         }
 
         [Test]
@@ -148,6 +260,156 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Runtime.TrySwitchRuntimeOnly(schemeId: 999), Is.False,
                 "runtime-only activation keeps the installed/allowed-set refusal semantics.");
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeB)));
+        }
+
+        [Test]
+        public void ActiveScheme_SaveLoad_RoundTripsTheSchemeId()
+        {
+            var store = NewStore();
+            store.SetActiveScheme("scheme.test.roundtrip");
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            try
+            {
+                store.Save(path);
+                using JsonDocument saved = JsonDocument.Parse(File.ReadAllText(path));
+                string[] keys = saved.RootElement.EnumerateObject().Select(property => property.Name).ToArray();
+                Assert.That(keys, Is.EqualTo(new[] { "activeSchemeId" }));
+                Assert.That(saved.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo("scheme.test.roundtrip"));
+                var reloaded = NewStore();
+                uint revisionBefore = reloaded.Revision;
+                reloaded.Load(path);
+                Assert.That(reloaded.Revision, Is.GreaterThan(revisionBefore));
+                Assert.That(reloaded.ActiveSchemeId, Is.EqualTo("scheme.test.roundtrip"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [Test]
+        public void ActiveScheme_LoadMissingFile_ClearsTheScheme()
+        {
+            var store = NewStore();
+            store.SetActiveScheme("scheme.test.was");
+            store.Load(Path.Combine(Path.GetTempPath(), $"ludots_missing_{Guid.NewGuid():N}.json"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [Test]
+        public void SetActiveScheme_Null_Fails()
+        {
+            var store = NewStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(null!));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void SetActiveScheme_Blank_Fails(string schemeId)
+        {
+            RejectActiveScheme(schemeId);
+        }
+
+        private static void RejectActiveScheme(string schemeId)
+        {
+            var store = NewStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(schemeId));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [Test]
+        public void SetActiveScheme_WhitespacePadded_Fails()
+        {
+            var store = NewStore();
+            ArgumentException error = Assert.Throws<ArgumentException>(() => store.SetActiveScheme(" scheme.test "));
+            Assert.That(error!.ParamName, Is.EqualTo("schemeId"));
+            Assert.That(error.Message, Does.Contain("whitespace"));
+            Assert.That(store.ActiveSchemeId, Is.Empty);
+        }
+
+        [Test]
+        public void Save_BeforeAnyScheme_FailsAndWritesNothing()
+        {
+            var store = NewStore();
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Save(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(File.Exists(path), Is.False);
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        [TestCase("null", TestName = "Load_NullDocument_FailsNamingPathAndField")]
+        [TestCase("{ }", TestName = "Load_MissingActiveSchemeId_FailsNamingPathAndField")]
+        [TestCase("{ \"activeSchemeId\": \"\" }", TestName = "Load_BlankActiveSchemeId_FailsNamingPathAndField")]
+        [TestCase("{ \"activeSchemeId\": \"   \" }", TestName = "Load_WhitespaceActiveSchemeId_FailsNamingPathAndField")]
+        public void Load_ActiveSchemeIdAbsentOrBlank_FailsNamingPathAndField(string json)
+        {
+            RejectSchemeFile(json, "activeSchemeId");
+        }
+
+        [Test]
+        public void Load_WhitespacePaddedActiveSchemeId_FailsWithoutTrimming()
+        {
+            RejectSchemeFile("{ \"activeSchemeId\": \" scheme.test \" }", "activeSchemeId");
+        }
+
+        [Test]
+        public void Load_OldCastCommitFields_FailsNamingThePath()
+        {
+            const string json = """
+                {
+                  "activeSchemeId": "scheme.test.keep",
+                  "global": { "castCommitId": "cast.commit.old" }
+                }
+                """;
+            string path = WriteSchemeFile(json);
+            var store = NewStore();
+            store.SetActiveScheme("scheme.test.keep");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Load(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(error.InnerException, Is.InstanceOf<JsonException>());
+                Assert.That(store.ActiveSchemeId, Is.EqualTo("scheme.test.keep"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static void RejectSchemeFile(string json, string field)
+        {
+            string path = WriteSchemeFile(json);
+            var store = NewStore();
+            store.SetActiveScheme("scheme.test.keep");
+            try
+            {
+                InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => store.Load(path));
+                Assert.That(error!.Message, Does.Contain(path));
+                Assert.That(error.Message, Does.Contain(field));
+                Assert.That(store.ActiveSchemeId, Is.EqualTo("scheme.test.keep"));
+            }
+            finally
+            {
+                File.Delete(path);
+            }
+        }
+
+        private static string WriteSchemeFile(string json)
+        {
+            string path = Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json");
+            File.WriteAllText(path, json);
+            return path;
         }
 
         [Test]
@@ -208,6 +470,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
             harness.Runtime.Install(new ControlSchemesConfig
             {
@@ -219,6 +482,7 @@ namespace Ludots.Tests.GAS
             Assert.That(binding.OrderTypeId, Is.EqualTo(2), "orderTypeKey resolves to its registry id at install.");
             Assert.That(binding.ThrottleTicks, Is.EqualTo(6));
             Assert.That(binding.StepDistanceCm, Is.EqualTo(400));
+            Assert.That(binding.DirectionMode, Is.EqualTo(ControlSchemeAxisMoveDirectionMode.WorldAbsolute));
 
             Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
             Assert.That(harness.Runtime.TryGetActiveAxisMove(out _), Is.False);
@@ -237,6 +501,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -251,6 +516,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "moveTo",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -271,6 +537,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = "orders.test.unknown",
                 ThrottleTicks = 6,
                 StepDistanceCm = 400,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
@@ -293,6 +560,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeKey = orderTypeKey,
                 ThrottleTicks = throttleTicks,
                 StepDistanceCm = stepDistanceCm,
+                DirectionMode = ControlSchemeAxisMoveDirectionMode.WorldAbsolute,
             };
 
             Assert.Throws<InvalidOperationException>(
@@ -317,7 +585,7 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "the active context's explicit intent must win over the player default.");
         }
@@ -331,13 +599,13 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(harness.IntentIds.GetId(DefaultIntent)),
                 "steady state (no mounted interaction context) consumes the possessed rep's player default intent (DEC-14).");
 
             InteractionPref other = NewPref(harness, AltIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in other),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in other),
                 Is.EqualTo(harness.IntentIds.GetId(AltIntent)),
                 "switching the player's preference changes the steady state's intent.");
         }
@@ -356,7 +624,7 @@ namespace Ludots.Tests.GAS
 
             InteractionPref pref = NewPref(harness, DefaultIntent);
             Assert.That(
-                CommandIntentArbiter.ResolveActiveCommandIntent(world, rep, in pref),
+                InteractionContextInstance.ResolveCommandIntent(world, rep, in pref),
                 Is.EqualTo(0),
                 "an active context without an explicit intent does not route and never bubbles to the player default (DEC-14).");
         }
@@ -388,6 +656,98 @@ namespace Ludots.Tests.GAS
             Assert.That(catalog, Does.Not.Contain("Input/axis_move.json"));
             Assert.That(catalog, Does.Contain("Input/interaction_prefs.json"),
                 "the interaction preference seed config is a catalog-declared required config.");
+            int schemesAt = catalog.IndexOf("\"Path\": \"Input/control_schemes.json\"", StringComparison.Ordinal);
+            Assert.That(schemesAt, Is.GreaterThanOrEqualTo(0));
+            string schemesEntry = catalog.Substring(schemesAt, Math.Min(280, catalog.Length - schemesAt));
+            Assert.That(schemesEntry, Does.Contain("\"ArrayAppendFields\""));
+            Assert.That(schemesEntry, Does.Contain("allowedSchemes"));
+        }
+
+        [Test]
+        public void Validate_DuplicateAllowedScheme_FailsClosed()
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA) },
+                    AllowedSchemes = new List<string> { SchemeA, SchemeA },
+                }, "Input/control_schemes.json"));
+            Assert.That(error!.Message, Does.Contain("duplicates scheme"));
+            Assert.That(error.Message, Does.Contain(SchemeA));
+            Assert.That(error.Message, Does.Contain("allowedSchemes"));
+        }
+
+        [Test]
+        public void Install_PersistedSchemeOutsideAllowedSet_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.Preferences.SetActiveScheme(SchemeB);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                harness.InstallTwoSchemes(allowedSchemes: new List<string> { SchemeA }));
+
+            Assert.That(error!.Message, Does.Contain(SchemeB));
+            Assert.That(error.Message, Does.Contain("not allowed"));
+        }
+
+        [Test]
+        public void TrySwitch_WritesTheBoundPreferenceFile()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+
+            string path = harness.Preferences.PersistencePath;
+            using (JsonDocument saved = JsonDocument.Parse(File.ReadAllText(path)))
+            {
+                Assert.That(saved.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo(SchemeA));
+            }
+
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            using JsonDocument switched = JsonDocument.Parse(File.ReadAllText(path));
+            Assert.That(switched.RootElement.GetProperty("activeSchemeId").GetString(), Is.EqualTo(SchemeB));
+        }
+
+        [Test]
+        public void Store_BlankPath_Fails()
+        {
+            ArgumentException error = Assert.Throws<ArgumentException>(() => new ClientControlSchemePreferenceStore(" "));
+            Assert.That(error!.ParamName, Is.EqualTo("persistencePath"));
+        }
+
+        [Test]
+        public void ResolveConfiguredPath_Blank_NamesTheGameJsonField()
+        {
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ClientControlSchemePreferenceStore.ResolveConfiguredPath("  ", Path.GetTempPath()));
+            Assert.That(error!.Message, Does.Contain("controlSchemePreferencePath"));
+        }
+
+        [Test]
+        public void ResolveConfiguredPath_BlankRoot_NamesUserDataRoot()
+        {
+            ArgumentException error = Assert.Throws<ArgumentException>(
+                () => ClientControlSchemePreferenceStore.ResolveConfiguredPath("user://control-scheme.json", " "));
+            Assert.That(error!.ParamName, Is.EqualTo("userDataRoot"));
+        }
+
+        [Test]
+        public void ResolveConfiguredPath_UserScheme_ExpandsAgainstHostRoot()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "ludots-user-data", Guid.NewGuid().ToString("N"));
+            string path = ClientControlSchemePreferenceStore.ResolveConfiguredPath("user://control-scheme.json", root);
+            Assert.That(path, Is.EqualTo(Path.Combine(root, "control-scheme.json")));
+        }
+
+        [Test]
+        public void Initialize_BlankUserDataRoot_NamesTheParameter()
+        {
+            using var engine = new GameEngine();
+            ArgumentException error = Assert.Throws<ArgumentException>(
+                () => engine.InitializeWithConfigPipeline(new List<string>(), "unused-assets", " "));
+            Assert.That(error!.ParamName, Is.EqualTo("userDataRoot"));
+            Assert.That(error.Message, Does.Contain("userDataRoot"));
         }
 
         [Test]
@@ -415,6 +775,12 @@ namespace Ludots.Tests.GAS
                 }
                 """)!.AsObject();
             Assert.DoesNotThrow(() => ControlSchemeConfigLoader.RejectLegacySchemeDefaults(current, "test"));
+        }
+
+        private static ClientControlSchemePreferenceStore NewStore()
+        {
+            return new ClientControlSchemePreferenceStore(
+                Path.Combine(Path.GetTempPath(), $"ludots_scheme_{Guid.NewGuid():N}.json"));
         }
 
         private static string FindRepoRoot()
@@ -445,11 +811,36 @@ namespace Ludots.Tests.GAS
             return pref;
         }
 
+        private static GraphControlFlowCompileResult CompileSchemeGraph(string json)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+            };
+            GraphControlFlowDocument document = JsonSerializer.Deserialize<GraphControlFlowDocument>(json, options)!;
+            return GraphControlFlowCompiler.Compile(document, new EventSchemaRegistry());
+        }
+
+        private static void RegisterCompiled(GraphProgramRegistry programs, GraphControlFlowCompileResult result)
+        {
+            Assert.That(result.Succeeded, Is.True, () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+            GraphProgramPackage package = result.Package!.Value;
+            int graphId = GraphIdRegistry.Register(package.GraphName);
+            programs.Register(
+                graphId,
+                result.Program,
+                package.Kind,
+                result.SourceMap,
+                package.Symbols,
+                package.TriggerGraphEntries);
+        }
+
         private sealed class Harness
         {
             public StringIntRegistry IntentIds = null!;
             public ControlSchemeRuntime Runtime = null!;
-            public ClientCastPreferenceStore Preferences = null!;
+            public ClientControlSchemePreferenceStore Preferences = null!;
             public PlayerInputHandler Handler;
             public TestInputBackend Backend;
             private StringIntRegistry _schemeIds = null!;
@@ -458,20 +849,7 @@ namespace Ludots.Tests.GAS
             {
                 var intentIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
-                // Minimal CTX-8 store: this fixture only exercises active-scheme persistence.
-                var castCommitIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var templateKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var formSetKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var preferences = new ClientCastPreferenceStore(
-                    new CastCommitProfileRegistry(
-                        castCommitIds,
-                        castCommitActionIds,
-                        new InteractionContextProfileRegistry(new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal))),
-                    templateKeys.Register,
-                    templateKeys.GetName,
-                    formSetKeys.Register,
-                    formSetKeys.GetName);
+                var preferences = NewStore();
 
                 var harness = new Harness
                 {
@@ -491,8 +869,8 @@ namespace Ludots.Tests.GAS
                 harness.Runtime = new ControlSchemeRuntime(
                     harness._schemeIds,
                     orderTypes,
-                    withHandler ? () => harness.Handler : null,
                     preferences,
+                    withHandler ? () => harness.Handler : null,
                     inputConfig: withInputConfig ? BuildInputConfig(includeMoveAxis: true) : null);
                 return harness;
             }

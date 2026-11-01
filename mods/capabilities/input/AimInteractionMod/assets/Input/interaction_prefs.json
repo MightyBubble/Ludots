@@ -1,0 +1,34 @@
+{
+  "keys": [
+    {
+      "id": "pref.aim.cast_mode",
+      "contextValued": true,
+      "values": [
+        "interaction.context.aim.click",
+        "interaction.context.aim.release",
+        "interaction.context.aim.smart",
+        "interaction.context.aim.target_first"
+      ]
+    },
+    {
+      "id": "pref.aim.cast_mode_origin",
+      "contextValued": false,
+      "values": [
+        "scheme",
+        "player"
+      ]
+    }
+  ],
+  "defaults": {
+    "prefs": [
+      {
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "key": "pref.aim.cast_mode_origin",
+        "value": "scheme"
+      }
+    ]
+  }
+}

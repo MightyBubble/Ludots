@@ -4,7 +4,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Ezreal.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -27,11 +32,6 @@
         "Cooldown.Champion.Ezreal.E"
       ]
     },
-    "input": {
-      "autoTargetPolicy": "NearestInRange",
-      "autoTargetRelation": "Hostile",
-      "autoTargetRangeCm": 760
-    },
     "presentation": {
       "displayName": "Arcane Shift",
       "iconGlyph": "E",
@@ -42,9 +42,12 @@
         "PressReleaseAimCast": "Release key, then confirm blink"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 440,
-      "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
+      "castRangeCm": 440
     }
   },
   {
@@ -52,7 +55,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Ezreal.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -79,9 +87,13 @@
         "PressReleaseAimCast": "Release key, then confirm mark shot"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
+      "castRangeCm": 760
     }
   },
   {
@@ -89,7 +101,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Ezreal.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -116,9 +133,13 @@
         "PressReleaseAimCast": "Release key, then confirm line shot"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 840,
-      "impactEffect": "Effect.Champion.Ezreal.MysticShot"
+      "castRangeCm": 840
     }
   },
   {
@@ -126,7 +147,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Ezreal.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -153,9 +179,13 @@
         "PressReleaseAimCast": "Release key, then confirm barrage direction"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 2200,
-      "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
+      "castRangeCm": 2200
     }
   },
   {
@@ -163,7 +193,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Garen.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -206,7 +241,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Garen.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -233,9 +273,12 @@
         "PressReleaseAimCast": "Release key, then confirm engage"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 320,
-      "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
+      "castRangeCm": 320
     }
   },
   {
@@ -243,7 +286,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Garen.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -270,9 +318,13 @@
         "PressReleaseAimCast": "Release key, then confirm execute"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.unit"
+    ],
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Champion.Garen.DemacianJustice"
+      "castRangeCm": 520
     }
   },
   {
@@ -280,7 +332,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Garen.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -307,9 +364,12 @@
         "PressReleaseAimCast": "Release key, then confirm spin"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Garen.Judgment"
+      "castRangeCm": 0
     }
   },
   {
@@ -317,7 +377,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Geomancer.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -344,9 +409,12 @@
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
+      "castRangeCm": 720
     }
   },
   {
@@ -354,7 +422,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Geomancer.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -381,9 +454,12 @@
         "PressReleaseAimCast": "Release key, then confirm rune field"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.RuneField"
+      "castRangeCm": 720
     }
   },
   {
@@ -391,7 +467,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Geomancer.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -418,9 +499,12 @@
         "PressReleaseAimCast": "Release key, then confirm pillar"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 720,
-      "impactEffect": "Effect.Champion.Geomancer.StonePillar"
+      "castRangeCm": 720
     }
   },
   {
@@ -428,7 +512,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Geomancer.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -455,9 +544,13 @@
         "PressReleaseAimCast": "Release key, then confirm beam"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 920,
-      "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
+      "castRangeCm": 920
     }
   },
   {
@@ -465,7 +558,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -492,9 +590,12 @@
         "PressReleaseAimCast": "Release key, then confirm gate"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 640,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
+      "castRangeCm": 640
     }
   },
   {
@@ -502,7 +603,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -529,9 +635,12 @@
         "PressReleaseAimCast": "Release key, then confirm charge"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
+      "castRangeCm": 0
     }
   },
   {
@@ -539,7 +648,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -566,9 +680,13 @@
         "PressReleaseAimCast": "Release key, then confirm shock blast"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 880,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
+      "castRangeCm": 880
     }
   },
   {
@@ -576,7 +694,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -603,9 +726,12 @@
         "PressReleaseAimCast": "Release key, then confirm shock ring"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 0,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
+      "castRangeCm": 0
     }
   },
   {
@@ -613,7 +739,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -640,9 +771,13 @@
         "PressReleaseAimCast": "Release key, then confirm cone"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.cone"
+    ],
     "targeting": {
-      "castRangeCm": 300,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
+      "castRangeCm": 300
     }
   },
   {
@@ -650,7 +785,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -677,9 +817,13 @@
         "PressReleaseAimCast": "Release key, then confirm leap"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
+    ],
     "targeting": {
-      "castRangeCm": 520,
-      "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
+      "castRangeCm": 520
     }
   },
   {
@@ -687,7 +831,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -727,7 +876,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.Jayce.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "End",
           "tick": 0
@@ -767,7 +921,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.Warrior.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Lockout.Warrior.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -794,9 +953,13 @@
         "PressReleaseAimCast": "Release key, then confirm melee sweep"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
+    ],
     "targeting": {
-      "castRangeCm": 180,
-      "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
+      "castRangeCm": 180
     }
   },
   {
@@ -804,7 +967,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.FireMage.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Lockout.FireMage.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -831,9 +999,13 @@
         "PressReleaseAimCast": "Release key, then confirm fireball"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 1200,
-      "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
+      "castRangeCm": 1200
     }
   },
   {
@@ -841,7 +1013,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.LaserMage.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Lockout.LaserMage.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -868,9 +1045,13 @@
         "PressReleaseAimCast": "Release key, then confirm laser"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.line"
+    ],
     "targeting": {
-      "castRangeCm": 1400,
-      "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
+      "castRangeCm": 1400
     }
   },
   {
@@ -878,7 +1059,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.Priest.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Lockout.Priest.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -905,9 +1091,13 @@
         "PressReleaseAimCast": "Release key, then confirm heal"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.unit"
+    ],
     "targeting": {
-      "castRangeCm": 900,
-      "impactEffect": "Effect.ChampionStress.Priest.Heal"
+      "castRangeCm": 900
     }
   },
   {
@@ -915,7 +1105,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.Q", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.SpellEngineer.Q",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -942,9 +1137,12 @@
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
+      "castRangeCm": 760
     }
   },
   {
@@ -952,7 +1150,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.W", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.SpellEngineer.W",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -979,9 +1182,12 @@
         "PressReleaseAimCast": "Release key, then confirm well"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 760,
-      "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
+      "castRangeCm": 760
     }
   },
   {
@@ -989,7 +1195,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.E", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.SpellEngineer.E",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1021,9 +1232,13 @@
         "PressReleaseAimCast": "Release key, then confirm arena"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground",
+      "graph.aim.shape.circle"
+    ],
     "targeting": {
-      "castRangeCm": 700,
-      "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
+      "castRangeCm": 700
     }
   },
   {
@@ -1031,7 +1246,12 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.R", "dispatchTarget": "Source" },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Lockout.SpellEngineer.R",
+          "dispatchTarget": "Source"
+        },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1053,11 +1273,6 @@
         "Cooldown.Champion.SpellEngineer.R"
       ]
     },
-    "input": {
-      "trigger": "Held",
-      "heldPolicy": "StartEnd",
-      "castModeOverride": "SmartCast"
-    },
     "presentation": {
       "displayName": "Guided Laser",
       "iconGlyph": "R",
@@ -1067,9 +1282,12 @@
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
     },
+    "triggerGraphs": [
+      "graph.aim.pick.hostile",
+      "graph.aim.rule.unit_or_ground"
+    ],
     "targeting": {
-      "castRangeCm": 1050,
-      "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
+      "castRangeCm": 1050
     }
   }
 ]

@@ -20,7 +20,6 @@
 仓库当前包含 demo、showcase、benchmark、tooling、能力包和 UI 皮肤等多类 Mod，例如：
 
 - `LudotsCoreMod`
-- `CoreInputMod`
 - `DiagnosticsOverlayMod`
 - `GmConsoleMod`
 - `FeatureHubMod`

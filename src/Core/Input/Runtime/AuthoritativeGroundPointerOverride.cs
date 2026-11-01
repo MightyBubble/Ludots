@@ -6,7 +6,8 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Input.Runtime
 {
     /// <summary>
-    /// One-frame authoritative world-point override for pointer actions handled by core UI.
+    /// One-frame authoritative world point. The next ground capture consumes it;
+    /// the action id is the caller's label and is not matched.
     /// </summary>
     public sealed class AuthoritativeGroundPointerOverride
     {
@@ -32,10 +33,10 @@ namespace Ludots.Core.Input.Runtime
             _hasOverride = true;
         }
 
-        public bool TryConsume(string actionId, out WorldCmInt2 worldCm)
+        public bool TryConsume(out WorldCmInt2 worldCm)
         {
             worldCm = default;
-            if (!_hasOverride || !string.Equals(_actionId, actionId, StringComparison.Ordinal))
+            if (!_hasOverride)
             {
                 return false;
             }

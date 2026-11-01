@@ -24,7 +24,7 @@
 | 选项是否出现 | Query 图（`conditionGraphId`）读 MapVar |
 | 选完改世界 | TriggerGraph（`actionGraphId`）写 MapVar |
 | 换皮 | `game.json` 的 `panelTheme` + `PanelThemes/` |
-| 回车 / 1/2/3 | `Input/default_input.json` + `game.json` 的 `startupInputContexts` |
+| 回车 / 1/2/3 | `Input/default_input.json`，`scheme.default` 激活 `DialogueAuthorKit.Controls` |
 
 ## 2. 结构
 
@@ -32,7 +32,7 @@
 DialogueAuthorKitShowcaseMod/
 ├── mod.json                          # 无 main；依赖 NarrativeFrontendMod
 └── assets/
-    ├── game.json                     # startupMapId / panelTheme / startupInputContexts
+    ├── game.json                     # startupMapId / panelTheme
     ├── config_catalog.json
     ├── Dialogue/dialogues.json
     ├── Story/{lines,speakers,presentation_profiles}.json
@@ -41,7 +41,8 @@ DialogueAuthorKitShowcaseMod/
     ├── Entities/templates.json
     ├── Presentation/...
     ├── PanelThemes/...
-    └── Input/default_input.json
+    ├── Input/default_input.json
+    └── Input/control_schemes.json    # scheme.default 激活 DialogueAuthorKit.Controls
 ```
 
 ## 3. 详情：进图开聊怎么挂
@@ -95,7 +96,6 @@ DialogueAuthorKitShowcaseMod/
 `game.json`：
 
 ```json
-"startupInputContexts": ["DialogueAuthorKit.Controls"]
 ```
 
 `Input/default_input.json` 定义该上下文的回车 / 1/2/3。

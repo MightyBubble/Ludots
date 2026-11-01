@@ -1,0 +1,10 @@
+{
+  "name": "CommandSourceCoreFixtureMod",
+  "version": "1.0.0",
+  "description": "Binds collection role commandSource to core.selection when the booted mod set has no game entry declaration.",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": ["fixture", "input"]
+}

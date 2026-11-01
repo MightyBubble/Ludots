@@ -35,6 +35,7 @@ namespace Ludots.Core.Input.Orders
         private readonly OrderQueue _orders;
         private readonly PlayerEntityLookup _players;
         private readonly ControlDomainQuery _controlDomains;
+        private readonly ContextScoredOrderResolver _contextScored;
         private readonly Entity[] _actorScratch;
         private readonly CommandIntentRoute[] _routeScratch;
         private readonly Entity[] _dispatchScratch;
@@ -73,6 +74,7 @@ namespace Ludots.Core.Input.Orders
             OrderQueue orders,
             PlayerEntityLookup players,
             ControlDomainQuery controlDomains,
+            ContextScoredOrderResolver contextScored,
             int scratchCapacity,
             Ludots.Core.Spatial.Eqs.EqsQueryRegistry? eqsQueries = null,
             Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities = null,
@@ -90,6 +92,7 @@ namespace Ludots.Core.Input.Orders
             _orders = orders ?? throw new ArgumentNullException(nameof(orders));
             _players = players ?? throw new ArgumentNullException(nameof(players));
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+            _contextScored = contextScored ?? throw new ArgumentNullException(nameof(contextScored));
             _pathServiceAccessor = pathServiceAccessor;
             _pathStoreAccessor = pathStoreAccessor;
             if (scratchCapacity <= 0)
@@ -174,8 +177,10 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>
         /// Cast side of the §12 bridge: actors are the intent-carried member set. An empty set is a
-        /// named rejection; each authorized member receives one cast order with Args.I0 = slot. The cast
-        /// order-type key resolves through the OrderTypeRegistry at drain time (cold path).
+        /// named rejection; each authorized member receives one cast order with Args.I0 = slot. A slot
+        /// holding a context group's root ability lands as the group's best-scored slot and target per
+        /// member, with the submitted target as the hover bias. The cast order-type key resolves through
+        /// the OrderTypeRegistry at drain time (cold path).
         /// </summary>
         private bool TryRouteCastSubmission(in CastIntentSubmission submission)
         {
@@ -219,9 +224,24 @@ namespace Ludots.Core.Input.Orders
                     continue;
                 }
 
+                int slot = submission.Slot;
+                Entity target = submission.HasTarget && _world.IsAlive(submission.Target) ? submission.Target : Entity.Null;
+                if (_contextScored.IsContextGroupRoot(actor, slot))
+                {
+                    if (!_contextScored.TryResolve(actor, slot, target, out ContextScoredOrderResolution resolution))
+                    {
+                        LastRejectionReason = "cast: context group resolved no candidate";
+                        allAccepted = false;
+                        continue;
+                    }
+
+                    slot = resolution.SlotIndex;
+                    target = resolution.Target;
+                }
+
                 var args = new OrderArgs
                 {
-                    I0 = submission.Slot,
+                    I0 = slot,
                 };
                 if (submission.HasGround)
                 {
@@ -236,7 +256,7 @@ namespace Ludots.Core.Input.Orders
                     PlayerId = owner.PlayerId,
                     Actor = actor,
                     CommandSource = Entity.Null,
-                    Target = submission.HasTarget && _world.IsAlive(submission.Target) ? submission.Target : Entity.Null,
+                    Target = target,
                     Args = args,
                     SubmitMode = submission.SubmitMode,
                 };

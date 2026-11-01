@@ -35,7 +35,6 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "CameraProfilesMod",
         "ParticipantViewCapabilityMod",
         "SelectionInteractionMod",
@@ -203,7 +202,8 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods),
-            Path.Combine(repoRoot, "assets"));
+            Path.Combine(repoRoot, "assets"),
+            Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
         return engine;
@@ -214,10 +214,7 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
         var backend = new NullInputBackend();
         var inputHandler = new PlayerInputHandler(backend, inputConfig);
-        for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-        {
-            inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-        }
+        engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
         engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)backend);

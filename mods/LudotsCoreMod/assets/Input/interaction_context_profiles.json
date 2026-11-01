@@ -2,6 +2,7 @@
   "profiles": [
     {
       "id": "interaction.context.moba.battle",
+      "inputContextId": "Core.Select",
       "commandIntentId": "intent.command.default",
       "bindings": [
         "Select.Begin",
@@ -25,6 +26,26 @@
         {
           "trigger": "graph.core.select_commit"
         }
+      ]
+    },
+    {
+      "id": "interaction.context.minimap",
+      "inputContextId": "Minimap.Device",
+      "foreground": true,
+      "pointerRouting": "ui",
+      "bindings": [
+        "Select.Begin",
+        "Select.End",
+        "Minimap.Zoom"
+      ],
+      "triggers": [
+        { "trigger": "graph.minimap.press" },
+        { "trigger": "graph.minimap.release" },
+        { "trigger": "graph.minimap.track" },
+        { "trigger": "graph.minimap.zoom" }
+      ],
+      "onActivated": [
+        "graph.minimap.seed"
       ]
     }
   ]

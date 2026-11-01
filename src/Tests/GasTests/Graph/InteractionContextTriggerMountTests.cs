@@ -217,6 +217,47 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(ReadCounter(world, subject), Is.EqualTo(2));
         }
 
+        [Test]
+        public void ReplacedBaseMount_ReleasesItsDerivedChildren_SlotRunsOnce_ParentCanReactivateChild()
+        {
+            using World world = NewWorld(out var gate, out var profiles, out _);
+            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents());
+
+            Entity subject = world.Create(NewMapEntity());
+            MountBaseContext(world, profiles, subject, BattleProfile);
+            var counter = new Ludots.Core.Gameplay.GAS.Components.BlackboardIntBuffer();
+            counter.Set(CounterKeyId, 0);
+            world.Add(subject, counter);
+
+            int counterProfileId = profiles.ProfileIdRegistry.GetId(CounterProfile);
+            int counterKey = ConfigKeyRegistry.Register(CounterProfile);
+            int battleKey = ConfigKeyRegistry.Register(BattleProfile);
+            runtime.Activate(subject, counterKey, battleKey);
+            gate.Update(0.016f);
+            Assert.That(gate.TryGetMountedTriggers(subject, counterProfileId, out _), Is.True);
+
+            world.Get<InteractionContextInstance>(subject) = new InteractionContextInstance
+            {
+                ContextId = profiles.ProfileIdRegistry.GetId(IdleProfile),
+                Source = InteractionContextInstanceSource.ExecLifecycle,
+            };
+            gate.Update(0.016f);
+
+            Assert.That(runtime.IsActive(subject, counterProfileId), Is.False,
+                "a derived instance never outlives its parent base mount");
+            Assert.That(gate.TryGetMountedTriggers(subject, counterProfileId, out _), Is.False,
+                "the orphan's triggers are unmounted with it");
+            Assert.That(ReadCounter(world, subject), Is.EqualTo(1));
+            gate.Update(0.016f);
+            Assert.That(ReadCounter(world, subject), Is.EqualTo(1), "the orphan's onDeactivated slot runs once");
+
+            MountBaseContext(world, profiles, subject, BattleProfile, replace: true);
+            gate.Update(0.016f);
+            runtime.Activate(subject, counterKey, battleKey);
+            Assert.That(runtime.IsActive(subject, counterProfileId), Is.True,
+                "the restored parent re-opens its child without hitting ActivateContextAlreadyActive");
+        }
+
         /// <summary>
         /// A foreground child parks its parent's interactive (action-bound) trigger
         /// mounts while keeping map/passive (event-bound) mounts, does not touch scope
@@ -283,6 +324,44 @@ namespace Ludots.Tests.Gas.Graph
                 "unpark is not a window close either — no Deactivated slot");
         }
 
+        [Test]
+        public void InputDispatchPhase_DefersUnparkUntilThePhaseEnds()
+        {
+            using World world = NewWorld(out var gate, out var profiles, out _);
+            var runtime = new InteractionContextInstanceRuntime(world, profiles, NewEvents());
+
+            Entity subject = world.Create(NewMapEntity());
+            MountBaseContext(world, profiles, subject, ParentProfile);
+            int parentId = profiles.ProfileIdRegistry.GetId(ParentProfile);
+            int parentKey = ConfigKeyRegistry.Register(ParentProfile);
+            int childKey = ConfigKeyRegistry.Register(ForegroundChildProfile);
+
+            gate.Update(0.016f);
+            runtime.Activate(subject, childKey, parentKey);
+            gate.Update(0.016f);
+            Assert.That(HasActionMount(RequireMounts(gate, subject, parentId), out _), Is.False);
+
+            gate.BeginInputDispatchPhase();
+            runtime.Deactivate(subject, childKey);
+            gate.ReconcileAfterInputAction(subject);
+            Assert.That(
+                HasActionMount(RequireMounts(gate, subject, parentId), out _),
+                Is.False,
+                "closing the foreground context mid-phase leaves the parked actions down");
+
+            gate.EndInputDispatchPhase();
+            Assert.That(HasActionMount(RequireMounts(gate, subject, parentId), out _), Is.True);
+        }
+
+        private static IReadOnlyList<Trigger> RequireMounts(
+            InteractionContextTriggerMountSystem gate,
+            Entity subject,
+            int profileId)
+        {
+            Assert.That(gate.TryGetMountedTriggers(subject, profileId, out IReadOnlyList<Trigger> mounts), Is.True);
+            return mounts;
+        }
+
         private static bool HasActionMount(IReadOnlyList<Trigger> mounts, out TriggerGraphMountTrigger actionMount)
         {
             for (int i = 0; i < mounts.Count; i++)
@@ -311,13 +390,21 @@ namespace Ludots.Tests.Gas.Graph
             World world,
             InteractionContextProfileRegistry profiles,
             Entity subject,
-            string profileId)
+            string profileId,
+            bool replace = false)
         {
-            world.Add(subject, new InteractionContextInstance
+            var instance = new InteractionContextInstance
             {
                 ContextId = profiles.ProfileIdRegistry.GetId(profileId),
                 Source = InteractionContextInstanceSource.TemplateSpawn,
-            });
+            };
+            if (replace)
+            {
+                world.Get<InteractionContextInstance>(subject) = instance;
+                return;
+            }
+
+            world.Add(subject, instance);
         }
 
         private static World NewWorld(
@@ -400,7 +487,8 @@ namespace Ludots.Tests.Gas.Graph
                 eventSchemas: null,
                 sessions: () => null,
                 writer,
-                new GasGraphRuntimeApi(world));
+                new GasGraphRuntimeApi(world),
+                new InteractionContextInstanceRuntime(world, profiles, NewEvents()));
             return world;
         }
 

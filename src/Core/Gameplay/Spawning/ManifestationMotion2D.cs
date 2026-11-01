@@ -5,6 +5,7 @@ namespace Ludots.Core.Gameplay.Spawning
         None = 0,
         SweepVelocity = 1,
         ParentExecutionTarget = 2,
+        ParentCastFacing = 3,
     }
 
     /// <summary>

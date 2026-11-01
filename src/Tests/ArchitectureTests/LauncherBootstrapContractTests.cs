@@ -823,12 +823,17 @@ namespace Ludots.Tests.Architecture
                       "schemaVersion": 1,
                       "planFingerprint": "test-fingerprint",
                       "orderedModIds": [
-                        "LudotsCoreMod"
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "plannedMods": [
                         {
                           "id": "LudotsCoreMod",
                           "rootPath": "{{modRoot.Replace("\\", "\\\\")}}"
+                        },
+                        {
+                          "id": "CommandSourceCoreFixtureMod",
+                          "rootPath": "{{Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod").Replace("\\", "\\\\")}}"
                         }
                       ]
                     }
@@ -844,7 +849,7 @@ namespace Ludots.Tests.Architecture
                     }
                     """);
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine, Is.Not.Null);
@@ -900,8 +905,9 @@ namespace Ludots.Tests.Architecture
                       "rootModIds": [
                         "LudotsCoreMod"
                       ],
-                      "orderedModIds": [
-                        "LudotsCoreMod"
+                                            "orderedModIds": [
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "plannedMods": [
                         {
@@ -912,6 +918,10 @@ namespace Ludots.Tests.Architecture
                           "kind": 2,
                           "buildState": 4,
                           "bindingNames": []
+                        },
+                        {
+                          "id": "CommandSourceCoreFixtureMod",
+                          "rootPath": "{{Path.Combine(repoRoot, "mods", "fixtures", "command_source", "CommandSourceCoreFixtureMod").Replace("\\", "\\\\")}}"
                         }
                       ],
                       "runtimeArtifacts": {
@@ -941,14 +951,15 @@ namespace Ludots.Tests.Architecture
                         "LudotsCoreMod"
                       ],
                       "PlanOrderedModIds": [
-                        "LudotsCoreMod"
+                        "LudotsCoreMod",
+                        "CommandSourceCoreFixtureMod"
                       ],
                       "PlanFingerprint": "full-graph-fingerprint",
                       "PlanSchemaVersion": 1
                     }
                     """);
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine, Is.Not.Null);
@@ -1044,7 +1055,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("missing plan freshness metadata"));
             }
@@ -1092,7 +1103,7 @@ namespace Ludots.Tests.Architecture
                     preferencesPath,
                     userConfigPath);
 
-                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
+                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod", "mod:CommandSourceCoreFixtureMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
                 var writtenBootstrapPath = launcher.WriteBootstrap(resolve.Plan);
 
                 Assert.That(resolve.Plan.GraphArtifactPath, Is.EqualTo(graphPath));
@@ -1104,7 +1115,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(bootstrapJson, Does.Contain("PlanRootModIds"));
                 Assert.That(bootstrapJson, Does.Contain("PlanOrderedModIds"));
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath);
+                var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
                 try
                 {
@@ -1135,7 +1146,7 @@ namespace Ludots.Tests.Architecture
             var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-stale-plan-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
+            var cameraRoot = Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod");
             var coreRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
             var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
@@ -1204,24 +1215,24 @@ namespace Ludots.Tests.Architecture
                     {
                       "LaunchGraphPath": "raylib.launch.graph.json",
                       "PlanSelectors": [
-                        "mod:CoreInputMod"
+                        "mod:CameraProfilesMod"
                       ],
                       "PlanRootModIds": [
-                        "CoreInputMod"
+                        "CameraProfilesMod"
                       ],
                       "PlanOrderedModIds": [
                         "LudotsCoreMod",
-                        "CoreInputMod"
+                        "CameraProfilesMod"
                       ],
                       "PlanFingerprint": "stale-plan-fingerprint",
                       "PlanSchemaVersion": 1
                     }
                     """);
 
-                Assert.That(coreInputRoot, Does.Exist);
+                Assert.That(cameraRoot, Does.Exist);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Stale launch graph rejected"));
                 Assert.That(ex.Message, Does.Contain("selectors"));
@@ -1359,7 +1370,7 @@ namespace Ludots.Tests.Architecture
                         LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardStaticPresenter30kMod",
                     expectedStartupMapId: "capability_standard_static_presenter_30k_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPresenter30kMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CapabilityStandardStaticPresenter30kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1387,13 +1398,12 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "CameraProfilesMod",
                         "SelectionInteractionMod",
                         "MassNavigationMod",
                         "FormationCapabilityShowcaseMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "CameraProfilesMod", "SelectionInteractionMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1405,11 +1415,10 @@ namespace Ludots.Tests.Architecture
                     allowedModIds: new[]
                     {
                         "LudotsCoreMod",
-                        "CoreInputMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
                     },
-                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "ParticipantViewCapabilityMod" });
+                    requiredModIds: new[] { "LudotsCoreMod", "ParticipantViewCapabilityMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1418,7 +1427,7 @@ namespace Ludots.Tests.Architecture
                         LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardTransportNetworkMod",
                     expectedStartupMapId: "capability_standard_transport_network",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTransportNetworkMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CapabilityStandardTransportNetworkMod" });
             }
             finally
             {
@@ -1459,7 +1468,6 @@ namespace Ludots.Tests.Architecture
                 Assert.That(plan.OrderedModIds, Is.SubsetOf(new[]
                 {
                     "LudotsCoreMod",
-                    "CoreInputMod",
                     "EntityCommandPanelMod",
                     "ProgressionScopeShowcaseMod"
                 }));
@@ -1623,7 +1631,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<Exception>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("unexpectedAdapterField"));
             }
@@ -1643,7 +1651,7 @@ namespace Ludots.Tests.Architecture
             var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-graph-invalid-order-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDirectory);
 
-            var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
+            var cameraRoot = Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod");
             var coreRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
             var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
             var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
@@ -1657,13 +1665,13 @@ namespace Ludots.Tests.Architecture
                       "schemaVersion": 1,
                       "planFingerprint": "invalid-order-fingerprint",
                       "orderedModIds": [
-                        "CoreInputMod",
+                        "CameraProfilesMod",
                         "LudotsCoreMod"
                       ],
                       "plannedMods": [
                         {
-                          "id": "CoreInputMod",
-                          "rootPath": "{{coreInputRoot.Replace("\\", "\\\\")}}"
+                          "id": "CameraProfilesMod",
+                          "rootPath": "{{cameraRoot.Replace("\\", "\\\\")}}"
                         },
                         {
                           "id": "LudotsCoreMod",
@@ -1684,7 +1692,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Launch plan order is invalid"));
             }
@@ -1735,7 +1743,7 @@ namespace Ludots.Tests.Architecture
 
                 WriteBootstrap(bootstrapPath, "graph-order-fingerprint");
 
-                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot());
                 using var engine = result.Engine;
 
                 Assert.That(engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
@@ -1769,7 +1777,7 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("missing launch graph metadata"));
             }
@@ -1829,7 +1837,7 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-invalid-order-fingerprint");
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("Launch plan order is invalid"));
             }
@@ -1871,7 +1879,7 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-case-alias-fingerprint");
 
                 var ex = Assert.Throws<Exception>(
-                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json", Ludots.Tests.EngineUserData.CreateIsolatedRoot()));
 
                 Assert.That(ex!.Message, Does.Contain("does not match plannedMods"));
             }
@@ -2147,6 +2155,14 @@ namespace Ludots.Tests.Architecture
                   "main": "",
                   "priority": {{priority}},
                   "dependencies": {{dependenciesJson ?? "{}"}}
+                }
+                """);
+            Directory.CreateDirectory(Path.Combine(modDir, "assets", "Input"));
+            File.WriteAllText(
+                Path.Combine(modDir, "assets", "Input", "collection_keys.json"),
+                """
+                {
+                  "commandSource": "core.selection"
                 }
                 """);
             return modDir;

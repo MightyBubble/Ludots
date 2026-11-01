@@ -1,0 +1,10 @@
+{
+  "name": "EntryClientSeatMod",
+  "version": "1.0.0",
+  "description": "Publishes the local seat for the bare entry client boot (player 1, scheme.default).",
+  "priority": 1000,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "tags": ["fixture", "input"]
+}

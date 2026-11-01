@@ -23,6 +23,7 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Input.Config;
 
 namespace CameraAcceptanceMod.Runtime
 {
@@ -144,7 +145,7 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             var descriptor = EntityCollectionDescriptor.Create(
-                "collection.command.source",
+                InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: owner,
@@ -218,7 +219,7 @@ namespace CameraAcceptanceMod.Runtime
                 BlendDurationSeconds = 0f,
                 FollowTargetKindOverride = CameraFollowTargetKind.EntityCollectionPrimary,
                 FollowCollectionOwnerOverride = owner,
-                FollowCollectionKeyOverride = "collection.command.source",
+                FollowCollectionKeyOverride = InputCollectionKeyDeclarations.RequireRole(engine, "commandSource"),
                 SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
                 ResetRuntimeState = true,
                 ReplaceActiveStack = true

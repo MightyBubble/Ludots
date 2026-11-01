@@ -1,3 +1,9 @@
 {
-  "startupInputContexts": ["Default_Gameplay", "Moba_Gameplay"]
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1,
+      "controlSchemeId": "scheme.aim.kbm"
+    }
+  ]
 }

@@ -16,7 +16,7 @@
 |---|---|
 | 档案字段形状 | src/Core/Input/Interaction/CastDispatchProfile.cs:145-186 |
 | 安装点 | src/Core/Engine/GameEngine.cs:1398 |
-| 选人消费 | src/Core/Input/Orders/InputOrderMappingSystem.cs:1736-1748 |
+| 选人消费 | src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs（TryRouteSubmission） |
 | 轮转推进入口（无生产调用） | src/Core/Input/Interaction/CastDispatchProfileRegistry.cs:163-176 |
 | 根资产 | assets/Input/cast_dispatch_profiles.json |
 

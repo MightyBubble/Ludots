@@ -1,0 +1,213 @@
+[
+  {
+    "id": "graph.champion.arm_hostile_assist",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "arm_press",
+        "event": "Aim.Rule.Press",
+        "priority": -5,
+        "start": "rep",
+        "refire": "restart"
+      },
+      {
+        "label": "arm_resolve",
+        "event": "Aim.Rule.Resolve",
+        "priority": -5,
+        "start": "rep",
+        "refire": "restart"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "q",
+        "op": "QueryFromCollection",
+        "collectionKey": "aim.actors"
+      },
+      {
+        "id": "c0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "member",
+        "op": "TargetListGet"
+      },
+      {
+        "id": "alive",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "alive_jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "tag",
+        "op": "HasTag",
+        "tag": "Champion.Input.NearestHostileAssist"
+      },
+      {
+        "id": "jump",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "on",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.assist"
+      },
+      {
+        "id": "off",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "aim.assist"
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep",
+        "fromPort": "next",
+        "to": "q"
+      },
+      {
+        "from": "q",
+        "fromPort": "next",
+        "to": "c0"
+      },
+      {
+        "from": "c0",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "member"
+      },
+      {
+        "from": "member",
+        "fromPort": "next",
+        "to": "alive"
+      },
+      {
+        "from": "alive",
+        "fromPort": "next",
+        "to": "alive_jump"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "true",
+        "to": "tag"
+      },
+      {
+        "from": "alive_jump",
+        "fromPort": "false",
+        "to": "off"
+      },
+      {
+        "from": "tag",
+        "fromPort": "next",
+        "to": "jump"
+      },
+      {
+        "from": "jump",
+        "fromPort": "true",
+        "to": "on"
+      },
+      {
+        "from": "jump",
+        "fromPort": "false",
+        "to": "off"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "halt"
+      },
+      {
+        "from": "off",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep",
+        "fromPort": "value",
+        "to": "q",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "member",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "alive",
+        "toPort": "source"
+      },
+      {
+        "from": "alive",
+        "fromPort": "value",
+        "to": "alive_jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "tag",
+        "toPort": "source"
+      },
+      {
+        "from": "tag",
+        "fromPort": "value",
+        "to": "jump",
+        "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "source"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "value"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "off",
+        "toPort": "source"
+      },
+      {
+        "from": "c0",
+        "fromPort": "value",
+        "to": "off",
+        "toPort": "value"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

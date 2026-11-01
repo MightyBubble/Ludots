@@ -31,7 +31,6 @@ namespace Ludots.Tests.Presentation
         internal static readonly string[] ShowcaseMods =
         {
             "LudotsCoreMod",
-            "CoreInputMod",
             "PresenterBlacksmithShowcaseMod"
         };
 
@@ -45,7 +44,7 @@ namespace Ludots.Tests.Presentation
             List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, resolvedModIds);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
             InstallInput(engine);
             InstallHeadlessPresentation(engine);
             engine.Start();
@@ -163,10 +162,7 @@ namespace Ludots.Tests.Presentation
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
-            for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
-            {
-                inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
-            }
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);

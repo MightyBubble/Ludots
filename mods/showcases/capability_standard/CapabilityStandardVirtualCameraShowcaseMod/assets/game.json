@@ -1,8 +1,5 @@
 {
   "startupMapId": "capability_standard_virtual_camera",
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
   "windowTitle": "Ludots Engine - Capability Standard Virtual Camera",
   "targetFps": 0,
   "presentation": {
@@ -26,7 +23,8 @@
   "startupLocalSeats": [
     {
       "seatId": "seat.0",
-      "playerId": 1
+      "playerId": 1,
+      "controlSchemeId": "scheme.default"
     }
   ]
 }

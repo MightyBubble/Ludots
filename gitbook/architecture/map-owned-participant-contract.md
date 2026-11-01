@@ -143,7 +143,6 @@ LogicView **不是**每个 Participant 的必有字段；当前实现对有本�
 - `src/Core/Map/MapLaunchContext.cs`
 - `src/Core/Commands/LoadMapCommand.cs`
 - `src/Core/Gameplay/Teams/ParticipantBindingResolver.cs`
-- `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
 
 ## 6. Validation Rules
 

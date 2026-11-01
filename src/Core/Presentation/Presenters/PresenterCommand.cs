@@ -28,6 +28,14 @@ namespace Ludots.Core.Presentation.Presenters
         public Entity Target;
         public Entity Viewer;
         public PresenterCommandEntitySource OwnerSource;
+        public int OwnerCollectionKeyId;
+        public int OwnerMemberIndex;
+
+        /// <summary>
+        /// Event subject captured when the rule fired. Scoped lookup uses this
+        /// instead of re-resolving <see cref="Source"/> when it is set.
+        /// </summary>
+        public Entity ScopeSubject;
         public Vector3 Position;
         public bool UseEventPosition;
         public bool HasParamPayload;

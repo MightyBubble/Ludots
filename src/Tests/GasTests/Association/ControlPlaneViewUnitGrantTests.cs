@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Registry;
 using NUnit.Framework;
+using Ludots.Core.Input.Config;
 
 namespace Ludots.Tests.GAS
 {
@@ -325,9 +326,9 @@ namespace Ludots.Tests.GAS
                     Store = store,
                     View = new ControlPlaneView(store, query),
                     ControlsTypeId = controlsTypeId,
-                    CommandSourceKeyId = keyRegistry.Register("collection.command.source"),
+                    CommandSourceKeyId = keyRegistry.Register("core.selection"),
                     _descriptor = EntityCollectionDescriptor.Create(
-                        "collection.command.source",
+                        "core.selection",
                         EntityCollectionSourceKind.UiAcquisition,
                         EntityCollectionRoleKind.CommandSource),
                 };

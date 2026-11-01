@@ -44,7 +44,13 @@ namespace Ludots.Adapter.Raylib
             // Check if file logging is requested after config merge
             Log.Initialize(effectiveBackend);
 
-            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            string userDataRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Ludots");
+            var result = GameBootstrapper.InitializeFromBaseDirectory(
+                baseDir,
+                gameConfigFile ?? "launcher.runtime.json",
+                userDataRoot);
             configure?.Invoke(result);
             var engine = result.Engine;
             var config = result.Config;
@@ -93,17 +99,8 @@ namespace Ludots.Adapter.Raylib
             var syntheticInput = new SyntheticInputDevice();
             IInputBackend inputBackend = new RaylibInputBackend(syntheticInput);
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
-            if (config.StartupInputContexts != null)
-            {
-                foreach (var contextId in config.StartupInputContexts)
-                {
-                    if (!string.IsNullOrWhiteSpace(contextId))
-                    {
-                        inputHandler.PushContext(contextId);
-                    }
-                }
-            }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
+            engine.GetService(CoreServiceKeys.ControlSchemeRuntime).ApplyActiveContexts(inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
             engine.SetService(CoreServiceKeys.SyntheticInput, syntheticInput);
             engine.SetService(CoreServiceKeys.HostFrameCapture, (IHostFrameCapture)new Services.RaylibFrameCaptureService());

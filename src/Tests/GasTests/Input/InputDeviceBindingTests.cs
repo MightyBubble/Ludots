@@ -182,11 +182,13 @@ namespace Ludots.Tests.GAS
             IInputDeviceWatcher watcher = new SyntheticInputDevice().WatchAsDeviceWatcher();
             IReadOnlyList<InputDeviceDescriptor> devices = watcher.GetConnectedDevices();
 
-            Assert.That(devices.Count, Is.EqualTo(2));
+            Assert.That(devices.Count, Is.EqualTo(3));
             Assert.That(devices[0].DeviceId, Is.EqualTo("synthetic-keyboard"));
             Assert.That(devices[0].Kind, Is.EqualTo(InputDeviceKind.Keyboard));
             Assert.That(devices[1].DeviceId, Is.EqualTo("synthetic-mouse"));
             Assert.That(devices[1].Kind, Is.EqualTo(InputDeviceKind.Mouse));
+            Assert.That(devices[2].DeviceId, Is.EqualTo("synthetic-gamepad"));
+            Assert.That(devices[2].Kind, Is.EqualTo(InputDeviceKind.Gamepad));
             Assert.That(devices[0].SeatSlot, Is.EqualTo(-1));
 
             foreach (InputDeviceDescriptor device in devices)
@@ -194,7 +196,7 @@ namespace Ludots.Tests.GAS
                 binding.BindDevice("seat-1", device);
             }
 
-            Assert.That(binding.GetDevices("seat-1").Count, Is.EqualTo(2));
+            Assert.That(binding.GetDevices("seat-1").Count, Is.EqualTo(3));
         }
 
         [Test]

@@ -1,3 +1,5 @@
+using Ludots.Platform.Abstractions;
+
 namespace Ludots.Core.GraphRuntime
 {
     public enum GraphExecutionStatus : byte
@@ -29,6 +31,14 @@ namespace Ludots.Core.GraphRuntime
         public int ReturnInt;
         public int InvokeDepth;
         public GraphExecutionStatus Status;
+
+        /// <summary>
+        /// Ground point resolved during this run. Each slice rebinds with a fresh default,
+        /// so a point written by ScreenPointToGround or SetTargetPos has to ride the cursor
+        /// or the next slice aims at the origin.
+        /// </summary>
+        public IntVector2 TargetPosCm;
+
         internal Arch.Core.Entity[]? TargetSnapshot;
         internal int TargetCount;
 
@@ -50,6 +60,7 @@ namespace Ludots.Core.GraphRuntime
         public void Reset(int startPc)
         {
             TargetCount = 0;
+            TargetPosCm = default;
             Pc = startPc;
             LastInstructionPc = -1;
             Steps = 0;
@@ -63,10 +74,16 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphSliceResult
     {
         public GraphSliceResult(GraphExecutionStatus status, int returnInt, int steps)
+            : this(status, returnInt, steps, steps)
+        {
+        }
+
+        public GraphSliceResult(GraphExecutionStatus status, int returnInt, int steps, int sliceSteps)
         {
             Status = status;
             ReturnInt = returnInt;
             Steps = steps;
+            SliceSteps = sliceSteps;
         }
 
         public GraphExecutionStatus Status { get; }
@@ -76,5 +93,8 @@ namespace Ludots.Core.GraphRuntime
         public bool Running => Status == GraphExecutionStatus.Running;
         public int ReturnInt { get; }
         public int Steps { get; }
+
+        /// <summary>Instructions charged to this slice. InvokeGraph callees are not included.</summary>
+        public int SliceSteps { get; }
     }
 }

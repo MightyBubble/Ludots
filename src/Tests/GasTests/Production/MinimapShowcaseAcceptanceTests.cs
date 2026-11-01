@@ -34,7 +34,6 @@ public sealed class MinimapShowcaseAcceptanceTests
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
-        "CoreInputMod",
         "FourXDemoMod",
         "MinimapShowcaseMod",
     };
@@ -660,7 +659,7 @@ public sealed class MinimapShowcaseAcceptanceTests
         var modPaths = RepoModPaths.ResolveExplicit(repoRoot, AcceptanceMods);
 
         var engine = new GameEngine();
-        engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+        engine.InitializeWithConfigPipeline(modPaths, assetsRoot, Ludots.Tests.EngineUserData.CreateIsolatedRoot());
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
         return engine;

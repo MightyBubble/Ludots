@@ -6,11 +6,17 @@
   "priority": 200,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
+    "AimInteractionMod": "^1.0.0",
     "CameraProfilesMod": "^1.0.0",
     "EntityCommandPanelMod": "^1.0.0",
     "DiagnosticsOverlayMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "gas", "command-panel", "champion", "3c"]
+  "tags": [
+    "showcase",
+    "gas",
+    "command-panel",
+    "champion",
+    "3c"
+  ]
 }

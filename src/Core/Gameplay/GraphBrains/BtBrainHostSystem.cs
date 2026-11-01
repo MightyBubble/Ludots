@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.AI.Fsm;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -219,7 +218,7 @@ public sealed class BtBrainHostSystem : BaseSystem<World, float>
             ref BlackboardIntBuffer buffer = ref World.Get<BlackboardIntBuffer>(actor);
             foreach ((string key, int value) in brain.BlackboardIntDefaults)
             {
-                buffer.Set(ConfigKeyRegistry.Register(key), value);
+                buffer.Set(OrderBlackboardKeyRegistry.Resolve(key), value);
             }
         }
 
@@ -228,7 +227,7 @@ public sealed class BtBrainHostSystem : BaseSystem<World, float>
             ref BlackboardEntityBuffer entities = ref World.Get<BlackboardEntityBuffer>(actor);
             foreach (string key in brain.BlackboardEntityDefaults)
             {
-                entities.Set(ConfigKeyRegistry.Register(key), Entity.Null);
+                entities.Set(OrderBlackboardKeyRegistry.Resolve(key), Entity.Null);
             }
         }
     }

@@ -29,7 +29,7 @@ namespace EntityCommandPanelMod.Runtime
         private readonly uint[] _generations = new uint[MaxInstances];
         private readonly uint[] _observedRevisions = new uint[MaxInstances];
         private readonly Dictionary<string, int> _slotsByInstanceKey = new(StringComparer.Ordinal);
-        private InputOrderActivationResult _lastActivationResult;
+        private EntityCommandPanelActivationResult _lastActivationResult;
 
         private uint _revision = 1;
 
@@ -44,7 +44,7 @@ namespace EntityCommandPanelMod.Runtime
         }
 
         internal uint Revision => _revision;
-        internal InputOrderActivationResult LastActivationResult => _lastActivationResult;
+        internal EntityCommandPanelActivationResult LastActivationResult => _lastActivationResult;
 
         internal bool HasVisiblePanels
         {
@@ -274,7 +274,7 @@ namespace EntityCommandPanelMod.Runtime
             return changed;
         }
 
-        internal void RecordActivationResult(in InputOrderActivationResult result)
+        internal void RecordActivationResult(in EntityCommandPanelActivationResult result)
         {
             _lastActivationResult = result;
             MarkDirty();

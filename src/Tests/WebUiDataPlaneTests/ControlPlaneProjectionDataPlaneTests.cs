@@ -182,7 +182,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 				P1Rep = world.Create(new PlayerIdentity { PlayerId = 1 }, new GameplayTagContainer(), new TagCountContainer()),
 				P2Rep = world.Create(new PlayerIdentity { PlayerId = 2 }, new GameplayTagContainer(), new TagCountContainer()),
 				OfflineTagId = TagRegistry.Register(ControlPlaneProjectionShowcaseIds.OfflineTag),
-				CommandSourceKeyId = keys.Register("collection.command.source"),
+				CommandSourceKeyId = keys.Register("core.selection"),
 				OwnedProjectionKeyId = keys.Register(ControlPlaneProjectionShowcaseIds.OwnedProjectionCollectionKey),
 				ProxiedProjectionKeyId = keys.Register(ControlPlaneProjectionShowcaseIds.ProxiedProjectionCollectionKey),
 			};
@@ -195,7 +195,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 			store.Replace(
 				state.P1Rep,
 				EntityCollectionDescriptor.Create(
-					"collection.command.source",
+					"core.selection",
 					EntityCollectionSourceKind.Explicit,
 					EntityCollectionRoleKind.CommandSource,
 					state.P1Rep),
@@ -203,7 +203,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 			store.Replace(
 				state.P2Rep,
 				EntityCollectionDescriptor.Create(
-					"collection.command.source",
+					"core.selection",
 					EntityCollectionSourceKind.Explicit,
 					EntityCollectionRoleKind.CommandSource,
 					state.P2Rep),

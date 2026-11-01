@@ -11,6 +11,12 @@ namespace Ludots.Core.Presentation.Presenters
         public int OwnerStableId;
         public int ScopeId;
         public Entity OwnerEntity;
+
+        /// <summary>
+        /// Event subject that names this instance in the scoped key (definition, scope, subject).
+        /// Null means the drawn <see cref="OwnerEntity"/> is that subject.
+        /// </summary>
+        public Entity ScopeSubject;
         public PresentationAnchorKind AnchorKind;
         public uint BehaviorActiveMask;
         public float Elapsed;

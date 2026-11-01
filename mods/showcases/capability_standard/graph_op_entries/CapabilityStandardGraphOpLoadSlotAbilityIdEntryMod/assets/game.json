@@ -1,0 +1,15 @@
+{
+  "startupMapId": "capability_standard_graph_op_LoadSlotAbilityId",
+  "windowTitle": "Ludots - 读出这一槽的技能编号",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 12000,
+      "mediumLodDistanceCm": 36000,
+      "lowLodDistanceCm": 72000
+    }
+  }
+}

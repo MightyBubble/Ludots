@@ -28,7 +28,8 @@ namespace Ludots.Tests.GAS
                 RepoModPaths.ResolveExplicit(
                     repoRoot,
                     new[] { "LudotsCoreMod", "EffectFormulaByTargetAcceptanceMod" }),
-                Path.Combine(repoRoot, "assets"));
+                Path.Combine(repoRoot, "assets"),
+                Ludots.Tests.EngineUserData.CreateIsolatedRoot());
 
             int templateId = EffectTemplateIdRegistry.GetId("Effect.Q4.Bolt");
             Assert.That(templateId, Is.GreaterThan(0), "Fixture effect must load from mod data.");

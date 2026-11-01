@@ -19,33 +19,21 @@
 
 - **Trigger**: `PressedThisFrame`
 - **TargetType**: 根据技能需求（`Entity` / `Position` / `None`）
-- **InteractionMode**: 根据技能需求（`TargetFirst` / `SmartCast`）
+- **手势**: 偏好 `pref.aim.cast_mode`
 
-```json5
-// 配置路径: mods/<yourMod>/InputOrderMappings/ability_Q_shift.json
-// 接口定义: src/Core/Input/Orders/InputOrderMapping.cs
-{
-  "actionId": "ability_Q_shift",                  // 独立的 ActionId（在 InputBackend 中配为 Shift+Q）
-  "trigger": "PressedThisFrame",
-  "orderTypeKey": "castAbility",
-  "targetType": "Entity",
-  "isSkillMapping": true,
-  "modifierSubmitBehavior": "Normal",             // 不需要特殊 modifier 行为（组合键已在 InputBackend 处理）
-  "autoTargetPolicy": "NearestEnemyInRange",
-  "autoTargetRangeCm": 600
-}
-```
+目标规则图是 `graph.aim.rule.unit_only`，拾取图是 `graph.aim.pick.hostile`。按下由控制方案上的输入上下文进入 `graph.aim.press`，槽号来自 `MapTrigger.BindingInt`。手势读偏好 `pref.aim.cast_mode`，取值是 `interaction.context.aim.click`、`interaction.context.aim.release`、`interaction.context.aim.smart`。指针采样是 `GraphPointerSampleRuntime`。下令演员写 `role:commandSource`，开局用 `Input/collection_keys.json` 把角色映射到集合名。座位要带 `controlSchemeId`。`Command` 由使用它的 mod 自己声明。
+
 
 **关键点**：
-- 组合键由 `PlayerInputHandler` 的 `CompositeBinding` 配置处理（Unity Input System 层）
-- 在 `InputOrderMapping` 中注册为独立的 `actionId`（如 `ability_Q_shift`）
-- 不需要在 Order 层做修饰键判断，Input 层已完成组合键识别
+- 修饰键绑在输入上下文上。根资产 `Camera.Rig` 已经绑了 `QueueModifier`（Shift）、`AlternateModifier`（Alt）、`PrecisionModifier`（Ctrl）
+- 另一套技能键写在控制方案的输入上下文里，槽号由 `MapTrigger.BindingInt` 进入 `graph.aim.press`
+- 按下时的修饰位在 `MapTrigger.Modifiers`，图自己读，不在订单类型上再判一遍组合键
 
 ---
 
 ## Graph 实现
 
-组合键技能的 Graph 实现与普通技能完全相同，差异仅在 `actionId` 和技能参数配置。
+组合键技能的效果图与普通技能相同。差别在控制方案里的另一组绑定，以及图读到的 `MapTrigger.Modifiers`。
 
 ```
 // Graph op 参考: src/Core/NodeLibraries/GASGraph/GraphOps.cs
@@ -85,9 +73,9 @@ Effect 模板示例：
 
 | 组件 | 路径 | 状态 |
 |------|------|------|
-| InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | PlayerInputHandler | `src/Core/Input/PlayerInputHandler.cs` | ✅ 已有（CompositeBinding 支持） |
-| InputOrderMappingSystem | `src/Core/Input/Orders/InputOrderMappingSystem.cs` | ✅ 已有 |
+| 瞄准规则图 | `mods/capabilities/input/AimInteractionMod` | 技能在 `triggerGraphs` 引用 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 
 ---
@@ -105,7 +93,7 @@ Effect 模板示例：
 - **DO**: 为组合键技能创建独立的 `actionId`（如 `ability_Q_shift`），在 InputBackend 配置中绑定为 Shift+Q。
 - **DO**: 组合键技能与普通技能共享相同的 Order 处理流程，无需特殊逻辑。
 - **DO**: 使用 `ModifierSubmitBehavior=Normal`，修饰键已在 Input 层消费，不需要传递到 Order 层。
-- **DON'T**: 不要在 `InputOrderMappingSystem` 中手动检测修饰键状态（Input 层已处理）。
+- `src/Core/Input/Orders/CommandIntentBufferDrainSystem.cs`
 - **DON'T**: 不要将组合键技能与 S7（Shift 队列）混淆：S7 是 `ModifierSubmitBehavior=QueueOnModifier`，S1 是独立技能 ID。
 
 ---
