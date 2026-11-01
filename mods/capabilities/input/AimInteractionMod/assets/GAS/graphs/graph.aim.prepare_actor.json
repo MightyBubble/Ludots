@@ -72,13 +72,8 @@
         "blackboardKey": "aim.range_cm"
       },
       {
-        "id": "c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "null_get",
-        "op": "TargetListGet"
+        "op": "ConstNullEntity"
       },
       {
         "id": "target",
@@ -186,16 +181,6 @@
         "to": "rng"
       },
       {
-        "from": "rng",
-        "fromPort": "next",
-        "to": "c99"
-      },
-      {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "null_get"
-      },
-      {
         "from": "null_get",
         "fromPort": "next",
         "to": "target"
@@ -229,6 +214,11 @@
         "from": "sv",
         "fromPort": "next",
         "to": "wf"
+      },
+      {
+        "from": "rng",
+        "fromPort": "next",
+        "to": "null_get"
       }
     ],
     "valueEdges": [
@@ -326,12 +316,6 @@
         "from": "z",
         "fromPort": "value",
         "to": "rng",
-        "toPort": "value"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
         "toPort": "value"
       },
       {

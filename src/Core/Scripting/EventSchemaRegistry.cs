@@ -174,6 +174,13 @@ namespace Ludots.Core.Scripting
                 new("sourceEntity", EventParamType.Entity, MapTriggerEventPayloadKeys.SourceEntity),
                 new("contextKeyId", EventParamType.Int, MapTriggerEventPayloadKeys.ContextKeyId),
             }),
+            new(GameEvents.ControlSchemeChanged.Value, EventScope.Map, new EventParamSchema[]
+            {
+                new("seatId", EventParamType.String, MapTriggerEventPayloadKeys.SeatId),
+                new("rep", EventParamType.Entity, MapTriggerEventPayloadKeys.Rep),
+                new("oldSchemeId", EventParamType.Int, MapTriggerEventPayloadKeys.OldSchemeId),
+                new("newSchemeId", EventParamType.Int, MapTriggerEventPayloadKeys.NewSchemeId),
+            }),
             // Mod-domain mount pulse (main domain expansion): not MapTrigger.* namespaced —
             // FireEvent path stamps ModId for filter matching on RegisterModTriggers mounts.
             new(GameEvents.ModLoaded.Value, EventScope.Global, new EventParamSchema[]

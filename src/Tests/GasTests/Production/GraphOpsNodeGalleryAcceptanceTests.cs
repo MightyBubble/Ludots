@@ -56,6 +56,17 @@ public sealed class GraphOpsNodeGalleryAcceptanceTests
     }
 
     [Test]
+    public void ConstNullEntity_WritesEmptyHandle()
+    {
+        using var runtime = new GraphOpsNodeGalleryRuntime();
+        runtime.BindOp("ConstNullEntity");
+        runtime.EnsureWorld();
+        runtime.Tick(0.35f);
+        Assert.That(runtime.Metrics.Detail, Does.Contain("空实体"));
+        Assert.That(runtime.Metrics.Detail, Does.Not.Contain("{"));
+    }
+
+    [Test]
     public void AddFloat_SubtractsSumFromTargetHealth()
     {
         using var runtime = new GraphOpsNodeGalleryRuntime();

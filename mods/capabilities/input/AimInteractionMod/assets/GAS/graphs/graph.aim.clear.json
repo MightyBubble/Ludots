@@ -52,13 +52,8 @@
         "op": "JumpIfFalse"
       },
       {
-        "id": "c99",
-        "op": "ConstInt",
-        "intValue": 99
-      },
-      {
         "id": "null_get",
-        "op": "TargetListGet"
+        "op": "ConstNullEntity"
       },
       {
         "id": "write_valid",
@@ -127,11 +122,6 @@
         "to": "halt"
       },
       {
-        "from": "c99",
-        "fromPort": "next",
-        "to": "null_get"
-      },
-      {
         "from": "null_get",
         "fromPort": "next",
         "to": "write_valid"
@@ -154,7 +144,7 @@
       {
         "from": "alive_jump",
         "fromPort": "true",
-        "to": "c99"
+        "to": "null_get"
       }
     ],
     "valueEdges": [
@@ -199,12 +189,6 @@
         "fromPort": "value",
         "to": "alive_jump",
         "toPort": "condition"
-      },
-      {
-        "from": "c99",
-        "fromPort": "value",
-        "to": "null_get",
-        "toPort": "value"
       },
       {
         "from": "member",

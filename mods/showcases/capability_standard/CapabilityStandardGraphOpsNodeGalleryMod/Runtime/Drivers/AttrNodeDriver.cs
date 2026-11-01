@@ -1068,6 +1068,11 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException("LoadCaster gallery did not resolve the caster.");
         }
 
+        if (string.Equals(op, "ConstNullEntity", StringComparison.Ordinal) && result.EntityValue != Entity.Null)
+        {
+            throw new InvalidOperationException("ConstNullEntity gallery did not write an empty entity handle.");
+        }
+
         if (string.Equals(op, "LoadExplicitTarget", StringComparison.Ordinal) ||
             string.Equals(op, "LoadContextTarget", StringComparison.Ordinal))
         {

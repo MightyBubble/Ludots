@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Persistence
@@ -23,6 +24,7 @@ namespace Ludots.Core.Persistence
             if (engine == null) throw new ArgumentNullException(nameof(engine));
 
             boundary.EnsureClean();
+            BlackboardEntityRefLifetimeSystem.FlushWorld(engine.World);
             SaveContextHeader header = SaveContextFactory.Capture(engine);
             JsonObject domains = RequireSaveParticipants(engine).CaptureDomains();
             LudotsBinaryWorldSerializer serializer = _worldSerializer

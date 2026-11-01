@@ -9,10 +9,14 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -95,6 +99,113 @@ namespace Ludots.Tests.GAS
                 Schemes = new List<ControlSchemeDefinition> { Harness.Scheme(SchemeA, ContextA) },
             }));
             Assert.That(harness.Runtime.ActiveSchemeId, Is.EqualTo(harness.SchemeId(SchemeA)));
+        }
+
+        [Test]
+        public void TrySwitch_NotifiesPreviousAndNewIds_SameIdStaysSilent()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var seen = new List<(int OldId, int NewId)>();
+            harness.Runtime.SchemeChanged = (oldId, newId) => seen.Add((oldId, newId));
+
+            int schemeA = harness.SchemeId(SchemeA);
+            int schemeB = harness.SchemeId(SchemeB);
+            Assert.That(harness.Runtime.TrySwitch(schemeB), Is.True);
+            Assert.That(seen, Is.EqualTo(new[] { (schemeA, schemeB) }));
+
+            Assert.That(harness.Runtime.TrySwitch(schemeB), Is.True);
+            Assert.That(seen, Has.Count.EqualTo(1), "a same-id switch does not publish another change.");
+        }
+
+        [Test]
+        public void ChangedMapping_UnknownSchemeFilter_FailsAtValidate()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            RegisterCompiled(programs, CompileSchemeGraph("""
+                {
+                  "id": "graph.test.scheme_changed_missing",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "missing",
+                      "event": "ControlSchemeChanged",
+                      "start": "act",
+                      "filters": { "payload": { "MapTrigger.NewSchemeId": "scheme.not.installed" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """));
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+            Assert.That(error!.Message, Does.Contain("CONTROL_SCHEME.ERR.ChangedMappingUnknownScheme"));
+            Assert.That(error.Message, Does.Contain("scheme.not.installed"));
+            Assert.That(error.Message, Does.Contain("graph.test.scheme_changed_missing"));
+        }
+
+        [Test]
+        public void ChangedMapping_InstalledSchemeFilter_Passes()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            RegisterCompiled(programs, CompileSchemeGraph($$"""
+                {
+                  "id": "graph.test.scheme_changed_installed",
+                  "kind": "TriggerGraph",
+                  "entries": [
+                    {
+                      "label": "installed",
+                      "event": "ControlSchemeChanged",
+                      "start": "act",
+                      "filters": { "payload": { "MapTrigger.NewSchemeId": "{{SchemeA}}" } }
+                    }
+                  ],
+                  "nodes": [ { "id": "act", "op": "HaltReturnInt" } ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """));
+
+            Assert.DoesNotThrow(() => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+        }
+
+        [Test]
+        public void ChangedMapping_NonIntSchemeFilter_FailsAtValidate()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            harness.InstallTwoSchemes();
+            var programs = new GraphProgramRegistry();
+            int graphId = GraphIdRegistry.Register("graph.test.scheme_changed_non_int");
+            var filter = new TriggerGraphEntryPayloadFilter(MapTriggerEventPayloadKeys.NewSchemeId, SchemeA, null);
+            var entry = new TriggerGraphEntry(
+                "non-int",
+                GameEvents.ControlSchemeChanged.Value,
+                startPc: 0,
+                once: false,
+                new TriggerGraphEntryFilters(null, null, null, null, null, payload: new[] { filter }));
+            programs.Register(
+                graphId,
+                new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                GraphKind.TriggerGraph,
+                GraphInstructionSourceMap.Empty,
+                null,
+                new[] { entry });
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeChangedMapping.Validate(programs, harness.Runtime));
+            Assert.That(error!.Message, Does.Contain("CONTROL_SCHEME.ERR.ChangedMappingUnknownScheme"));
+            Assert.That(error.Message, Does.Contain("graph.test.scheme_changed_non_int"));
         }
 
         [Test]
@@ -698,6 +809,31 @@ namespace Ludots.Tests.GAS
             InteractionPref pref = default;
             pref.SetPlayerDefault(intentId, castDispatchProfileId: 777);
             return pref;
+        }
+
+        private static GraphControlFlowCompileResult CompileSchemeGraph(string json)
+        {
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true,
+            };
+            GraphControlFlowDocument document = JsonSerializer.Deserialize<GraphControlFlowDocument>(json, options)!;
+            return GraphControlFlowCompiler.Compile(document, new EventSchemaRegistry());
+        }
+
+        private static void RegisterCompiled(GraphProgramRegistry programs, GraphControlFlowCompileResult result)
+        {
+            Assert.That(result.Succeeded, Is.True, () => string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+            GraphProgramPackage package = result.Package!.Value;
+            int graphId = GraphIdRegistry.Register(package.GraphName);
+            programs.Register(
+                graphId,
+                result.Program,
+                package.Kind,
+                result.SourceMap,
+                package.Symbols,
+                package.TriggerGraphEntries);
         }
 
         private sealed class Harness

@@ -24,6 +24,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         LoadExplicitTarget = 5,
         Jump = 6,
         JumpIfFalse = 7,
+        ConstNullEntity = 8,
         LoadAttribute = 10,
         AddFloat = 20,
         MulFloat = 21,

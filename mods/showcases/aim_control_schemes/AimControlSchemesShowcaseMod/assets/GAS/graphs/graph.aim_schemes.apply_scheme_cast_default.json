@@ -1,0 +1,418 @@
+[
+  {
+    "id": "graph.aim_schemes.apply_scheme_cast_default",
+    "kind": "TriggerGraph",
+    "entries": [
+      {
+        "label": "scheme.aim.kbm",
+        "event": "ControlSchemeChanged",
+        "start": "rep_kbm",
+        "budget": "single-slice",
+        "filters": {
+          "payload": {
+            "MapTrigger.NewSchemeId": "scheme.aim.kbm"
+          }
+        }
+      },
+      {
+        "label": "scheme.aim.gamepad",
+        "event": "ControlSchemeChanged",
+        "start": "rep_pad",
+        "budget": "single-slice",
+        "filters": {
+          "payload": {
+            "MapTrigger.NewSchemeId": "scheme.aim.gamepad"
+          }
+        }
+      },
+      {
+        "label": "scheme.aim.kbm_skills",
+        "event": "ControlSchemeChanged",
+        "start": "rep_skills",
+        "budget": "single-slice",
+        "filters": {
+          "payload": {
+            "MapTrigger.NewSchemeId": "scheme.aim.kbm_skills"
+          }
+        }
+      },
+      {
+        "label": "scheme.aim.gamepad_left",
+        "event": "ControlSchemeChanged",
+        "start": "rep_left",
+        "budget": "single-slice",
+        "filters": {
+          "payload": {
+            "MapTrigger.NewSchemeId": "scheme.aim.gamepad_left"
+          }
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "id": "rep_kbm",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot_kbm",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "check_kbm",
+        "op": "IsPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
+        "id": "jump_kbm",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "set_kbm",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "id": "rep_pad",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot_pad",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "check_pad",
+        "op": "IsPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
+        "id": "jump_pad",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "set_pad",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.release"
+      },
+      {
+        "id": "rep_skills",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot_skills",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "check_skills",
+        "op": "IsPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
+        "id": "jump_skills",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "set_skills",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "id": "rep_left",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "slot_left",
+        "op": "ConstInt",
+        "intValue": -1
+      },
+      {
+        "id": "check_left",
+        "op": "IsPref",
+        "key": "pref.aim.cast_mode_origin",
+        "value": "player"
+      },
+      {
+        "id": "jump_left",
+        "op": "JumpIfFalse"
+      },
+      {
+        "id": "set_left",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.smart"
+      },
+      {
+        "id": "c1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "halt",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "rep_kbm",
+        "fromPort": "next",
+        "to": "slot_kbm"
+      },
+      {
+        "from": "slot_kbm",
+        "fromPort": "next",
+        "to": "check_kbm"
+      },
+      {
+        "from": "check_kbm",
+        "fromPort": "next",
+        "to": "jump_kbm"
+      },
+      {
+        "from": "jump_kbm",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "jump_kbm",
+        "fromPort": "false",
+        "to": "set_kbm"
+      },
+      {
+        "from": "set_kbm",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_pad",
+        "fromPort": "next",
+        "to": "slot_pad"
+      },
+      {
+        "from": "slot_pad",
+        "fromPort": "next",
+        "to": "check_pad"
+      },
+      {
+        "from": "check_pad",
+        "fromPort": "next",
+        "to": "jump_pad"
+      },
+      {
+        "from": "jump_pad",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "jump_pad",
+        "fromPort": "false",
+        "to": "set_pad"
+      },
+      {
+        "from": "set_pad",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_skills",
+        "fromPort": "next",
+        "to": "slot_skills"
+      },
+      {
+        "from": "slot_skills",
+        "fromPort": "next",
+        "to": "check_skills"
+      },
+      {
+        "from": "check_skills",
+        "fromPort": "next",
+        "to": "jump_skills"
+      },
+      {
+        "from": "jump_skills",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "jump_skills",
+        "fromPort": "false",
+        "to": "set_skills"
+      },
+      {
+        "from": "set_skills",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "rep_left",
+        "fromPort": "next",
+        "to": "slot_left"
+      },
+      {
+        "from": "slot_left",
+        "fromPort": "next",
+        "to": "check_left"
+      },
+      {
+        "from": "check_left",
+        "fromPort": "next",
+        "to": "jump_left"
+      },
+      {
+        "from": "jump_left",
+        "fromPort": "true",
+        "to": "c1"
+      },
+      {
+        "from": "jump_left",
+        "fromPort": "false",
+        "to": "set_left"
+      },
+      {
+        "from": "set_left",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "halt"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "target"
+      },
+      {
+        "from": "rep_kbm",
+        "fromPort": "value",
+        "to": "set_kbm",
+        "toPort": "source"
+      },
+      {
+        "from": "slot_kbm",
+        "fromPort": "value",
+        "to": "check_kbm",
+        "toPort": "value"
+      },
+      {
+        "from": "check_kbm",
+        "fromPort": "value",
+        "to": "jump_kbm",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep_pad",
+        "fromPort": "value",
+        "to": "check_pad",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_pad",
+        "fromPort": "value",
+        "to": "check_pad",
+        "toPort": "target"
+      },
+      {
+        "from": "rep_pad",
+        "fromPort": "value",
+        "to": "set_pad",
+        "toPort": "source"
+      },
+      {
+        "from": "slot_pad",
+        "fromPort": "value",
+        "to": "check_pad",
+        "toPort": "value"
+      },
+      {
+        "from": "check_pad",
+        "fromPort": "value",
+        "to": "jump_pad",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep_skills",
+        "fromPort": "value",
+        "to": "check_skills",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_skills",
+        "fromPort": "value",
+        "to": "check_skills",
+        "toPort": "target"
+      },
+      {
+        "from": "rep_skills",
+        "fromPort": "value",
+        "to": "set_skills",
+        "toPort": "source"
+      },
+      {
+        "from": "slot_skills",
+        "fromPort": "value",
+        "to": "check_skills",
+        "toPort": "value"
+      },
+      {
+        "from": "check_skills",
+        "fromPort": "value",
+        "to": "jump_skills",
+        "toPort": "condition"
+      },
+      {
+        "from": "rep_left",
+        "fromPort": "value",
+        "to": "check_left",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_left",
+        "fromPort": "value",
+        "to": "check_left",
+        "toPort": "target"
+      },
+      {
+        "from": "rep_left",
+        "fromPort": "value",
+        "to": "set_left",
+        "toPort": "source"
+      },
+      {
+        "from": "slot_left",
+        "fromPort": "value",
+        "to": "check_left",
+        "toPort": "value"
+      },
+      {
+        "from": "check_left",
+        "fromPort": "value",
+        "to": "jump_left",
+        "toPort": "condition"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "halt",
+        "toPort": "value"
+      }
+    ]
+  }
+]

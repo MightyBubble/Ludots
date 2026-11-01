@@ -2898,6 +2898,14 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod",
         "projectPath": "CapabilityStandardGraphOpApplyMapDefaultCameraEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstNullEntity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstNullEntityEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstNullEntityEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

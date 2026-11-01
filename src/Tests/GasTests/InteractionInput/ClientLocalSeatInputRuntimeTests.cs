@@ -90,6 +90,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PublishSeats_MultiSeat_NotifiesEachActivationAndLaterSwitch()
+        {
+            using Harness harness = Harness.Create();
+            var seen = new List<(string Seat, int OldId, int NewId)>();
+            harness.Runtime.SeatSchemeChanged = (seat, oldId, newId) => seen.Add((seat, oldId, newId));
+            harness.PublishDualSeat();
+
+            int schemeA = harness.Schemes.SchemeIdRegistry.GetId(SchemeA);
+            int schemeB = harness.Schemes.SchemeIdRegistry.GetId(SchemeB);
+            Assert.That(seen, Is.EqualTo(new[]
+            {
+                ("seat.0", 0, schemeA),
+                ("seat.1", 0, schemeA),
+            }));
+
+            seen.Clear();
+            Assert.That(harness.Runtime.TrySwitchSeatScheme(harness.Seats, "seat.1", SchemeB), Is.True);
+            Assert.That(seen, Is.EqualTo(new[] { ("seat.1", schemeA, schemeB) }));
+
+            seen.Clear();
+            Assert.That(harness.Runtime.TrySwitchSeatScheme(harness.Seats, "seat.1", SchemeB), Is.True);
+            Assert.That(seen, Is.Empty);
+        }
+
+        [Test]
         public void TrySwitchSeatScheme_MultiSeat_SwitchesChannelAndWritesBackThatSeatOnly()
         {
             using Harness harness = Harness.Create(withPreferences: true);
