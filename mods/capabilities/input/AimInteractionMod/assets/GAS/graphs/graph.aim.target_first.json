@@ -68,6 +68,20 @@
         "parentContext": "interaction.context.aim.cast"
       },
       {
+        "id": "miss_slot",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "aim.slot"
+      },
+      {
+        "id": "miss_ability",
+        "op": "LoadSlotAbilityId"
+      },
+      {
+        "id": "miss_shape",
+        "op": "DispatchMapEvent",
+        "event": "Aim.Shape.Bind"
+      },
+      {
         "id": "halt_miss",
         "op": "HaltReturnInt"
       },
@@ -213,6 +227,21 @@
       },
       {
         "from": "act_click",
+        "fromPort": "next",
+        "to": "miss_slot"
+      },
+      {
+        "from": "miss_slot",
+        "fromPort": "next",
+        "to": "miss_ability"
+      },
+      {
+        "from": "miss_ability",
+        "fromPort": "next",
+        "to": "miss_shape"
+      },
+      {
+        "from": "miss_shape",
         "fromPort": "next",
         "to": "halt_miss"
       },
@@ -505,6 +534,30 @@
         "fromPort": "value",
         "to": "handled_jump",
         "toPort": "condition"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "miss_slot",
+        "toPort": "source"
+      },
+      {
+        "from": "member",
+        "fromPort": "value",
+        "to": "miss_ability",
+        "toPort": "source"
+      },
+      {
+        "from": "miss_slot",
+        "fromPort": "value",
+        "to": "miss_ability",
+        "toPort": "value"
+      },
+      {
+        "from": "miss_ability",
+        "fromPort": "value",
+        "to": "miss_shape",
+        "toPort": "ability"
       }
     ]
   }

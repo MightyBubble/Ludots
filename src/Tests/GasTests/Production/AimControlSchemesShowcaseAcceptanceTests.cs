@@ -599,7 +599,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(_engine.TriggerManager.Errors.Count, Is.EqualTo(errorsBeforeGround), Diag("ground skill errors"));
             Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("ground skill keeps the mode"));
             AdvanceTick();
-            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("ground skill indicator"));
+            Assert.That(CountPresenter("aim.circle"), Is.EqualTo(1), Diag("ground skill indicator"));
             Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill still no submit"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill next tick"));
             Cancel(AimSurface.KeyboardCursor);
@@ -617,7 +617,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("missing target"));
             Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("missing target keeps the mode"));
             AdvanceTick();
-            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("missing target indicator"));
+            Assert.That(CountPresenter("aim.circle"), Is.EqualTo(1), Diag("missing target indicator"));
             Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("missing target still not cast"));
             ReleaseSlot(AimSurface.KeyboardCursor, 0);
         }
