@@ -285,7 +285,7 @@ namespace InteractionShowcaseMod.UI
                         .FontSize(12f)
                         .Color("#E2C27A")
                         .WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text("LMB select | drag box-select | Ctrl+1..4 save group | 1..4 recall group | RMB move / confirm | Shift queue | S stop | F1-F5 switch reference feel.")
+                    Ui.Text("LMB select | drag box-select | Ctrl+1..4 save group | 1..4 recall group | RMB move / confirm | Shift queue | S stop | F1-F6 switch reference feel.")
                         .FontSize(12f)
                         .Color("#93A4B8")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -1096,7 +1096,7 @@ namespace InteractionShowcaseMod.UI
                 return "Q SupportBeam (ally unit) | W TacticalJump (point) | E VolleyLine (direction) | R Overclock (self buff) | Z ThrustJump (double-tap) | F ShieldNet (toggle) | Space ActionContext | X+C OrbitalStrike (vector)";
             }
 
-            return "Primary verbs are bound to Q/W/E/R/Z/F/Space/X+C. Switch modes with F1-F5 and use Shift to queue orders.";
+            return "Primary verbs are bound to Q/W/E/R/Z/F/Space/X+C. Switch modes with F1-F6 and use Shift to queue orders.";
         }
 
         private sealed record InteractionShowcasePanelState(

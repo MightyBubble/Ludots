@@ -7,6 +7,14 @@
     "maps": ["interaction_showcase_hub", "interaction_showcase_stress"],
     "buttons": [
       {
+        "id": "Interaction.Mode.TargetFirst",
+        "label": "WoW / Target First",
+        "actionId": "Aim.CastMode.TargetFirst",
+        "highlight": {
+          "pref": { "key": "pref.aim.cast_mode", "value": "interaction.context.aim.target_first" }
+        }
+      },
+      {
         "id": "Interaction.Mode.LoL",
         "label": "LoL / Smart Cast",
         "actionId": "Aim.CastMode.Smart",

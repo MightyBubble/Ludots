@@ -73,6 +73,12 @@
       "onActivated": [
         "graph.aim.smart_cast"
       ]
+    },
+    {
+      "id": "interaction.context.aim.target_first",
+      "onActivated": [
+        "graph.aim.target_first"
+      ]
     }
   ]
 }

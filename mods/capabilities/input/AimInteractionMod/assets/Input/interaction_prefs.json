@@ -6,7 +6,8 @@
       "values": [
         "interaction.context.aim.click",
         "interaction.context.aim.release",
-        "interaction.context.aim.smart"
+        "interaction.context.aim.smart",
+        "interaction.context.aim.target_first"
       ]
     }
   ],

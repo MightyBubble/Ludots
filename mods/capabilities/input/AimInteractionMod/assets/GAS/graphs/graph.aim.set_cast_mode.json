@@ -23,6 +23,13 @@
         "start": "rep_release",
         "refire": "restart",
         "budget": "single-slice"
+      },
+      {
+        "label": "Aim.CastMode.TargetFirst",
+        "action": "Aim.CastMode.TargetFirst",
+        "start": "rep_target",
+        "refire": "restart",
+        "budget": "single-slice"
       }
     ],
     "nodes": [
@@ -55,6 +62,16 @@
         "op": "SetPref",
         "key": "pref.aim.cast_mode",
         "value": "interaction.context.aim.release"
+      },
+      {
+        "id": "rep_target",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "set_target",
+        "op": "SetPref",
+        "key": "pref.aim.cast_mode",
+        "value": "interaction.context.aim.target_first"
       },
       {
         "id": "c1",
@@ -98,6 +115,16 @@
         "to": "c1"
       },
       {
+        "from": "rep_target",
+        "fromPort": "next",
+        "to": "set_target"
+      },
+      {
+        "from": "set_target",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
         "from": "c1",
         "fromPort": "next",
         "to": "halt"
@@ -120,6 +147,12 @@
         "from": "rep_release",
         "fromPort": "value",
         "to": "set_release",
+        "toPort": "source"
+      },
+      {
+        "from": "rep_target",
+        "fromPort": "value",
+        "to": "set_target",
         "toPort": "source"
       },
       {

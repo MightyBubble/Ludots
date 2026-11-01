@@ -165,6 +165,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private CalendarRuntime? _calendar;
         private TimeFlowService? _timeFlow;
         private Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer? _commandIntentSubmissions;
+
+        // One slot per nested DispatchMapEvent. Listeners increment only the innermost
+        // open slot, so an outer dispatch's integer excludes submits made under a nested dispatch.
+        // Not world state: the slots exist only while Fire is on the stack.
+        private int _dispatchSubmitDepth;
+        private readonly int[] _dispatchSubmitCounts = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxInvokeDepth];
         private Ludots.Core.EntityCollections.CollectionApplier? _collectionApplier;
 
         // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
@@ -385,6 +391,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindCommandIntentSubmissions(Ludots.Core.Gameplay.GAS.Orders.CommandIntentSubmissionBuffer submissions)
         {
             _commandIntentSubmissions = submissions ?? throw new ArgumentNullException(nameof(submissions));
+        }
+
+        /// <inheritdoc />
+        public void BeginDispatchSubmitCount()
+        {
+            if (_dispatchSubmitDepth >= _dispatchSubmitCounts.Length)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DispatchSubmitDepthExceeded: nested DispatchMapEvent depth {_dispatchSubmitDepth + 1} exceeds {_dispatchSubmitCounts.Length}.");
+            }
+
+            _dispatchSubmitCounts[_dispatchSubmitDepth++] = 0;
+        }
+
+        /// <inheritdoc />
+        public int EndDispatchSubmitCount()
+        {
+            if (_dispatchSubmitDepth == 0)
+            {
+                throw new InvalidOperationException(
+                    "GAS.GRAPH.ERR.DispatchSubmitDepthEmpty: EndDispatchSubmitCount without a matching begin.");
+            }
+
+            return _dispatchSubmitCounts[--_dispatchSubmitDepth];
+        }
+
+        private void NoteDispatchSubmit()
+        {
+            if (_dispatchSubmitDepth == 0)
+            {
+                return;
+            }
+
+            _dispatchSubmitCounts[_dispatchSubmitDepth - 1]++;
         }
 
         /// <summary>
@@ -1535,6 +1575,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 groundCm,
                 submitMode,
                 layout), members);
+            NoteDispatchSubmit();
         }
 
         /// <summary>
@@ -1563,6 +1604,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 groundCm,
                 orderTypeKeyId,
                 submitMode), members);
+            NoteDispatchSubmit();
         }
 
         /// <summary>

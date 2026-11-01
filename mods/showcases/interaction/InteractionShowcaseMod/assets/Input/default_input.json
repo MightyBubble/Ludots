@@ -178,6 +178,10 @@
           "path": "<Keyboard>/f5"
         },
         {
+          "actionId": "Aim.CastMode.TargetFirst",
+          "path": "<Keyboard>/f6"
+        },
+        {
           "actionId": "SelectionGroupRecall1",
           "path": "<Keyboard>/1"
         },

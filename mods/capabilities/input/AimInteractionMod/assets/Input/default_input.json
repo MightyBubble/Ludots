@@ -58,6 +58,11 @@
       "id": "Aim.CastMode.AimRelease",
       "name": "Aim_CastMode_AimRelease",
       "type": "Button"
+    },
+    {
+      "id": "Aim.CastMode.TargetFirst",
+      "name": "Aim_CastMode_TargetFirst",
+      "type": "Button"
     }
   ],
   "contexts": [

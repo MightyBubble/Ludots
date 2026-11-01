@@ -141,6 +141,13 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
         session.AssertFriendlyCastRestoresDefaultPick();
     }
 
+    [Test]
+    public void TargetFirst_SelectedUnitCastsOnThePressTick_GroundAndMissingTargetOpenClickAim()
+    {
+        using Session session = Session.Boot("scheme.aim.kbm");
+        session.AssertTargetFirst();
+    }
+
     private enum AimSurface
     {
         KeyboardCursor,
@@ -472,6 +479,147 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("friendly cast restore"));
         }
 
+        public void AssertTargetFirst()
+        {
+            const string modeId = "interaction.context.aim.target_first";
+            SetMode(modeId, "f4");
+            Grant("Ability.AimSchemes.UnitOnly", 0);
+            ClickSelect(Position(Near));
+            Assert.That(CollectionCount("aim.current_target"), Is.EqualTo(1), Diag("selected target"));
+            Assert.That(CollectionMember("aim.current_target"), Is.EqualTo(Near), Diag("selected target member"));
+            Assert.That(CollectionOwner("aim.current_target"), Is.EqualTo(Hero), Diag("selected target owner"));
+            string commandKey = InputCollectionKeyDeclarations.RequireRole(_engine, "commandSource");
+            Assert.That(CollectionMember(commandKey), Is.EqualTo(Hero), Diag("click leaves the commanded unit"));
+            AimMouse(Position(Hero) + new Vector2(700f, 0f));
+            Assert.That(ReadInt("aim.point.valid"), Is.EqualTo(1), Diag("cursor point before target-first"));
+
+            int pressTick = _engine.GameSession.CurrentTick;
+            PressSlot(AimSurface.KeyboardCursor, 0);
+            Assert.That(_engine.GameSession.CurrentTick, Is.EqualTo(pressTick + 1), Diag("target-first press tick"));
+            AssertCastSubmission(0, Near, "target-first unit submit");
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("exec waits until the next tick"));
+            AdvanceTick();
+            AssertCast(0, Near, "target-first unit exec");
+            ReleaseSlot(AimSurface.KeyboardCursor, 0);
+            Settle();
+
+            Grant("Ability.AimSchemes.Ground", 0);
+            AimMouse(Position(Hero) + new Vector2(700f, 0f));
+            int errorsBeforeGround = _engine.TriggerManager.Errors.Count;
+            PressSlot(AimSurface.KeyboardCursor, 0);
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill does not submit"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill exec"));
+            Assert.That(Contexts(), Does.Contain("interaction.context.aim.click"), Diag("ground skill opens click aim"));
+            Assert.That(Contexts(), Does.Not.Contain("interaction.context.aim.target_first"), Diag("ground skill context"));
+            Assert.That(_engine.TriggerManager.Errors.Count, Is.EqualTo(errorsBeforeGround), Diag("ground skill errors"));
+            Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("ground skill keeps the mode"));
+            AdvanceTick();
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("ground skill indicator"));
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill still no submit"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("ground skill next tick"));
+            Cancel(AimSurface.KeyboardCursor);
+            Assert.That(AimGestureOpen(), Is.False, Diag("ground skill click aim closed"));
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("ground skill cancel submits nothing"));
+            ReleaseSlot(AimSurface.KeyboardCursor, 0);
+
+            ClickSelect(new Vector2(3200f, 3200f));
+            Assert.That(CollectionCount("aim.current_target"), Is.EqualTo(0), Diag("cleared target"));
+            PressSlot(AimSurface.KeyboardCursor, 0);
+            Assert.That(CastCount(), Is.EqualTo(0), Diag("missing target submit"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("missing target exec"));
+            Assert.That(Contexts(), Does.Contain("interaction.context.aim.click"), Diag("missing target opens click aim"));
+            Assert.That(Contexts(), Does.Not.Contain("interaction.context.aim.target_first"), Diag("missing target context"));
+            Assert.That(TriggerErrors(), Is.EqualTo("<none>"), Diag("missing target"));
+            Assert.That(ReadCastMode(), Is.EqualTo(modeId), Diag("missing target keeps the mode"));
+            AdvanceTick();
+            Assert.That(CountPresenter("aim.range"), Is.EqualTo(1), Diag("missing target indicator"));
+            Assert.That(_engine.World.Has<AbilityExecInstance>(Hero), Is.False, Diag("missing target still not cast"));
+            ReleaseSlot(AimSurface.KeyboardCursor, 0);
+        }
+
+        private void Grant(string abilityId, int slot)
+        {
+            int id = AbilityIdRegistry.GetId(abilityId);
+            if (!_engine.World.Has<GrantedSlotBuffer>(Hero))
+            {
+                _engine.World.Add(Hero, default(GrantedSlotBuffer));
+            }
+
+            ref GrantedSlotBuffer granted = ref _engine.World.Get<GrantedSlotBuffer>(Hero);
+            granted.Grant(slot, id, sourceTagId: 0);
+        }
+
+        private void ClickSelect(Vector2 screenCm)
+        {
+            AimMouse(screenCm);
+            ClickLeft();
+        }
+
+        private Entity CollectionOwner(string key) => CollectionView(key).Owner;
+
+        private Entity CollectionMember(string key)
+        {
+            EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Entity owner = CollectionOwner(key);
+            Span<Entity> members = stackalloc Entity[Math.Max(CollectionCount(key), 1)];
+            int copied = collections.CopyEntities(owner, key, members);
+            if (copied <= 0)
+            {
+                throw new InvalidOperationException($"collection '{key}' has no members");
+            }
+
+            return members[0];
+        }
+
+        private EntityCollectionView CollectionView(string key)
+        {
+            EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Span<EntityCollectionHandle> handles = stackalloc EntityCollectionHandle[Math.Max(collections.CollectionCount, 1)];
+            int count = collections.CopyActiveHandles(handles);
+            for (int i = 0; i < count; i++)
+            {
+                if (collections.TryGetView(handles[i], out EntityCollectionView view) &&
+                    string.Equals(view.Key, key, StringComparison.Ordinal))
+                {
+                    return view;
+                }
+            }
+
+            throw new InvalidOperationException($"collection '{key}' missing");
+        }
+
+        private int CastCount()
+        {
+            CommandIntentSubmissionBuffer submissions = _engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
+                ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
+            return submissions.CastCount;
+        }
+
+        private void AssertCastSubmission(int slot, Entity target, string step)
+        {
+            CommandIntentSubmissionBuffer submissions = _engine.GetService(CoreServiceKeys.CommandIntentSubmissions)
+                ?? throw new InvalidOperationException("CommandIntentSubmissions missing.");
+            Assert.That(submissions.CastCount, Is.GreaterThan(0), Diag(step));
+            bool found = false;
+            for (int i = 0; i < submissions.CastCount; i++)
+            {
+                CastIntentSubmission cast = submissions.Cast(i);
+                if (cast.Slot != slot)
+                {
+                    continue;
+                }
+
+                Assert.That(cast.HasTarget, Is.True, Diag(step));
+                Assert.That(cast.Target, Is.EqualTo(target), Diag(step));
+                Assert.That(cast.HasGround, Is.False, Diag(step));
+                found = true;
+            }
+
+            Assert.That(found, Is.True, Diag(step));
+        }
+
         private void AssertBootstrapped()
         {
             PlayerInputHandler input = _engine.GetService(CoreServiceKeys.InputHandler)
@@ -654,6 +802,7 @@ public sealed class AimControlSchemesShowcaseAcceptanceTests
             "f1" => "Aim.CastMode.Smart",
             "f2" => "Aim.CastMode.AimRelease",
             "f3" => "Aim.CastMode.AimClick",
+            "f4" => "Aim.CastMode.TargetFirst",
             _ => throw new ArgumentOutOfRangeException(nameof(key)),
         };
 
