@@ -285,28 +285,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.State = EffectState.Calculate;
                         effect.State = EffectState.Apply;
 
-                        if (World.IsAlive(context.Target))
+                        if (!World.IsAlive(context.Target))
                         {
-                            if (World.Has<ActiveEffectContainer>(context.Target))
+                            // The target was destroyed after the effect was proposed: there is nothing to apply it to.
+                            effect.State = EffectState.Committed;
+                            AddFixed(_effectsToDestroy, effectEntity, nameof(_effectsToDestroy));
+                        }
+                        else if (World.Has<ActiveEffectContainer>(context.Target))
+                        {
+                            ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
+                            if (!container.Add(effectEntity))
                             {
-                                ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
-                                if (!container.Add(effectEntity))
-                                {
-                                    throw CreateActiveEffectContainerCapacityExceeded(context.Target, effectEntity);
-                                }
+                                throw CreateActiveEffectContainerCapacityExceeded(context.Target, effectEntity);
+                            }
 
-                                AddFixed(_effectsToActivate, effectEntity, nameof(_effectsToActivate));
-                            }
-                            else
-                            {
-                                AddFixed(_pendingCreateContainer, new PendingCreateContainer { Target = context.Target }, nameof(_pendingCreateContainer));
-                                AddFixed(_pendingAttach, new PendingAttach { Target = context.Target, Effect = effectEntity }, nameof(_pendingAttach));
-                            }
+                            AddFixed(_effectsToActivate, effectEntity, nameof(_effectsToActivate));
                         }
                         else
                         {
-                            throw new InvalidOperationException(
-                                $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.TargetUnavailable: target={context.Target.Id}, effect={effectEntity.Id}.");
+                            AddFixed(_pendingCreateContainer, new PendingCreateContainer { Target = context.Target }, nameof(_pendingCreateContainer));
+                            AddFixed(_pendingAttach, new PendingAttach { Target = context.Target, Effect = effectEntity }, nameof(_pendingAttach));
                         }
 
                         ConsumeWork(ref workUnits);
@@ -369,12 +367,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             return false;
                         }
                         var item = _pendingAttach[_playbackCursor++];
+                        if (!World.IsAlive(item.Effect)) { ConsumeWork(ref workUnits); continue; }
                         if (!World.IsAlive(item.Target))
                         {
-                            throw new InvalidOperationException(
-                                $"GAS.ACTIVE_EFFECT_CONTAINER.ERR.TargetUnavailable: target={item.Target.Id}, effect={item.Effect.Id}.");
+                            World.Destroy(item.Effect);
+                            ConsumeWork(ref workUnits);
+                            continue;
                         }
-                        if (!World.IsAlive(item.Effect)) { ConsumeWork(ref workUnits); continue; }
                         if (World.Has<ActiveEffectContainer>(item.Target))
                         {
                             ref var container = ref World.Get<ActiveEffectContainer>(item.Target);

@@ -115,6 +115,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectApplication_TargetDestroyedBeforeApply_DiscardsEffect()
+        {
+            using var world = World.Create();
+            Entity target = world.Create();
+            Entity effect = world.Create(
+                new GameplayEffect { LifetimeKind = EffectLifetimeKind.Infinite, State = EffectState.Pending },
+                new EffectContext { Source = target, Target = target },
+                new EffectModifiers());
+            world.Destroy(target);
+            using var application = new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock());
+
+            while (!application.UpdateSlice(0f, int.MaxValue)) { }
+
+            That(world.IsAlive(effect), Is.False);
+        }
+
+        [Test]
         public void GraphTargetList_FilterRelationship_RejectsUnregisteredRelationshipType()
         {
             using var world = World.Create();
