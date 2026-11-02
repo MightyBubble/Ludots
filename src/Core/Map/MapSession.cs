@@ -181,6 +181,9 @@ namespace Ludots.Core.Map
                             world.Remove<PresentationDestroyEventPublished>(toDestroy[i]);
                         }
 
+                        // The presentation destroy finishes on a later frame; a session reopened under the
+                        // same MapId before then must not adopt this entity as its own member.
+                        world.Remove<MapEntity>(toDestroy[i]);
                         continue;
                     }
 
