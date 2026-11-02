@@ -1,5 +1,6 @@
 using System.Reflection;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -101,6 +102,25 @@ public sealed class S14RegistryIsolationTests
         Assert.That(bound.GraphIds.GetId("Graph.Bound.Only"), Is.EqualTo(1));
         Assert.That(ambient.GraphIds.GetId("Graph.Bound.Only"), Is.EqualTo(ambient.GraphIds.InvalidId));
         Assert.That(GraphIdRegistry.GetId("Graph.Bound.Only"), Is.EqualTo(GraphIdRegistry.InvalidId));
+    }
+
+    [Test]
+    public void AttributeEventTagMapping_BelongsToTheBoundSet()
+    {
+        var first = new ModRegistrySet();
+        ModRegistryAmbient.Bind(first);
+        int attributeId = AttributeRegistry.Register("Health");
+        int eventTagId = TagRegistry.Register("Event.Attribute.Health.Changed");
+        AttributeEventTagRegistry.Register(attributeId, eventTagId);
+
+        ModRegistryAmbient.Bind(new ModRegistrySet());
+        Assert.That(AttributeEventTagRegistry.GetEventTagId(attributeId), Is.EqualTo(TagRegistry.InvalidId));
+
+        ModRegistryAmbient.Bind(first);
+        Assert.That(AttributeEventTagRegistry.GetEventTagId(attributeId), Is.EqualTo(eventTagId));
+
+        AttributeRegistry.Clear();
+        Assert.That(AttributeEventTagRegistry.GetEventTagId(attributeId), Is.EqualTo(TagRegistry.InvalidId));
     }
 
     [Test]
