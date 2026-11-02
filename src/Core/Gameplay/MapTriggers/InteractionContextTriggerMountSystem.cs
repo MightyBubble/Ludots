@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.MapTriggers
@@ -59,7 +60,9 @@ namespace Ludots.Core.Gameplay.MapTriggers
     public sealed class InteractionContextTriggerMountSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _activeContextQuery =
-            new QueryDescription().WithAny<InteractionContextInstance, InteractionContextInstances>();
+            new QueryDescription()
+                .WithAny<InteractionContextInstance, InteractionContextInstances>()
+                .WithNone<PresentationDestroyPending>();
 
         private readonly TriggerManager _triggerManager;
         private readonly InteractionContextProfileRegistry _contextProfiles;
@@ -178,9 +181,11 @@ namespace Ludots.Core.Gameplay.MapTriggers
             // deactivated) no longer matches the component query, so the loop above cannot
             // unmount its stale context mounts. Owning no context components means its
             // desired set is empty — remove every context-owned mount it still carries.
+            // A subject awaiting presentation destroy leaves the scan too; its mounts are reclaimed
+            // by OnContextOwnerDestroyed, which runs Deactivated only while its map is still active.
             foreach (Entity subject in retired)
             {
-                if (!current.Contains(subject) && World.IsAlive(subject))
+                if (!current.Contains(subject) && World.IsAlive(subject) && !World.Has<PresentationDestroyPending>(subject))
                 {
                     RemoveAllContextMounts(subject);
                 }
