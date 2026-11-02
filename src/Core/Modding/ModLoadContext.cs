@@ -13,7 +13,7 @@ namespace Ludots.Core.Modding
         private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.Ordinal);
         private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.Ordinal);
         private readonly HashSet<string> _processSharedAssemblyNames;
-        private readonly Func<AssemblyName, Assembly> _sharedAssemblyResolver;
+        private Func<AssemblyName, Assembly>? _sharedAssemblyResolver;
 
         public ModLoadContext(
             Func<AssemblyName, Assembly> sharedAssemblyResolver,
@@ -25,6 +25,19 @@ namespace Ludots.Core.Modding
                 : new HashSet<string>(
                     processSharedAssemblyNames.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()),
                     StringComparer.Ordinal);
+            Unloading += static context => ((ModLoadContext)context).ReleaseUnloadRoots();
+        }
+
+        // The runtime pins an unloading context with a strong handle until no object references its
+        // assemblies. Anything this context still references (its assemblies, the host resolver that
+        // reaches mod-registered callbacks) would close that loop and keep the context, and the whole
+        // engine behind the resolver, alive forever.
+        private void ReleaseUnloadRoots()
+        {
+            _sharedAssemblyResolver = null;
+            _managedAssembliesByPath.Clear();
+            _resolvers.Clear();
+            _registeredMainAssemblyPaths.Clear();
         }
 
         public void RegisterMainAssemblyPath(string modMainAssemblyPath)

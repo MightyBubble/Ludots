@@ -10,6 +10,7 @@ public sealed class ModRegistrySet
         Tags = CreateTags();
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
+        AttributeEventTagIds = new int[AttributeRegistry.MaxAttributes];
         AbilityIds = CreateAbilityIds();
         AbilityCategories = CreateAbilityCategories();
         EffectTemplateIds = CreateEffectTemplateIds();
@@ -21,6 +22,7 @@ public sealed class ModRegistrySet
     public IdentityTable Tags { get; private set; }
     public IdentityTable Attributes { get; private set; }
     public AttributeRegistry.AttributeConstraints[] AttributeConstraints { get; private set; }
+    public int[] AttributeEventTagIds { get; private set; }
     public IdentityTable AbilityIds { get; private set; }
     public IdentityTable AbilityCategories { get; private set; }
     public IdentityTable EffectTemplateIds { get; private set; }
@@ -62,6 +64,7 @@ public sealed class ModRegistrySet
     {
         Attributes = CreateAttributes();
         AttributeConstraints = new AttributeRegistry.AttributeConstraints[AttributeRegistry.MaxAttributeIds];
+        AttributeEventTagIds = new int[AttributeRegistry.MaxAttributes];
     }
     public void ReplaceAbilityIds()
     {
