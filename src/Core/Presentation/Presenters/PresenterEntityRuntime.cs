@@ -5041,13 +5041,17 @@ namespace Ludots.Core.Presentation.Presenters
                 WorldScale = parentScale,
                 WorldFacing = parentFacing,
             };
+            PresenterInstanceTransformOverride instanceOverride = _world.Has<PresenterInstanceTransformOverride>(child)
+                ? _world.Get<PresenterInstanceTransformOverride>(child)
+                : default;
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 performerSnapshot,
                 parentSnapshot,
                 true,
                 default,
                 false,
-                default);
+                definition.PositionOffset,
+                instanceOverride);
             return ApplyResolvedTransform(
                 child,
                 ref position,
