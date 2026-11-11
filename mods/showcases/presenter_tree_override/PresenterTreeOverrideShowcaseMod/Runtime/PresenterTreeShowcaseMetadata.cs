@@ -1,9 +1,26 @@
 using System;
+using System.Numerics;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 
 namespace PresenterTreeOverrideShowcaseMod.Runtime
 {
+    internal readonly struct PresenterTreeCameraTour
+    {
+        public PresenterTreeCameraTour(float stopSeconds, CameraPoseRequest[] poses)
+        {
+            StopSeconds = stopSeconds;
+            Poses = poses;
+        }
+
+        public float StopSeconds { get; }
+        public CameraPoseRequest[] Poses { get; }
+
+        public int StopIndexAt(float elapsedSeconds) => (int)(elapsedSeconds / StopSeconds) % Poses.Length;
+    }
+
     internal readonly struct PresenterTreeRiderSchedule
     {
         public PresenterTreeRiderSchedule(
@@ -64,6 +81,70 @@ namespace PresenterTreeOverrideShowcaseMod.Runtime
             return true;
         }
 
+        /// <summary>
+        /// 巡游第 0 站固定是地图的 DefaultCamera 全景，后面依次是 cameraTour.stops；
+        /// 站点不写的 yaw / fov 沿用全景，保证整段巡游朝向一致。
+        /// </summary>
+        public static bool TryReadCameraTour(GameEngine engine, out PresenterTreeCameraTour tour)
+        {
+            tour = default;
+            if (!TryGetSection(engine, out JsonObject section, out string mapId) ||
+                !section.TryGetPropertyValue("cameraTour", out JsonNode? tourNode) ||
+                tourNode == null)
+            {
+                return false;
+            }
+
+            JsonObject tourObj = tourNode as JsonObject
+                ?? throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.cameraTour must be an object.");
+            CameraConfig overview = engine.CurrentMapSession!.MapConfig!.DefaultCamera
+                ?? throw new InvalidOperationException($"Map '{mapId}' cameraTour requires DefaultCamera as the overview stop.");
+            float stopSeconds = ReadRequiredFloat(tourObj, mapId, "stopSeconds");
+            if (stopSeconds <= 0f)
+            {
+                throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.cameraTour.stopSeconds must be > 0.");
+            }
+
+            JsonArray stops = tourObj["stops"] as JsonArray
+                ?? throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.cameraTour.stops must be an array.");
+            if (stops.Count == 0)
+            {
+                throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.cameraTour.stops must not be empty.");
+            }
+
+            var poses = new CameraPoseRequest[stops.Count + 1];
+            poses[0] = new CameraPoseRequest
+            {
+                TargetCm = new Vector2(
+                    overview.TargetXCm ?? throw new InvalidOperationException($"Map '{mapId}' DefaultCamera.TargetXCm is required for cameraTour."),
+                    overview.TargetYCm ?? throw new InvalidOperationException($"Map '{mapId}' DefaultCamera.TargetYCm is required for cameraTour.")),
+                Yaw = overview.Yaw,
+                Pitch = overview.Pitch,
+                DistanceCm = overview.DistanceCm,
+                FovYDeg = overview.FovYDeg,
+            };
+
+            for (int i = 0; i < stops.Count; i++)
+            {
+                JsonObject stop = stops[i] as JsonObject
+                    ?? throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.cameraTour.stops[{i}] must be an object.");
+                string context = $"cameraTour.stops[{i}]";
+                poses[i + 1] = new CameraPoseRequest
+                {
+                    TargetCm = new Vector2(
+                        ReadRequiredFloat(stop, mapId, "targetXCm", context),
+                        ReadRequiredFloat(stop, mapId, "targetYCm", context)),
+                    Yaw = overview.Yaw,
+                    Pitch = ReadRequiredFloat(stop, mapId, "pitch", context),
+                    DistanceCm = ReadRequiredFloat(stop, mapId, "distanceCm", context),
+                    FovYDeg = overview.FovYDeg,
+                };
+            }
+
+            tour = new PresenterTreeCameraTour(stopSeconds, poses);
+            return true;
+        }
+
         private static bool TryGetSection(GameEngine engine, out JsonObject section, out string mapId)
         {
             section = null!;
@@ -80,17 +161,18 @@ namespace PresenterTreeOverrideShowcaseMod.Runtime
             return true;
         }
 
-        private static float ReadRequiredFloat(JsonObject section, string mapId, string key)
+        private static float ReadRequiredFloat(JsonObject section, string mapId, string key, string? context = null)
         {
+            string path = context == null ? $"{SectionKey}.{key}" : $"{SectionKey}.{context}.{key}";
             if (!section.TryGetPropertyValue(key, out JsonNode? valueNode) || valueNode == null)
             {
-                throw new InvalidOperationException($"Map '{mapId}' must declare metadata.{SectionKey}.{key}.");
+                throw new InvalidOperationException($"Map '{mapId}' must declare metadata.{path}.");
             }
 
             float value = valueNode.GetValue<float>();
             if (!float.IsFinite(value))
             {
-                throw new InvalidOperationException($"Map '{mapId}' metadata.{SectionKey}.{key} must be finite.");
+                throw new InvalidOperationException($"Map '{mapId}' metadata.{path} must be finite.");
             }
 
             return value;
