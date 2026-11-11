@@ -89,6 +89,8 @@
 | 不配本地座位（`startupLocalSeats` + 地图 `Players`）时，Raylib 实机不做可见性裁剪，画面里一个外观都不画，也不报错 | 使用门槛，待评估是否该报错 |
 | 模板子件没有 `WorldPositionCm` 时不会有画面变换组件，`SourceHasVisualTransform` 条件把它静默跳过，子件不出外观 | 使用门槛，待评估是否该报错 |
 | 走批量摆放路径（D4 的 `PresenterParamOverrides` 只能走这条）时模板必须自带 `WorldPositionCm`，于是 `PositionXCm` 不生效，坐标只能写在 `Overrides.WorldPositionCm` | 使用门槛 |
+| 骑士身体的渲染路径写成 `SkinnedMesh` 时，身体按静止姿势画、不播动画，挂在手骨上的剑却跟着动画走，剑看起来离了手，也不报错。只有 `GpuSkinnedInstance` 会让身体播动画，本演示用它 | 待评估：`SkinnedMesh` 配了动画时该报错还是补上动画 |
+| 软件渲染（llvmpipe）下，场景里有 `GpuSkinnedInstance` 时整帧 3D 画面全黑，只剩名牌文字 | 环境限制；沙箱截图时临时把骑士改成 `SkinnedMesh`，所以截图里剑不在手上，B2 以自动化验收为准 |
 | 大块地面只按属主中心参与裁剪，近景时会被整块裁掉；核心层没有数据入口声明包围盒 | 本演示把地面拆成 12 块绕开 |
 | 地图上给某一座建筑里的某个外观子物体单独覆盖（E1）、按路径增删子件（D3）、`attach:false` 的独立实体（D5）、骨骼按名字引用 | 后续 |
 

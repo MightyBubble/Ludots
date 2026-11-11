@@ -1626,7 +1626,7 @@
           "assetKind": "SkinnedMesh",
           "assetId": "blacksmith.worker.knight",
           "materialId": "default_surface",
-          "renderPath": "SkinnedMesh",
+          "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable"
         }
       },
