@@ -609,6 +609,13 @@ namespace Ludots.Core.Presentation.Presenters
                 return;
             }
 
+            // 局部变换是单位、又没有子级的静止子物体不会进 bootstrap，父级也不再同步。
+            // 实例位姿覆盖只能在这次创建里叠进 InheritParent，否则会停在属主原点。
+            if (TryInitializeInheritedTransformOverride(presenter, in state, definition))
+            {
+                return;
+            }
+
             Entity owner = state.OwnerEntity;
             bool hasOwnerTransform = _world.IsAlive(owner) && _world.Has<VisualTransform>(owner);
             VisualTransform ownerTransform = hasOwnerTransform ? _world.Get<VisualTransform>(owner) : VisualTransform.Default;
@@ -643,11 +650,71 @@ namespace Ludots.Core.Presentation.Presenters
             PresenterDefinition definition)
         {
             if (definition.Behaviors == null ||
-                !TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out _))
+                !TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out _) ||
+                !TryReadParentWorldTransform(
+                    presenter,
+                    out Vector3 parentPosition,
+                    out Quaternion parentRotation,
+                    out PresenterWorldFacing parentFacing,
+                    out Vector3 parentScale))
             {
                 return false;
             }
 
+            ApplyParentAttachmentTransform(
+                presenter,
+                in state,
+                definition,
+                in parentPosition,
+                in parentRotation,
+                in parentFacing,
+                in parentScale);
+            return true;
+        }
+
+        private bool TryInitializeInheritedTransformOverride(
+            Entity presenter,
+            in PresenterState state,
+            PresenterDefinition definition)
+        {
+            if (!_world.Has<PresenterInstanceTransformOverride>(presenter) ||
+                !_world.Get<PresenterInstanceTransformOverride>(presenter).HasOverride)
+            {
+                return false;
+            }
+
+            if (!TryReadParentWorldTransform(
+                    presenter,
+                    out Vector3 parentPosition,
+                    out Quaternion parentRotation,
+                    out PresenterWorldFacing parentFacing,
+                    out Vector3 parentScale))
+            {
+                return false;
+            }
+
+            ApplyInheritedParentTransform(
+                presenter,
+                in state,
+                definition,
+                in parentPosition,
+                in parentRotation,
+                in parentFacing,
+                in parentScale);
+            return true;
+        }
+
+        private bool TryReadParentWorldTransform(
+            Entity presenter,
+            out Vector3 position,
+            out Quaternion rotation,
+            out PresenterWorldFacing facing,
+            out Vector3 scale)
+        {
+            position = default;
+            rotation = Quaternion.Identity;
+            facing = default;
+            scale = Vector3.One;
             Entity parent = _world.Has<PresenterParent>(presenter)
                 ? _world.Get<PresenterParent>(presenter).Parent
                 : Entity.Null;
@@ -661,14 +728,10 @@ namespace Ludots.Core.Presentation.Presenters
                 return false;
             }
 
-            ApplyParentAttachmentTransform(
-                presenter,
-                in state,
-                definition,
-                _world.Get<PresenterWorldPosition>(parent).Value,
-                _world.Get<PresenterWorldRotation>(parent).Value,
-                _world.Get<PresenterWorldFacing>(parent),
-                _world.Get<PresenterWorldScale>(parent).Value);
+            position = _world.Get<PresenterWorldPosition>(parent).Value;
+            rotation = _world.Get<PresenterWorldRotation>(parent).Value;
+            facing = _world.Get<PresenterWorldFacing>(parent);
+            scale = _world.Get<PresenterWorldScale>(parent).Value;
             return true;
         }
 
