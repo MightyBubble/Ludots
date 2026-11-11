@@ -5887,6 +5887,28 @@
       ]
     },
     {
+      "id": "presenter_tree_override",
+      "path": "mods/showcases/presenter_tree_override/PresenterTreeOverrideShowcaseMod",
+      "projectPath": "PresenterTreeOverrideShowcaseMod.csproj",
+      "title": "外观树与覆盖演示",
+      "summary": "镜头自动巡游 9 个站点：同一份外观定义摆两份，右边那份换位置、换颜色、换塔顶或多一个吸附；巡逻车绕圈时旗和车尾灯不掉位，乘客上下车；同一模板的营地和信号塔各带自己的标题和颜色。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "presenter",
+        "attachment",
+        "override"
+      ],
+      "binding": "presenter_tree_override_showcase",
+      "preset": "presenter_tree_override_showcase_raylib",
+      "docsPath": "gitbook/architecture/presenter-transform-and-attachment.md",
+      "readmePath": "mods/showcases/presenter_tree_override/showcase-design.md",
+      "acceptanceTest": "PresenterTreeOverrideShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/presenter-tree-override",
+      "screenshot": "artifacts/acceptance/presenter-tree-override/overview.png",
+      "status": "active"
+    },
+    {
       "id": "presenter_blacksmith_large_world_entry",
       "path": "mods/showcases/presenter_blacksmith_large_world_entry/PresenterBlacksmithLargeWorldEntryMod",
       "projectPath": "PresenterBlacksmithLargeWorldEntryMod.csproj",

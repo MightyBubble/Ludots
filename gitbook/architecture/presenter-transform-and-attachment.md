@@ -200,7 +200,8 @@ Attachment behavior 将子 presenter 挂载到父 presenter 的骨骼上。
 ```csharp
 public struct AttachmentConfig
 {
-    public int BoneId;                   // 骨骼 ID（由 adapter 解析）
+    public AttachmentTarget Target;     // Parent：挂父 presenter；Bone：挂父 presenter 的骨骼
+    public int BoneId;                   // 骨骼 ID（由 adapter 解析），只在 Target=Bone 时允许写
     public Vector3 Offset;              // 骨骼空间偏移
     public Quaternion RotationOffset;   // 骨骼空间旋转偏移
     public bool InheritScale;           // 是否继承骨骼缩放（默认 false）
@@ -237,6 +238,23 @@ public interface IBoneTransformProvider
 ### 5.4 Attachment 与 Grounding 的交互
 
 骨骼挂载的 presenter **不做 grounding**。即使 `GroundingMode != None`，当 `TransformSource == BoneAttached` 时跳过 grounding。骨骼位置已经包含了角色的地面贴合信息。
+
+### 5.5 吸附与子物体位姿覆盖的叠加
+
+children 条目上的 `overrides.transform` 落成 `PresenterInstanceTransformOverride`。子物体同时有吸附时，先算吸附，再叠覆盖：
+
+```
+attachRotation = parentRotation × rotationOffset
+position = parentPosition + attachRotation 方向上的 offset + attachRotation × override.localPosition
+rotation = attachRotation × override.localRotation
+scale    = (inheritScale ? parentScale : 1) × override.localScale
+```
+
+覆盖偏移只按吸附旋转转，不乘吸附缩放。父节点每帧传播（批量路径、属主快速路径、单实体路径）都走同一条叠加，父节点移动时覆盖和锚点偏移不会丢。
+
+加载期校验：
+- 写了 `boneId` 而 `target` 不是 `Bone`，或 `target` 是 `Bone` 却没写 `boneId`，直接报错。
+- 子定义声明了 `anchor.offset` 时，children 条目不能再写 `overrides.transform.localPosition`，也不能用 `instanceBehaviors` 再加 Attachment；这两条在 `instanceChildren` 里同样检查。
 
 ## 6 Spline 驱动的变换
 
@@ -297,3 +315,13 @@ public struct SplineConfig
 | smoke | InheritParent | None | 相对 furnace 偏移 (0,5,0)，不贴合 |
 | worker | SplineDriven | SnapToGround | 样条巡逻，贴合地面 |
 | worker_hammer（如有） | BoneAttached | 跳过 | 挂载到工人右手骨骼 |
+
+## 9 外观树与覆盖演示
+
+`mods/showcases/presenter_tree_override` 把本页的覆盖与吸附规则逐条摆成能看的展台，镜头自动巡游。设计、场景和已知边界见该目录下的 `showcase-design.md`，逐案例验收是 `PresenterTreeOverrideShowcaseAcceptanceTests`。
+
+搭类似场景时要注意的三个使用门槛：
+
+- Raylib 实机要有本地座位（`game.json` 的 `startupLocalSeats` 加地图的 `Teams` / `Players`），否则不做可见性裁剪，画面里不画任何外观。
+- 模板子件要带 `WorldPositionCm`，才会有画面变换组件；否则带 `SourceHasVisualTransform` 条件的生成规则不会给它建外观。
+- 地图摆放写 `PresenterParamOverrides` 只能走批量路径，这条路径要求模板自带 `WorldPositionCm`，坐标要写在 `Overrides.WorldPositionCm`，`PositionXCm` 不生效。
