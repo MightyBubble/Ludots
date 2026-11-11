@@ -84,8 +84,8 @@
 | 吸附结果整个覆写掉子物体的位姿覆盖（B3） | 已修 |
 | 写了 `boneId` 没写 `target` 时静默按挂父节点处理（B2） | 已修，改为加载报错 |
 | `instanceChildren` / `instanceBehaviors` 的冲突校验漏查 | 已修 |
-| 静止父节点（带 `PresentationStaticTransform`）下，子定义自带的吸附偏移不生效，名牌贴在地上（S1） | 修复中 |
-| A1 熔炉（`InstancedStaticMesh`）丢了位姿覆盖（S2） | 修复中 |
+| 静止父节点（带 `PresentationStaticTransform`）下，子定义自带的吸附偏移不生效，名牌贴在地上（S1） | 已修 |
+| A1 熔炉（`InstancedStaticMesh`）丢了位姿覆盖（S2） | 已修 |
 | 不配本地座位（`startupLocalSeats` + 地图 `Players`）时，Raylib 实机不做可见性裁剪，画面里一个外观都不画，也不报错 | 使用门槛，待评估是否该报错 |
 | 模板子件没有 `WorldPositionCm` 时不会有画面变换组件，`SourceHasVisualTransform` 条件把它静默跳过，子件不出外观 | 使用门槛，待评估是否该报错 |
 | 走批量摆放路径（D4 的 `PresenterParamOverrides` 只能走这条）时模板必须自带 `WorldPositionCm`，于是 `PositionXCm` 不生效，坐标只能写在 `Overrides.WorldPositionCm` | 使用门槛 |
