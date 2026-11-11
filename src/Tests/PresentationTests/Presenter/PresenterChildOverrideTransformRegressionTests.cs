@@ -415,6 +415,213 @@ namespace Ludots.Tests.Presentation
                 "bone attachment tracks a later bone pose");
         }
 
+        [Test]
+        public void StaticOwner_DefinitionParentAttachment_LandsAboveRootWithoutTick()
+        {
+            const float hover = 3.6f;
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int textId = definitions.Register("s1.text", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    WorldTextSlot(0, 9101),
+                    ParentAttachmentSlot(1, new Vector3(0f, hover, 0f)),
+                ],
+            });
+            int meshId = definitions.Register("s1.mesh", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    IdentityMeshSlot(0, 9102, VisualMobility.Static, VisualRenderPath.StaticMesh),
+                    ParentAttachmentSlot(1, new Vector3(0f, hover, 0f)),
+                ],
+            });
+            int rootId = definitions.Register("s1.root", new PresenterDefinition
+            {
+                Behaviors = [IdentityMeshSlot(0, 9100, VisualMobility.Static, VisualRenderPath.StaticMesh)],
+                Children =
+                [
+                    new ChildPresenterRef { DefinitionId = textId },
+                    new ChildPresenterRef { DefinitionId = meshId },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateStaticOwner(world, new Vector3(9f, 0f, 10f));
+            Entity root = runtime.CreateHierarchy(
+                definitions, rootId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                Vector3.Zero, stableId: 9100, Entity.Null, definitions.Get(rootId));
+            MarkBootstrapLikeRuntime(world, definitions, root);
+            Entity text = FindChild(world, root, textId);
+            Entity mesh = FindChild(world, root, meshId);
+
+            Assert.That(definitions.Get(textId).RequiresBootstrapProcessing, Is.False, PoseEvidence(world, text, definitions.Get(textId)));
+            Assert.That(definitions.Get(meshId).RequiresBootstrapProcessing, Is.False, PoseEvidence(world, mesh, definitions.Get(meshId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(text), Is.False, PoseEvidence(world, text, definitions.Get(textId)));
+            Assert.That(world.Has<PerfHasAttachmentTick>(text), Is.False, PoseEvidence(world, text, definitions.Get(textId)));
+            Assert.That(world.Has<PerfHasAttachmentTick>(mesh), Is.False, PoseEvidence(world, mesh, definitions.Get(meshId)));
+            Assert.That(world.Has<PerfTransformSyncTick>(root), Is.False, PoseEvidence(world, root, definitions.Get(rootId)));
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using PresenterBehaviorSystem behaviors = CreateBehaviors(world, runtime, definitions);
+            RunStaticFrames(sync, behaviors, 2);
+
+            Vector3 expected = world.Get<PresenterWorldPosition>(root).Value + new Vector3(0f, hover, 0f);
+            AssertClose(world.Get<PresenterWorldPosition>(text).Value, expected, "world text attachment " + PoseEvidence(world, text, definitions.Get(textId)));
+            AssertClose(world.Get<PresenterWorldPosition>(mesh).Value, expected, "static mesh attachment " + PoseEvidence(world, mesh, definitions.Get(meshId)));
+            Assert.That(world.Get<PresenterTransformSource>(text).Value, Is.EqualTo(TransformSource.AttachedToParent), PoseEvidence(world, text, definitions.Get(textId)));
+            Assert.That(world.Get<PresenterTransformSource>(mesh).Value, Is.EqualTo(TransformSource.AttachedToParent), PoseEvidence(world, mesh, definitions.Get(meshId)));
+        }
+
+        [Test]
+        public void StaticOwner_DefinitionParentAttachment_SurvivesBootstrappingParent()
+        {
+            const float hover = 3.6f;
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int textId = definitions.Register("s1.camp.text", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    WorldTextSlot(0, 9111),
+                    ParentAttachmentSlot(1, new Vector3(0f, hover, 0f)),
+                ],
+            });
+            int rootId = definitions.Register("s1.camp.root", new PresenterDefinition
+            {
+                Behaviors = [IdentityMeshSlot(0, 9110, VisualMobility.Static, VisualRenderPath.StaticMesh, new Vector3(0f, 0.04f, 0f))],
+                Children = [new ChildPresenterRef { DefinitionId = textId }],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateStaticOwner(world, new Vector3(4f, 0f, 8f));
+            Entity root = runtime.CreateHierarchy(
+                definitions, rootId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                Vector3.Zero, stableId: 9110, Entity.Null, definitions.Get(rootId));
+            MarkBootstrapLikeRuntime(world, definitions, root);
+            Entity text = FindChild(world, root, textId);
+
+            Assert.That(definitions.Get(rootId).RequiresBootstrapProcessing, Is.True, PoseEvidence(world, root, definitions.Get(rootId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(root), Is.True, PoseEvidence(world, root, definitions.Get(rootId)));
+            Assert.That(world.Has<PerfHasAttachmentTick>(text), Is.False, PoseEvidence(world, text, definitions.Get(textId)));
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using PresenterBehaviorSystem behaviors = CreateBehaviors(world, runtime, definitions);
+            RunStaticFrames(sync, behaviors, 2);
+
+            Vector3 expected = world.Get<PresenterWorldPosition>(root).Value + new Vector3(0f, hover, 0f);
+            AssertClose(world.Get<PresenterWorldPosition>(text).Value, expected, "bootstrap parent must not drop the definition attachment " + PoseEvidence(world, text, definitions.Get(textId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(root), Is.False, PoseEvidence(world, root, definitions.Get(rootId)));
+        }
+
+        [Test]
+        public void StaticOwner_ChildTransformOverride_LandsWithoutChildBootstrap()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int furnaceId = definitions.Register("s2.furnace", new PresenterDefinition
+            {
+                Behaviors = [IdentityMeshSlot(0, 9201, VisualMobility.Static, VisualRenderPath.InstancedStaticMesh)],
+            });
+            int plainId = definitions.Register("s2.plain", new PresenterDefinition
+            {
+                Behaviors = [IdentityMeshSlot(0, 9202, VisualMobility.Static, VisualRenderPath.StaticMesh)],
+            });
+            PresenterInstanceTransformOverride furnaceOverride = TransformOverride(new Vector3(2.4f, 0f, 0.6f), new Vector3(0.6f, 0.6f, 0.6f));
+            PresenterInstanceTransformOverride plainOverride = TransformOverride(new Vector3(-1.5f, 0f, 0.4f), new Vector3(0.5f, 0.5f, 0.5f));
+            int rootId = definitions.Register("s2.root", new PresenterDefinition
+            {
+                Children =
+                [
+                    new ChildPresenterRef { DefinitionId = furnaceId, TransformOverride = furnaceOverride },
+                    new ChildPresenterRef { DefinitionId = plainId, TransformOverride = plainOverride },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateStaticOwner(world, new Vector3(9f, 0f, 10f));
+            Entity root = runtime.CreateHierarchy(
+                definitions, rootId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                Vector3.Zero, stableId: 9200, Entity.Null, definitions.Get(rootId));
+            MarkBootstrapLikeRuntime(world, definitions, root);
+            Entity furnace = FindChild(world, root, furnaceId);
+            Entity plain = FindChild(world, root, plainId);
+
+            Assert.That(definitions.Get(furnaceId).RequiresBootstrapProcessing, Is.False, PoseEvidence(world, furnace, definitions.Get(furnaceId)));
+            Assert.That(definitions.Get(plainId).RequiresBootstrapProcessing, Is.False, PoseEvidence(world, plain, definitions.Get(plainId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(furnace), Is.False, PoseEvidence(world, furnace, definitions.Get(furnaceId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(plain), Is.False, PoseEvidence(world, plain, definitions.Get(plainId)));
+            Assert.That(world.Has<PresenterChildren>(furnace) && world.Get<PresenterChildren>(furnace).Count != 0, Is.False);
+            Assert.That(world.Has<PerfTransformSyncTick>(root), Is.False, PoseEvidence(world, root, definitions.Get(rootId)));
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using PresenterBehaviorSystem behaviors = CreateBehaviors(world, runtime, definitions);
+            RunStaticFrames(sync, behaviors, 2);
+
+            Vector3 rootPosition = world.Get<PresenterWorldPosition>(root).Value;
+            AssertClose(world.Get<PresenterWorldPosition>(furnace).Value, rootPosition + furnaceOverride.LocalPosition, "instanced static mesh override " + PoseEvidence(world, furnace, definitions.Get(furnaceId)));
+            AssertClose(world.Get<PresenterWorldScale>(furnace).Value, furnaceOverride.LocalScale, "instanced static mesh scale " + PoseEvidence(world, furnace, definitions.Get(furnaceId)));
+            AssertClose(world.Get<PresenterWorldPosition>(plain).Value, rootPosition + plainOverride.LocalPosition, "static mesh without local offset " + PoseEvidence(world, plain, definitions.Get(plainId)));
+            AssertClose(world.Get<PresenterWorldScale>(plain).Value, plainOverride.LocalScale, "static mesh scale " + PoseEvidence(world, plain, definitions.Get(plainId)));
+        }
+
+        [Test]
+        public void StaticOwner_BatchEntry_ChildTransformOverride_LandsWithoutChildBootstrap()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int childId = definitions.Register("s2.batch.child", new PresenterDefinition
+            {
+                Behaviors = [IdentityMeshSlot(0, 9211, VisualMobility.Static, VisualRenderPath.InstancedStaticMesh)],
+            });
+            PresenterInstanceTransformOverride childOverride = TransformOverride(new Vector3(2.4f, 0f, 0.6f), new Vector3(0.6f, 0.6f, 0.6f));
+            int rootId = definitions.Register("s2.batch.root", new PresenterDefinition
+            {
+                Children = [new ChildPresenterRef { DefinitionId = childId, TransformOverride = childOverride }],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateStaticOwner(world, new Vector3(9f, 0f, 10f));
+            var created = new Entity[1];
+            runtime.CreateEntityAnchoredRootBatch(
+                definitions,
+                rootId,
+                new[] { owner },
+                new[] { 1 },
+                new[] { 9210 },
+                new[]
+                {
+                    new VisualTransform
+                    {
+                        Position = new Vector3(9f, 0f, 10f),
+                        Rotation = Quaternion.Identity,
+                        Scale = Vector3.One,
+                    },
+                },
+                new[] { new CullState { IsVisible = true, LOD = LODLevel.High } },
+                definitions.Get(rootId),
+                created);
+            Entity root = created[0];
+            MarkBootstrapLikeRuntime(world, definitions, root);
+            Entity child = FindChild(world, root, childId);
+
+            Assert.That(definitions.Get(childId).RequiresBootstrapProcessing, Is.False, PoseEvidence(world, child, definitions.Get(childId)));
+            Assert.That(world.Has<PresenterBootstrapPending>(child), Is.False, PoseEvidence(world, child, definitions.Get(childId)));
+
+            using var sync = new PresenterEntityTransformSyncSystem(world, runtime, definitions);
+            using PresenterBehaviorSystem behaviors = CreateBehaviors(world, runtime, definitions);
+            RunStaticFrames(sync, behaviors, 2);
+
+            Vector3 rootPosition = world.Get<PresenterWorldPosition>(root).Value;
+            AssertClose(world.Get<PresenterWorldPosition>(child).Value, rootPosition + childOverride.LocalPosition, "batch entry override " + PoseEvidence(world, child, definitions.Get(childId)));
+            AssertClose(world.Get<PresenterWorldScale>(child).Value, childOverride.LocalScale, "batch entry scale " + PoseEvidence(world, child, definitions.Get(childId)));
+        }
+
         private static void AssertInheritedChild(
             World world,
             Entity parent,
@@ -594,6 +801,11 @@ namespace Ludots.Tests.Presentation
 
         private static BehaviorSlot ParentAttachmentSlot(int slot)
         {
+            return ParentAttachmentSlot(slot, new Vector3(0f, 1f, 0f));
+        }
+
+        private static BehaviorSlot ParentAttachmentSlot(int slot, Vector3 offset)
+        {
             return new BehaviorSlot
             {
                 SlotIndex = slot,
@@ -602,11 +814,118 @@ namespace Ludots.Tests.Presentation
                 Attachment = new AttachmentConfig
                 {
                     Target = AttachmentTarget.Parent,
-                    Offset = new Vector3(0f, 1f, 0f),
+                    Offset = offset,
                     RotationOffset = Quaternion.Identity,
                     InheritScale = false,
                 },
             };
+        }
+
+        private static BehaviorSlot WorldTextSlot(int slot, int textTokenId)
+        {
+            return new BehaviorSlot
+            {
+                SlotIndex = slot,
+                Kind = BehaviorKind.WorldText,
+                ActiveByDefault = true,
+                WorldText = new WorldTextConfig
+                {
+                    TextTokenId = textTokenId,
+                    FontSize = 18,
+                },
+            };
+        }
+
+        private static BehaviorSlot IdentityMeshSlot(int slot, int assetId, VisualMobility mobility, VisualRenderPath renderPath, Vector3 localOffset = default)
+        {
+            return new BehaviorSlot
+            {
+                SlotIndex = slot,
+                Kind = BehaviorKind.AssetBinding,
+                ActiveByDefault = true,
+                AssetBinding = new AssetBindingConfig
+                {
+                    AssetKind = AssetKind.Mesh,
+                    AssetId = assetId,
+                    RenderPath = renderPath,
+                    Mobility = mobility,
+                    LocalOffset = localOffset,
+                    LocalRotation = Quaternion.Identity,
+                    LocalScale = Vector3.One,
+                    AssetIdParamKey = -1,
+                },
+            };
+        }
+
+        private static Entity CreateStaticOwner(World world, Vector3 position)
+        {
+            Entity owner = CreateOwner(world, position, Quaternion.Identity);
+            world.Add(owner, new PresentationStaticTransform());
+            return owner;
+        }
+
+        private static void MarkBootstrapLikeRuntime(World world, PresenterDefinitionRegistry definitions, Entity presenter)
+        {
+            if (!world.IsAlive(presenter) || !world.Has<PresenterState>(presenter))
+            {
+                return;
+            }
+
+            int defId = world.Get<PresenterState>(presenter).DefId;
+            if (definitions.TryGet(defId, out PresenterDefinition definition) &&
+                definition.RequiresBootstrapProcessing &&
+                !world.Has<PresenterBootstrapPending>(presenter))
+            {
+                world.Add(presenter, new PresenterBootstrapPending());
+            }
+
+            if (!world.Has<PresenterChildren>(presenter))
+            {
+                return;
+            }
+
+            PresenterChildren children = world.Get<PresenterChildren>(presenter);
+            for (int i = 0; i < children.Count; i++)
+            {
+                MarkBootstrapLikeRuntime(world, definitions, children.Get(i));
+            }
+        }
+
+        private static void RunStaticFrames(PresenterEntityTransformSyncSystem sync, PresenterBehaviorSystem behaviors, int frames)
+        {
+            for (int i = 0; i < frames; i++)
+            {
+                sync.Update(0.016f);
+                behaviors.Update(0.016f);
+            }
+        }
+
+        private static Entity FindChild(World world, Entity parent, int definitionId)
+        {
+            PresenterChildren children = world.Get<PresenterChildren>(parent);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (world.Get<PresenterState>(child).DefId == definitionId)
+                {
+                    return child;
+                }
+            }
+
+            Assert.Fail($"Child definition {definitionId} was not created under {parent.Id}.");
+            return Entity.Null;
+        }
+
+        private static string PoseEvidence(World world, Entity presenter, PresenterDefinition definition)
+        {
+            Vector3 position = world.Get<PresenterWorldPosition>(presenter).Value;
+            Vector3 scale = world.Has<PresenterWorldScale>(presenter)
+                ? world.Get<PresenterWorldScale>(presenter).Value
+                : Vector3.Zero;
+            TransformSource source = world.Has<PresenterTransformSource>(presenter)
+                ? world.Get<PresenterTransformSource>(presenter).Value
+                : TransformSource.WorldFixed;
+            return $"pos={position} scale={scale} source={source} bootstrapPending={world.Has<PresenterBootstrapPending>(presenter)} attachmentTick={world.Has<PerfHasAttachmentTick>(presenter)} transformSync={world.Has<PerfTransformSyncTick>(presenter)} staticVisual={world.Has<PerfStaticStableVisual>(presenter)} requiresBootstrap={definition.RequiresBootstrapProcessing}";
         }
 
         private static BehaviorSlot InactiveSoundSlot(int slot)
