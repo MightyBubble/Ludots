@@ -2077,11 +2077,15 @@ namespace Ludots.Core.Presentation.Systems
             Quaternion normalizedParentRot = VisualMath.NormalizeOrIdentity(parentRot);
             Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
             Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
-            SetTransform(entity, TransformSource.AttachedToParent,
-                parentPos + Vector3.Transform(scaledOffset, normalizedParentRot),
-                VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? normalizedParentScale : Vector3.One,
-                parentFacing);
+            Vector3 position = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
+            Quaternion rotation = VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 scale = config.InheritScale ? normalizedParentScale : Vector3.One;
+            PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                ReadInstanceOverride(entity),
+                ref position,
+                ref rotation,
+                ref scale);
+            SetTransform(entity, TransformSource.AttachedToParent, position, rotation, scale, parentFacing);
         }
 
         private void ApplyBoneAttachment(Entity entity, int parentStableId, in AttachmentConfig config)
@@ -2107,10 +2111,18 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             Quaternion normalizedBoneRotation = VisualMath.NormalizeOrIdentity(boneRotation);
+            Vector3 position = bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation);
+            Quaternion rotation = VisualMath.NormalizeOrIdentity(normalizedBoneRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 scale = config.InheritScale ? VisualMath.NormalizeScale(boneScale) : Vector3.One;
+            PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                ReadInstanceOverride(entity),
+                ref position,
+                ref rotation,
+                ref scale);
             SetTransform(entity, TransformSource.BoneAttached,
-                bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation),
-                VisualMath.NormalizeOrIdentity(normalizedBoneRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? VisualMath.NormalizeScale(boneScale) : Vector3.One,
+                position,
+                rotation,
+                scale,
                 World.Has<PresenterWorldFacing>(entity) ? World.Get<PresenterWorldFacing>(entity) : default);
         }
 
@@ -2720,6 +2732,10 @@ namespace Ludots.Core.Presentation.Systems
             Chunk chunk)
         {
             ref Entity entityFirst = ref chunk.Entity(0);
+            bool composeOverride = chunk.Has<PresenterInstanceTransformOverride>();
+            Span<PresenterInstanceTransformOverride> transformOverrides = composeOverride
+                ? chunk.GetSpan<PresenterInstanceTransformOverride>()
+                : default;
             foreach (int index in chunk)
             {
                 if (!IsBehaviorActive(states[index].BehaviorActiveMask, slotIndex))
@@ -2742,12 +2758,21 @@ namespace Ludots.Core.Presentation.Systems
                 Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
                 Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
                 Vector3 resolvedPosition = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
-                Vector2 resolvedPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
                 Quaternion resolvedRotation = VisualMath.NormalizeOrIdentity(normalizedParentRot * VisualMath.NormalizeOrIdentity(config.RotationOffset));
                 PresenterWorldFacing resolvedFacing = World.Has<PresenterWorldFacing>(parentEntity)
                     ? World.Get<PresenterWorldFacing>(parentEntity)
                     : default;
                 Vector3 resolvedScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+                if (composeOverride)
+                {
+                    PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                        in transformOverrides[index],
+                        ref resolvedPosition,
+                        ref resolvedRotation,
+                        ref resolvedScale);
+                }
+
+                Vector2 resolvedPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
                 bool changed =
                     sources[index].Value != TransformSource.AttachedToParent ||
                     positions[index].Value != resolvedPosition ||

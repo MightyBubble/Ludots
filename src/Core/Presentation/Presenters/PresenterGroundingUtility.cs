@@ -171,6 +171,24 @@ namespace Ludots.Core.Presentation.Presenters
             return VisualMath.NormalizeOrIdentity(alignment * VisualMath.NormalizeOrIdentity(rotation));
         }
 
+        // 位姿覆盖是吸附结果之后的局部变换：偏移只按吸附旋转转，不乘吸附缩放。
+        public static void ComposeAttachmentSpaceOverride(
+            in PresenterInstanceTransformOverride instanceOverride,
+            ref Vector3 position,
+            ref Quaternion rotation,
+            ref Vector3 scale)
+        {
+            if (!instanceOverride.HasOverride)
+            {
+                return;
+            }
+
+            Quaternion attachmentRotation = VisualMath.NormalizeOrIdentity(rotation);
+            position += Vector3.Transform(instanceOverride.LocalPosition, attachmentRotation);
+            rotation = WorldPlane2D.ComposeVisualRotation(attachmentRotation, instanceOverride.LocalRotation);
+            scale = VisualMath.NormalizeScale(scale) * VisualMath.NormalizeScale(instanceOverride.LocalScale);
+        }
+
         private static PresenterResolvedTransform ApplyInstanceOverride(
             in Vector3 basePosition,
             in Quaternion baseRotation,

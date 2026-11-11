@@ -5082,13 +5082,27 @@ namespace Ludots.Core.Presentation.Presenters
                 ? normalizedParentScale * config.Offset
                 : config.Offset;
             Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            Quaternion nextRotation = VisualMath.NormalizeOrIdentity(
+                normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+            PresenterInstanceTransformOverride instanceOverride = _world.Has<PresenterInstanceTransformOverride>(child)
+                ? _world.Get<PresenterInstanceTransformOverride>(child)
+                : default;
+            if (instanceOverride.HasOverride)
+            {
+                PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                    in instanceOverride,
+                    ref nextPosition,
+                    ref nextRotation,
+                    ref nextScale);
+            }
+
             PresenterResolvedTransform resolved = new PresenterResolvedTransform
             {
                 Position = nextPosition,
-                Rotation = VisualMath.NormalizeOrIdentity(
-                    normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
+                Rotation = nextRotation,
                 Facing = parentFacing,
-                Scale = config.InheritScale ? normalizedParentScale : Vector3.One,
+                Scale = nextScale,
             };
             ref PresenterWorldPosition position = ref _world.Get<PresenterWorldPosition>(child);
             ref PresenterWorldPlanePosition planePosition = ref _world.Get<PresenterWorldPlanePosition>(child);
