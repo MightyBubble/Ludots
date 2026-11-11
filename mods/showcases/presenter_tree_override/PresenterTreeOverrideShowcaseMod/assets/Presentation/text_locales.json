@@ -1,0 +1,43 @@
+{
+  "defaultLocale": "zh-CN",
+  "locales": {
+    "zh-CN": {
+      "ptree.text.title_line": "{0}",
+      "ptree.title.a1": "A1 一棵树成套出现",
+      "ptree.title.a2": "A2 同一个灯柱：右边这根放大挪开",
+      "ptree.title.a3": "A3 同一个水晶：右边这颗改成红色",
+      "ptree.title.a4": "A4 同一座塔：右边这座换了塔顶",
+      "ptree.title.a5": "A5 同一个宝珠：右边这颗多一个吸附",
+      "ptree.title.cart_inner": "B1·B3·C1 巡逻车：小旗 / 车顶灯 / 车尾灯",
+      "ptree.title.cart_outer": "D1 同模板第二辆：整组件换掉绕圈参数",
+      "ptree.title.rider": "D6 乘客",
+      "ptree.title.knight": "B2 剑挂在右手骨骼上",
+      "ptree.title.camp_north": "D2 北营地",
+      "ptree.title.camp_harbor": "D2 港口营地",
+      "ptree.title.tent_north": "北营地·指挥帐",
+      "ptree.title.tent_harbor": "港口指挥帐",
+      "ptree.title.beacon_red": "D4 信号塔·红",
+      "ptree.title.beacon_green": "D4 信号塔·绿",
+      "ptree.title.beacon_blue": "D4 信号塔·蓝"
+    },
+    "en-US": {
+      "ptree.text.title_line": "{0}",
+      "ptree.title.a1": "A1 Whole tree spawns together",
+      "ptree.title.a2": "A2 Same lamppost: right one moved and scaled",
+      "ptree.title.a3": "A3 Same crystal: right one recolored",
+      "ptree.title.a4": "A4 Same tower: right one swapped its top",
+      "ptree.title.a5": "A5 Same orb: right one gets an extra attachment",
+      "ptree.title.cart_inner": "B1 B3 C1 Patrol cart: flags / roof lamp / rear lamp",
+      "ptree.title.cart_outer": "D1 Same template: orbit component replaced",
+      "ptree.title.rider": "D6 Rider",
+      "ptree.title.knight": "B2 Sword on the right hand bone",
+      "ptree.title.camp_north": "D2 North camp",
+      "ptree.title.camp_harbor": "D2 Harbor camp",
+      "ptree.title.tent_north": "North command tent",
+      "ptree.title.tent_harbor": "Harbor command tent",
+      "ptree.title.beacon_red": "D4 Beacon red",
+      "ptree.title.beacon_green": "D4 Beacon green",
+      "ptree.title.beacon_blue": "D4 Beacon blue"
+    }
+  }
+}

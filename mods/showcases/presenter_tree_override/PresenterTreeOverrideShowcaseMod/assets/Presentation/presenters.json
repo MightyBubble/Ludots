@@ -1,0 +1,1877 @@
+[
+  {
+    "id": "ptree.bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.ground"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.ground.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.ground"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.station.a1"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.a1.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.station.a1"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.station.a2"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.a2.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.station.a2"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.station.a3"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.a3.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.station.a3"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.station.a4"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.a4.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.station.a4"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.station.a5"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.a5.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.station.a5"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.cart"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.cart.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.cart"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.rider"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.rider.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.rider"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.knight"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.knight.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.knight"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.camp"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.camp.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.camp"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.camp.tent"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.camp.tent.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.camp.tent"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "ptree.beacon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePresenter",
+          "definitionId": "ptree.beacon.root",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "ptree.beacon"
+        },
+        "command": {
+          "kind": "DestroyPresenterScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.label.high",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "ptree.text.title_line",
+          "fontSize": 18,
+          "args": [
+            {
+              "source": "entityInfoTitle"
+            }
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.96,
+            0.86,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            3.6,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.label.mid",
+    "behaviors": [
+      {
+        "slot": "hud",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "ptree.text.title_line",
+          "fontSize": 18,
+          "args": [
+            {
+              "source": "entityInfoTitle"
+            }
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.96,
+            0.86,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            2.6,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.ground.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            -0.06,
+            0
+          ],
+          "localScale": [
+            64,
+            0.1,
+            44
+          ]
+        },
+        "style": {
+          "color": [
+            0.17,
+            0.2,
+            0.19,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a1.house",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.building.north.intact",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a1.furnace",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "blacksmith.furnace",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a1.banner_cloth",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0.4,
+            1.9,
+            0
+          ],
+          "localScale": [
+            0.8,
+            0.5,
+            0.05
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.28,
+            0.22,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a1.banner",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            1.1,
+            0
+          ],
+          "localScale": [
+            0.08,
+            2.2,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.38,
+            0.42,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.a1.banner_cloth",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a1.root",
+    "children": [
+      {
+        "definitionId": "ptree.a1.house",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.a1.furnace",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              2.4,
+              0,
+              0.6
+            ],
+            "localScale": [
+              0.6,
+              0.6,
+              0.6
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a1.banner",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -2.4,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a2.lamp_bulb",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            2.15,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.5,
+            0.5
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.86,
+            0.3,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a2.lamppost",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            1.0,
+            0
+          ],
+          "localScale": [
+            0.18,
+            2.0,
+            0.18
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.64,
+            0.68,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.a2.lamp_bulb",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a2.root",
+    "children": [
+      {
+        "definitionId": "ptree.a2.lamppost",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.4,
+              0,
+              0
+            ],
+            "localScale": [
+              0.7,
+              0.7,
+              0.7
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a2.lamppost",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              1.8,
+              0,
+              0
+            ],
+            "localScale": [
+              1.4,
+              1.4,
+              1.4
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a3.crystal",
+    "paramDefaults": [
+      {
+        "paramKey": "ptree.crystal.color",
+        "lane": "Vector",
+        "vectorValue": [
+          0.32,
+          0.6,
+          1,
+          1
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "localScale": [
+            0.8,
+            1.8,
+            0.8
+          ],
+          "colorParamKey": "ptree.crystal.color"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a3.root",
+    "children": [
+      {
+        "definitionId": "ptree.a3.crystal",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.3,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a3.crystal",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              1.3,
+              0,
+              0
+            ]
+          },
+          "params": [
+            {
+              "paramKey": "ptree.crystal.color",
+              "lane": "Vector",
+              "vectorValue": [
+                1,
+                0.28,
+                0.22,
+                1
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a4.top_orb",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            2.6,
+            0
+          ],
+          "localScale": [
+            0.7,
+            0.7,
+            0.7
+          ]
+        },
+        "style": {
+          "color": [
+            0.32,
+            0.6,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a4.flag_cloth",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0.35,
+            3.0,
+            0
+          ],
+          "localScale": [
+            0.7,
+            0.42,
+            0.05
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.28,
+            0.22,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a4.top_flag",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            2.7,
+            0
+          ],
+          "localScale": [
+            0.06,
+            1.0,
+            0.06
+          ]
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.38,
+            0.42,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.a4.flag_cloth",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a4.tower",
+    "children": [
+      {
+        "definitionId": "ptree.a4.top_orb",
+        "scopeTag": "structure"
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            1.1,
+            0
+          ],
+          "localScale": [
+            0.8,
+            2.2,
+            0.8
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.64,
+            0.68,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a4.root",
+    "children": [
+      {
+        "definitionId": "ptree.a4.tower",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.4,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a4.tower",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              1.4,
+              0,
+              0
+            ]
+          }
+        },
+        "childrenMode": "Instance",
+        "instanceChildren": [
+          {
+            "definitionId": "ptree.a4.top_flag",
+            "scopeTag": "structure"
+          }
+        ]
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.a5.base",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.3,
+            0
+          ],
+          "localScale": [
+            1.0,
+            0.6,
+            1.0
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.64,
+            0.68,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a5.orb",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.85,
+            0
+          ],
+          "localScale": [
+            0.55,
+            0.55,
+            0.55
+          ]
+        },
+        "style": {
+          "color": [
+            0.72,
+            0.45,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.a5.root",
+    "children": [
+      {
+        "definitionId": "ptree.a5.base",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.4,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a5.base",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              1.4,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a5.orb",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.4,
+              0,
+              0
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.a5.orb",
+        "scopeTag": "structure",
+        "instanceBehaviors": [
+          {
+            "slot": "attachment",
+            "kind": "Attachment",
+            "activeByDefault": true,
+            "attachment": {
+              "target": "Parent",
+              "offset": [
+                1.4,
+                1.5,
+                0
+              ],
+              "rotationOffset": [
+                0,
+                0,
+                0,
+                1
+              ],
+              "inheritScale": false
+            }
+          }
+        ]
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.cart.flag_cloth",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0.25,
+            1.25,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.35,
+            0.04
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.58,
+            0.2,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.cart.flag",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.9,
+            0
+          ],
+          "localScale": [
+            0.06,
+            1.1,
+            0.06
+          ]
+        },
+        "style": {
+          "color": [
+            0.36,
+            0.38,
+            0.42,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.cart.flag_cloth",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.cart.lamp",
+    "paramDefaults": [
+      {
+        "paramKey": "ptree.lamp.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          0.86,
+          0.3,
+          1
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            0.42,
+            0.42,
+            0.42
+          ],
+          "colorParamKey": "ptree.lamp.color"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            1.55,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.cart.cab",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0.6,
+            1.0,
+            0
+          ],
+          "localScale": [
+            0.8,
+            0.5,
+            1.1
+          ]
+        },
+        "style": {
+          "color": [
+            0.12,
+            0.42,
+            0.42,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.cart.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.45,
+            0
+          ],
+          "localScale": [
+            2.2,
+            0.7,
+            1.3
+          ]
+        },
+        "style": {
+          "color": [
+            0.2,
+            0.62,
+            0.6,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.cart.cab",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.cart.flag",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -0.6,
+              0,
+              0.85
+            ],
+            "localScale": [
+              0.8,
+              0.8,
+              0.8
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.cart.flag",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -0.6,
+              0,
+              -0.85
+            ],
+            "localScale": [
+              0.8,
+              0.8,
+              0.8
+            ]
+          }
+        }
+      },
+      {
+        "definitionId": "ptree.cart.lamp",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.cart.lamp",
+        "scopeTag": "structure",
+        "overrides": {
+          "transform": {
+            "localPosition": [
+              -1.2,
+              0,
+              0
+            ]
+          },
+          "params": [
+            {
+              "paramKey": "ptree.lamp.color",
+              "lane": "Vector",
+              "vectorValue": [
+                1,
+                0.28,
+                0.22,
+                1
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.rider.head",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2.0,
+            0
+          ],
+          "localScale": [
+            0.4,
+            0.4,
+            0.4
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.85,
+            0.7,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.rider.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.35,
+            0
+          ],
+          "localScale": [
+            0.45,
+            0.9,
+            0.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.5,
+            0.3,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.rider.head",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.label.mid",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.knight.sword_guard",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.02,
+            0
+          ],
+          "localScale": [
+            0.32,
+            0.06,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            0.85,
+            0.65,
+            0.2,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.knight.sword",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0.45,
+            0
+          ],
+          "localScale": [
+            0.07,
+            0.9,
+            0.07
+          ]
+        },
+        "style": {
+          "color": [
+            0.88,
+            0.9,
+            0.95,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Bone",
+          "boneId": 13,
+          "offset": [
+            0,
+            0,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.knight.sword_guard",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.knight.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "ptree.knight.swing",
+          "animationProfileId": "ptree.knight.profile",
+          "speedParamKey": "ptree.knight.swing.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "ptree.knight.swing.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.knight.sword",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.camp.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.04,
+            0
+          ],
+          "localScale": [
+            3.4,
+            0.08,
+            3.4
+          ]
+        },
+        "style": {
+          "color": [
+            0.45,
+            0.36,
+            0.24,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.camp.tent_roof",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            1.3,
+            0
+          ],
+          "localScale": [
+            1.8,
+            0.2,
+            1.6
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.3,
+            0.2,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.camp.tent.root",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.6,
+            0
+          ],
+          "localScale": [
+            1.6,
+            1.2,
+            1.4
+          ]
+        },
+        "style": {
+          "color": [
+            0.9,
+            0.82,
+            0.62,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.camp.tent_roof",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.label.mid",
+        "scopeTag": "structure"
+      }
+    ]
+  },
+  {
+    "id": "ptree.beacon.light",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            2.7,
+            0
+          ],
+          "localScale": [
+            0.8,
+            0.8,
+            0.8
+          ],
+          "colorParamKey": "ptree.beacon.color"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.beacon.root",
+    "paramDefaults": [
+      {
+        "paramKey": "ptree.beacon.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            1.15,
+            0
+          ],
+          "localScale": [
+            0.25,
+            2.3,
+            0.25
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.64,
+            0.68,
+            1
+          ]
+        }
+      }
+    ],
+    "children": [
+      {
+        "definitionId": "ptree.beacon.light",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ptree.label.high",
+        "scopeTag": "structure"
+      }
+    ]
+  }
+]

@@ -1,0 +1,107 @@
+{
+  "Id": "presenter_tree_override_showcase",
+  "Tags": ["showcase", "presenter", "attachment", "override"],
+  "Metadata": {
+    "presenterTreeShowcase": {
+      "riderCycleSeconds": 12,
+      "riderBoardAtSeconds": 2,
+      "riderAlightAtSeconds": 8,
+      "riderSeatOffsetXCm": -20,
+      "riderSeatOffsetYCm": 0,
+      "riderAlightRadiusCm": 220
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 6400,
+      "HeightCm": 6400,
+      "Anchor": { "LocalXCm": 0, "LocalYCm": 0, "WorldXCm": 0, "WorldYCm": 0 },
+      "Grid": { "CellSizeCm": 100 }
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 3100,
+    "TargetYCm": 2700,
+    "Yaw": 0,
+    "Pitch": 50,
+    "DistanceCm": 5600,
+    "FovYDeg": 55
+  },
+  "Entities": [
+    { "InstanceId": "ptree.ground", "Template": "ptree.ground", "PositionXCm": 3200, "PositionYCm": 2700 },
+
+    { "InstanceId": "ptree.a1", "Template": "ptree.station.a1", "PositionXCm": 900, "PositionYCm": 4300, "entityInfo": { "titleToken": "ptree.title.a1" } },
+    { "InstanceId": "ptree.a2", "Template": "ptree.station.a2", "PositionXCm": 2000, "PositionYCm": 4300, "entityInfo": { "titleToken": "ptree.title.a2" } },
+    { "InstanceId": "ptree.a3", "Template": "ptree.station.a3", "PositionXCm": 3100, "PositionYCm": 4300, "entityInfo": { "titleToken": "ptree.title.a3" } },
+    { "InstanceId": "ptree.a4", "Template": "ptree.station.a4", "PositionXCm": 4200, "PositionYCm": 4300, "entityInfo": { "titleToken": "ptree.title.a4" } },
+    { "InstanceId": "ptree.a5", "Template": "ptree.station.a5", "PositionXCm": 5300, "PositionYCm": 4300, "entityInfo": { "titleToken": "ptree.title.a5" } },
+
+    {
+      "InstanceId": "ptree.cart.inner",
+      "Template": "ptree.cart",
+      "PositionXCm": 2450,
+      "PositionYCm": 2600,
+      "entityInfo": { "titleToken": "ptree.title.cart_inner" },
+      "Overrides": { "PresenterTreeRideHostTag": {} }
+    },
+    {
+      "InstanceId": "ptree.cart.outer",
+      "Template": "ptree.cart",
+      "PositionXCm": 1150,
+      "PositionYCm": 2600,
+      "entityInfo": { "titleToken": "ptree.title.cart_outer" },
+      "Overrides": {
+        "PresenterTreeOrbitMotion": {
+          "CenterXCm": 2000,
+          "CenterYCm": 2600,
+          "RadiusCm": 850,
+          "PeriodSeconds": 10,
+          "PhaseDeg": 180
+        }
+      }
+    },
+    { "InstanceId": "ptree.rider", "Template": "ptree.rider", "PositionXCm": 3250, "PositionYCm": 2600, "entityInfo": { "titleToken": "ptree.title.rider" } },
+    { "InstanceId": "ptree.knight", "Template": "ptree.knight", "PositionXCm": 4600, "PositionYCm": 2600, "entityInfo": { "titleToken": "ptree.title.knight" } },
+
+    {
+      "InstanceId": "ptree.camp.north",
+      "Template": "ptree.camp",
+      "PositionXCm": 900,
+      "PositionYCm": 1000,
+      "entityInfo": { "titleToken": "ptree.title.camp_north" },
+      "overridePaths": [ { "path": "hq", "entityInfo": { "titleToken": "ptree.title.tent_north" } } ]
+    },
+    {
+      "InstanceId": "ptree.camp.harbor",
+      "Template": "ptree.camp",
+      "PositionXCm": 2200,
+      "PositionYCm": 1000,
+      "entityInfo": { "titleToken": "ptree.title.camp_harbor" },
+      "overridePaths": [ { "path": "hq", "entityInfo": { "titleToken": "ptree.title.tent_harbor" } } ]
+    },
+
+    {
+      "InstanceId": "ptree.beacon.red",
+      "Template": "ptree.beacon",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 3600, "Y": 1000 } } },
+      "entityInfo": { "titleToken": "ptree.title.beacon_red" },
+      "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [1, 0.25, 0.2, 1] } ]
+    },
+    {
+      "InstanceId": "ptree.beacon.green",
+      "Template": "ptree.beacon",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 4400, "Y": 1000 } } },
+      "entityInfo": { "titleToken": "ptree.title.beacon_green" },
+      "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [0.3, 0.95, 0.4, 1] } ]
+    },
+    {
+      "InstanceId": "ptree.beacon.blue",
+      "Template": "ptree.beacon",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 5200, "Y": 1000 } } },
+      "entityInfo": { "titleToken": "ptree.title.beacon_blue" },
+      "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [0.3, 0.55, 1, 1] } ]
+    }
+  ]
+}
