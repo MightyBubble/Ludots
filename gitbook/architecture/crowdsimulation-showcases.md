@@ -64,7 +64,7 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 | 行军 | `march_leg1_a.png`（300）、`march_leg2_b.png`（472）、`march.png`（712，转向后） |
 | 连点 | `repeat_click_leg1_settling.png`（300）、`repeat_click_leg2_clicks.png`（480）、`repeat_click.png`（630） |
 | 迷雾探索 | `fog_explore_before.png`（60）、`fog_explore_enemy_in_view.png`（150）、`fog_explore_seen.png`（2760） |
-| 乐观迷雾 | `fog_reroute_optimistic.png`（下令按开局，会话 tick 40，折线直穿那排水）、`fog_reroute_known.png`（同一会话 tick 40，下令把 fogTerrain 写成 false，折线从第一条就绕开。左栏开关是开局偏好，两张都开着） |
+| 乐观迷雾 | `fog_reroute_optimistic.png`（下令按开局，会话 tick 40，折线直穿那排水）、`fog_reroute_known.png`（同一会话 tick 40，下令把 fogTerrain 写成 false，折线从第一条就绕开。左栏开关是开局偏好，两张都开着）、`fog_reroute_rerouted.png`（同一开局偏好，建筑已在 tick 60 放下，会话 tick 326，折线已绕开那排水，2 人仍在行进） |
 | 共享视野 | `fog_shared_vision_before.png`（20）、`fog_shared_vision_seen.png`（226）、`fog_shared_vision_enemy_shown.png`（642）、`fog_shared_vision_ghost_kept.png`（1032）、`fog_shared_vision_ghost_cleared.png`（1332） |
 | 5 万单位 | `stress_50k_hud_paused.png`（134，暂停步进）、`stress_50k_hud.png`（149，实时） |
 
