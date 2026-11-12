@@ -20,6 +20,7 @@ using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -72,8 +73,7 @@ public sealed class MinimapShowcaseAcceptanceTests
     [Test]
     public void MinimapShowcase_WritesMarkerOnlyAcceptanceArtifacts()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "minimap-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/minimap-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         Directory.CreateDirectory(artifactDir);
         Directory.CreateDirectory(screensDir);

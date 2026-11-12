@@ -12,6 +12,7 @@ using Ludots.UI;
 using NUnit.Framework;
 using ScopeSwitchShowcaseMod;
 using ScopeSwitchShowcaseMod.Runtime;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -35,7 +36,7 @@ public sealed class ScopeSwitchShowcaseAcceptanceTests
     public void ScopeSwitchShowcase_SwitchesVisibleAndSelectableSetsAcrossScopes()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "scope-switch-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/scope-switch-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

@@ -10,12 +10,14 @@ using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Vision;
+using Ludots.Tests;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Performance;
 
 /// <summary>
-/// 换实现之前的迷雾采样。显式点名才跑，写出 Baselines/l76-fog.json。
+/// 换实现之前的迷雾采样。显式点名才跑。覆盖入库基线要同时设置
+/// L76_OVERWRITE_BASELINE=1 与 LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1，文件是 Baselines/l76-fog.json。
 /// 头记录当时的提交、uname -srm、nproc、dotnet --version。
 /// 行为行是 S7 雾脚本和回收脚本（种子 s1337），每个 Period 记每组可见格数和已探索格数。
 /// 性能行是雾开着的 12k / 50k，各 5 次，取中位；分配是同一 200 tick 稳态窗的本线程字节。
@@ -45,10 +47,12 @@ public sealed class L76FogBaselineHarness
             ["perf"] = SamplePerf(),
         };
 
-        string path = Path.Combine(root, "src", "Tests", "CrowdSimulationTests", "Baselines", "l76-fog.json");
-        if (File.Exists(path) && Environment.GetEnvironmentVariable("L76_OVERWRITE_BASELINE") != "1")
+        string path = CommittedTestArtifacts.Resolve("src/Tests/CrowdSimulationTests/Baselines/l76-fog.json");
+        string committed = Path.Combine(root, "src", "Tests", "CrowdSimulationTests", "Baselines", "l76-fog.json");
+        if (File.Exists(committed) && Environment.GetEnvironmentVariable("L76_OVERWRITE_BASELINE") != "1")
         {
-            throw new InvalidOperationException("基线已在。设置 L76_OVERWRITE_BASELINE=1 才会覆盖。");
+            throw new InvalidOperationException(
+                "基线已在。覆盖入库文件要同时设置 L76_OVERWRITE_BASELINE=1 与 LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1。");
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

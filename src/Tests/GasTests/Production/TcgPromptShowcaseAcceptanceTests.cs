@@ -19,6 +19,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.UI.PanelActivation;
 using Ludots.UI;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -43,7 +44,7 @@ public sealed class TcgPromptShowcaseAcceptanceTests
     private const string Pass = "TcgPrompt.Pass";
     private const string Negate = "TcgPrompt.Negate";
     private const string Activate = "TcgPrompt.Activate";
-    private static readonly string ArtifactDir = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "tcg_prompt");
+    private static string ArtifactDir => CommittedTestArtifacts.Resolve("artifacts/acceptance/tcg_prompt");
 
     [Test]
     public void EnterTable_SeesOwnStatusEnemyStatusAndTurnHint_NoPrompt()

@@ -59,7 +59,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             AssertLauncherBinding(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+            string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{ArtifactFolderName}");
             Directory.CreateDirectory(artifactDir);
 
             var backend = new TestInputBackend();
@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS.Production
         {
             string repoRoot = FindRepoRoot();
             AssertLauncherBinding(repoRoot);
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", ArtifactFolderName);
+            string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{ArtifactFolderName}");
             Directory.CreateDirectory(artifactDir);
 
             var backend = new TestInputBackend();

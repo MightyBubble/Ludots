@@ -45,6 +45,7 @@ using RoadNetworkShowcaseMod.Runtime;
 using RoadNetworkShowcaseMod.Systems;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS
 {
@@ -1494,7 +1495,7 @@ namespace Ludots.Tests.GAS
             float maxAdvanceCm = System.MathF.Max(vanguardAdvanceCm, System.MathF.Max(northAdvanceCm, southAdvanceCm));
             Assert.That(maxAdvanceCm - minAdvanceCm, Is.GreaterThan(180f), $"Execution presets should produce visibly distinct movement envelopes over the same corridor slice. Vanguard={vanguardAdvanceCm:F0} North={northAdvanceCm:F0} South={southAdvanceCm:F0}");
 
-            string outputDir = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "road_network_showcase_strategy_matrix");
+            string outputDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/road_network_showcase_strategy_matrix");
             Directory.CreateDirectory(outputDir);
             File.WriteAllText(Path.Combine(outputDir, "battle-report.md"), BuildStrategyMatrixBattleReport(planRows, vanguardAdvanceCm, northAdvanceCm, southAdvanceCm));
             File.WriteAllText(Path.Combine(outputDir, "trace.jsonl"), BuildStrategyMatrixTrace(planRows, vanguardAdvanceCm, northAdvanceCm, southAdvanceCm));
@@ -1520,7 +1521,7 @@ namespace Ludots.Tests.GAS
             Assert.That(abandoned.Status, Does.Contain("abandoned after"), $"Expected timeout abandon branch to fire. Status={abandoned.Status}");
             Assert.That(abandoned.HasActiveOrder, Is.False, "Failed timeout refresh should abandon and clear the active road-follow order.");
 
-            string outputDir = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "road_network_showcase_timeout");
+            string outputDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/road_network_showcase_timeout");
             Directory.CreateDirectory(outputDir);
             File.WriteAllText(Path.Combine(outputDir, "battle-report.md"), BuildTimeoutBattleReport(refreshed, abandoned));
             File.WriteAllText(Path.Combine(outputDir, "trace.jsonl"), BuildTimeoutTrace(refreshed, abandoned));

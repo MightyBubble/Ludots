@@ -834,7 +834,6 @@ public sealed class MassNavigationRouteExecutionSink
         state.RouteReady = true;
         state.ForceResetNextApply = true;
         RecordNavPublication(state);
-        AdvanceWaypointCursor(simulation, state);
         return new MassNavigationRouteSinkResult(
             MassNavigationRouteSinkStatus.Applied,
             partial ? PathStatus.Partial : path.Status,
@@ -947,6 +946,9 @@ public sealed class MassNavigationRouteExecutionSink
         Vector2 position = simulation.GetAgentWorldPositionCm(state.AgentIndex);
         float threshold = ResolveWaypointAdvanceThresholdCm(simulation, state.AgentIndex);
         float thresholdSq = threshold * threshold;
+        // Idle units are already settled on the waypoint under their feet. That hold is not a jam:
+        // only a cursor that is still outside the advance circle at the start of this scan may take
+        // the single recovery hop. Consuming an in-circle waypoint spends the hop.
         bool settledHopAvailable = simulation.IsAgentSettled(state.AgentIndex);
         while (state.CurrentWaypointIndex < state.PointCount - 1)
         {
@@ -954,7 +956,15 @@ public sealed class MassNavigationRouteExecutionSink
             float dx = waypoint.X - position.X;
             float dy = waypoint.Y - position.Y;
             bool insideAdvanceCircle = (dx * dx) + (dy * dy) <= thresholdSq;
-            if (!insideAdvanceCircle)
+            if (insideAdvanceCircle)
+            {
+                settledHopAvailable = false;
+            }
+            else if (!settledHopAvailable)
+            {
+                return;
+            }
+            else
             {
                 // The arrival settle radius is bounded by the advance threshold (route semantics
                 // enforce the scale >= 1), but the stuck-timeout settle parks a yielding agent
@@ -962,11 +972,6 @@ public sealed class MassNavigationRouteExecutionSink
                 // never clear that waypoint: the target it cannot reach stays applied without
                 // recovery reset and the cursor is dead. Allow exactly one hop per apply from a
                 // settled agent so a jam re-targets forward without skipping the route ahead.
-                if (!settledHopAvailable)
-                {
-                    return;
-                }
-
                 settledHopAvailable = false;
             }
 

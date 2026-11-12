@@ -37,7 +37,7 @@ public sealed class FogVisionDecayShowcaseAcceptanceTests
     public void FogVisionDecayShowcase_DecaysLiveKnowledgeAndKeepsStoreBounded()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "fog-vision-decay-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/fog-vision-decay-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
         foreach (string svg in Directory.GetFiles(screensDir, "*.svg"))

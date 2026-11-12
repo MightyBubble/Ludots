@@ -37,6 +37,7 @@ using NarrativeFrontendMod.Runtime;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
 using SkiaSharp;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -73,7 +74,7 @@ namespace Ludots.Tests.GAS.Production
         public void NarrativeShowcase_PlayableFlow_WritesAcceptanceArtifacts()
         {
             string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "narrative-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/narrative-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
             AssertThemeAssetsHaveTransparentBackgrounds(repoRoot);
