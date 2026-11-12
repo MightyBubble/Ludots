@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -334,17 +335,23 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.World.Get<EntityInfoTitleToken>(harborTent).Value, Is.EqualTo("ptree.title.tent_harbor"));
             List<PresenterView> p = SnapshotPresenters(engine);
             Assert.That(p.Count(x => x.Definition == "ptree.camp.tent.root"), Is.EqualTo(2), "both template-child tents get a visual");
+            Assert.That(engine.World.Has<VisualTransform>(northTent), Is.True, "a template child without its own WorldPositionCm still gets a visual transform from its attachment");
+            Assert.That(Vector2.Distance(LogicPositionCm(engine, northTent), LogicPositionCm(engine, FindPlaced(engine, "ptree.camp.north"))), Is.LessThan(1000f),
+                "the tent lands at its camp, not at the world origin");
         }
 
-        [TestCase("ptree.beacon.red", 1f, 0.25f, 0.2f)]
-        [TestCase("ptree.beacon.green", 0.3f, 0.95f, 0.4f)]
-        [TestCase("ptree.beacon.blue", 0.3f, 0.55f, 1f)]
-        public void D4_BatchPlacedBeacons_EachLightReadsItsPlacementParam(string owner, float r, float g, float b)
+        [TestCase("ptree.beacon.red", 1f, 0.25f, 0.2f, 3600f)]
+        [TestCase("ptree.beacon.green", 0.3f, 0.95f, 0.4f, 4400f)]
+        [TestCase("ptree.beacon.blue", 0.3f, 0.55f, 1f, 5200f)]
+        public void D4_BatchPlacedBeacons_EachLightReadsItsPlacementParam(string owner, float r, float g, float b, float placementXCm)
         {
             using GameEngine engine = CreateLoadedEngine();
             PresenterView light = Single(SnapshotPresenters(engine), "ptree.beacon.light", owner);
 
             AssertColor(SubmittedColor(engine, light), new Vector4(r, g, b, 1f), $"{owner} light colour");
+            Vector2 position = LogicPositionCm(engine, FindPlaced(engine, owner));
+            Assert.That(position.X, Is.EqualTo(placementXCm).Within(0.5f), $"{owner} batch placement honours PositionXCm");
+            Assert.That(position.Y, Is.EqualTo(4300f).Within(0.5f), $"{owner} batch placement honours PositionYCm");
         }
 
         [Test]

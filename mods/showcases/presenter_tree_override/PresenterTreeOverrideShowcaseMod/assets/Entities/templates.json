@@ -153,12 +153,6 @@
       "Name": {
         "Value": "Command Tent"
       },
-      "WorldPositionCm": {
-        "Value": {
-          "X": 0,
-          "Y": 0
-        }
-      },
       "FacingDirection": {
         "AngleRad": 0.0
       }
