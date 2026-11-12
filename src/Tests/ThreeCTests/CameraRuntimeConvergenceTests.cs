@@ -871,7 +871,8 @@ namespace Ludots.Tests.ThreeC
             manager.Update(0.016f);
 
             behaviorInput.Clear();
-            behaviorInput.Apply(CameraBehaviorInputChannels.LookY, -200f, AttributeBindingMode.Override);
+            // Look.Y+ 视线上仰，pitch 减小，贴到下限；这个角度下视口角会离开有限高度图。
+            behaviorInput.Apply(CameraBehaviorInputChannels.LookY, 200f, AttributeBindingMode.Override);
             behaviorInput.Apply(CameraBehaviorInputChannels.RotateHold, 1f, AttributeBindingMode.Override);
 
             Assert.DoesNotThrow(() => manager.Update(0.016f));
