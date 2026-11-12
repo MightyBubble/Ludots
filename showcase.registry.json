@@ -23,6 +23,11 @@
     },
     {
       "kind": "csproj",
+      "value": "mods/showcases/fog_of_war/FogTerrainDecalShowcaseMod",
+      "reason": "迷雾贴地渲染的数据场景，用 mod:FogTerrainDecalShowcaseMod 解析启动，没有独立的 launcher binding"
+    },
+    {
+      "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
       "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
     },
@@ -11218,6 +11223,50 @@
         "navigation",
         "crowd-simulation",
         "navsurface"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s3_path_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod",
+      "projectPath": null,
+      "title": "CrowdSimulation S3 路径（种子 1337）",
+      "summary": "在种子 1337 上点起点和终点。Q 换体型，T 在 1/2/4 条后台线程间换，G 放慢后台路径。画面上是折线、方向贴花，以及请求帧、生效帧、等了几拍。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s3_path_1337",
+      "preset": "crowd_simulation_s3_path_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Parity.S3PathServiceTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/raylib-s1337-s3path-interactive.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "path"
+      ]
+    },
+    {
+      "id": "crowd_simulation_s4_deploy_1337",
+      "path": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod",
+      "projectPath": null,
+      "title": "CrowdSimulation S4 部署（种子 1337）",
+      "summary": "种子 1337 上的部署沙盘。进图按配置放人，到点自动回放。HUD 上有工具、避让、暂停和倍速、重烘报告、单位状态。玩家一开始操作，自动回放就停。",
+      "tier": "T3",
+      "category": "capability",
+      "binding": "crowd_simulation_s4_deploy_1337",
+      "preset": "crowd_simulation_s4_deploy_1337_raylib",
+      "docsPath": "gitbook/architecture/crowdsimulation-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "CrowdSimulationTests.Parity.S4DeployTruthTests",
+      "artifactDir": "artifacts/acceptance/crowdsimulation-s1",
+      "screenshot": "artifacts/acceptance/crowdsimulation-s1/raylib-s1337-s4deploy-live.png",
+      "status": "active",
+      "tags": [
+        "navigation",
+        "crowd-simulation",
+        "deploy"
       ]
     },
     {

@@ -40,8 +40,8 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 ## 组成
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
-- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 280,000 cm、目标 (1332450, 429000)，罩住出发点和导航格 x=213、y=80..83 那排水域。领队折线由本场景的 `CrowdSimulationDebugView.json` 打开 `overlays.funnel`，画在界面最上层。窗口 1280×1100，调试视图「缓存」页的会话 tick 落在画面里），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
-- 脚本可以引用文件：`session.scriptAsset` 写 mod 内相对路径，指向根上有 `script` 数组的文档（和回归场景同一种格式）。会话先跑这份文件里的行，再跑 `session.script`，合起来仍须按 tick 升序。行军、折返、连点三个场景共用的 120 人开局写在舞台 Mod 的 `assets/CrowdSimulation/showcase/formation-120.json`，三个场景只写自己的指令。5 万单位场景直接引用 50k 门禁读的 `assets/CrowdSimulation/regress/stress-50k.json`，演示和门禁是同一个文件。
+- 场景 Mod：`CrowdSimulationDebug.json` 写 `session.script` 和标题，`virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 280,000 cm、目标 (1332450, 429000)，罩住出发点和导航格 x=213、y=80..83 那排水域。领队折线由本场景的 `CrowdSimulationDebugView.json` 打开 `overlays.funnel`，画在界面最上层。窗口 1280×1100，调试视图「缓存」页的会话 tick 落在画面里），`game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
+- 脚本可以引用文件：`session.scriptAsset` 写 mod 内相对路径，指向根上有 `script` 数组的文档（和回归场景同一种格式）。会话先跑这份文件里的行，再跑 `session.script`，合起来仍须按 tick 升序。行军、折返、连点三个场景共用的 120 人开局写在舞台 Mod 的 `mods/showcases/crowd_simulation/CrowdSimulationShowcaseStageMod/assets/CrowdSimulation/showcase/formation-120.json`，三个场景只写自己的指令。5 万单位场景直接引用 50k 门禁读的 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json`，演示和门禁是同一个文件。
 - 行军和连点的第一条指令都是 tick 0 走到 A 点，这一行没有抽出来：它是各自场景的第一步，连点场景后面八次点击也是同一个 A 点，抽成共享文件反而要拆成两层引用。
 
 ## 验收
@@ -76,7 +76,7 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 
 2026-10-17 那次对照是在忙机器上测的：C# 开窗前 1 分钟负载高于 4 核，门禁等到超时才开测。那组帧时已从本文和产物里撤下。`artifacts/benchmarks/crowd-kernel-50k-tick/` 恢复为这次对照之前的 C# 记录。它不是和 Web 紧挨着测的，不能拿来当对照。
 
-重测要在空闲机器上，和 Web 紧挨着做。开窗时 1 分钟负载要明显低于核数，`CrowdKernel50KBenchmarkTests` 的等待是 0 ms。Web 用同一份 `stress-50k.json`，放在这次 C# 的前一次或后一次立刻跑。两端产物一起换：`artifacts/benchmarks/crowd-kernel-50k-tick/` 的 `benchmark-report.md` 与 `trace.jsonl`，以及 `artifacts/benchmarks/crowd-stress50k-web/web-timing.json`。
+重测要在空闲机器上，和 Web 紧挨着做。开窗时 1 分钟负载要明显低于核数，`CrowdKernel50KBenchmarkTests` 的等待是 0 ms。Web 用同一份 `stress-50k.json`，放在这次 C# 的前一次或后一次立刻跑。两端产物一起换：`artifacts/benchmarks/crowd-kernel-50k-tick/benchmark-report.md` 与 `artifacts/benchmarks/crowd-kernel-50k-tick/trace.jsonl`，以及 Web 计时 web-timing.json（重测时写入 `artifacts/benchmarks/crowd-stress50k-web/`，这次对照之前已撤下）。
 
 ```bash
 dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Release --filter "FullyQualifiedName~CrowdKernel50KBenchmarkTests"
