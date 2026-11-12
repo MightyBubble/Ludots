@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.Structures;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
@@ -225,8 +226,11 @@ public sealed class L76FogGateTests
 
     /// <summary>
     /// s7 雾脚本和回收脚本：认知导航是否物化、版本、流场到达格、到达单位句柄。
-    /// 挂组会解析认知导航，版本是槽号乘 1048576。回收脚本里这些组只改了是否物化和版本。
-    /// 到达格仍是夹具 commit 那次采样。同一目标格下到达格变了，夹具不改写，断言停在第一条到达格差异。
+    /// 挂组会解析认知导航，版本是槽号乘 1048576。
+    /// 到达格按当前会话重录。相对 a412d9f581712b683d84bf644c9b594095ed11e3 变宽，来自
+    /// 14ec62b3ec7cafa88aa97c9f8b5b67f8876022c9（按瓦片多起点合并走廊）和
+    /// 09745d4e6099fd1c337bd65c46bf975100e949ca（折返场并入旧掩码）。
+    /// 地面单位的中心不落在阻挡足迹上，所在格也不是水、山、崖。
     /// </summary>
     [Test]
     public void CognitiveNavVersion_AndArrivalCells_MatchBaseline()
@@ -268,11 +272,14 @@ public sealed class L76FogGateTests
         var fog = session.Fog!;
         int period = fog.Period;
         int ticks = meta["ticks"]!.GetValue<int>();
+        var surface = Parity.S1SurfaceTruthTests.ReadSurface("s1337");
+        var impassable = ImpassableTerrain(surface);
         var samples = new JsonArray();
         for (int t = 0; t < ticks; t++)
         {
             reference.ApplyDue(session);
             Step(session);
+            AssertUnitsStayOnFooting(session, surface, impassable, truthName, t);
             if (t % period == 0) samples.Add(CognitiveSnapshot(session, t));
         }
 
@@ -287,6 +294,60 @@ public sealed class L76FogGateTests
             ["samples"] = samples,
             ["end"] = CognitiveSnapshot(session, session.TickCount),
         };
+    }
+
+    private static HashSet<byte> ImpassableTerrain(NavSurfaceAsset surface)
+    {
+        var impassable = new HashSet<byte>();
+        for (int i = 0; i < surface.TerrainTypeIds.Length; i++)
+        {
+            if (surface.TerrainTypeIds[i] is "water" or "mountain" or "cliff") impassable.Add((byte)i);
+        }
+
+        if (impassable.Count != 3)
+        {
+            Assert.Fail($"s1337 地形表里水、山、崖应各有一项，实际 {impassable.Count} 项：{string.Join(",", surface.TerrainTypeIds)}");
+        }
+
+        return impassable;
+    }
+
+    private static void AssertUnitsStayOnFooting(
+        CrowdSimSession session,
+        NavSurfaceAsset surface,
+        HashSet<byte> impassable,
+        string truthName,
+        int tick)
+    {
+        var store = session.Structures ?? throw new InvalidOperationException($"{truthName} 会话没有结构仓。");
+        int cell = surface.NavCellSizeCm;
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            var entity = session.Units.EntityAt(i);
+            var state = session.World.Get<CrowdSimulationUnitState>(entity);
+            // 层 1 走桥面。桥下可以是水，桥面足迹也不是地面阻挡。
+            if (state.Level != 0) continue;
+            var pos = session.World.Get<WorldPositionCm>(entity).Value;
+            int cx = pos.X.ToInt() / cell;
+            int cy = pos.Y.ToInt() / cell;
+            if ((uint)cx >= (uint)surface.NavCellsX || (uint)cy >= (uint)surface.NavCellsY)
+            {
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 落在导航格外 ({cx},{cy})");
+            }
+
+            byte terrain = surface.TerrainAt(cx, cy);
+            if (impassable.Contains(terrain))
+            {
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 踩在 {surface.TerrainTypeIds[terrain]} ({cx},{cy})");
+            }
+
+            foreach (int id in store.EntityIds)
+            {
+                if (!store.TryGetTemplate(id, out int template) || !session.Config.Structures.Templates[template].Blocks) continue;
+                if (!store.FootprintOf(id).Covers(pos.X, pos.Y)) continue;
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 进入阻挡 {id}");
+            }
+        }
     }
 
     private static JsonObject CognitiveSnapshot(CrowdSimSession session, int tick)
