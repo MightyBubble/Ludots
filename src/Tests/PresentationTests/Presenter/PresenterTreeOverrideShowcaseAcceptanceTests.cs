@@ -308,7 +308,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(attachments, Has.Length.EqualTo(1));
             AttachmentConfig attachment = attachments[0].Attachment;
             Assert.That(attachment.Target, Is.EqualTo(AttachmentTarget.Bone));
-            Assert.That(attachment.BoneId, Is.EqualTo(13));
+            Assert.That(attachment.BoneId, Is.EqualTo(13), "Knight.glb skin joint 13 is handslot.r");
+
+            int stableId = engine.World.Get<PresenterState>(knight.Entity).StableId;
+            var hand = new HandBoneStub(stableId, boneId: 13);
+            engine.SetService(CoreServiceKeys.BoneTransformProvider, (IBoneTransformProvider)hand);
+            hand.Position = new Vector3(4f, 5f, 6f);
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 2);
+            sword = Single(SnapshotPresenters(engine), "ptree.knight.sword", "ptree.knight");
+            AssertNear(sword.Position, hand.Position, "sword presenter lands on the hand bone the provider reports");
+
+            hand.Position = new Vector3(-2f, 1.5f, 3f);
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 2);
+            sword = Single(SnapshotPresenters(engine), "ptree.knight.sword", "ptree.knight");
+            AssertNear(sword.Position, hand.Position, "sword presenter follows a later hand bone pose");
         }
 
         [Test]
@@ -322,6 +335,14 @@ namespace Ludots.Tests.Presentation
                 "inner cart keeps the template orbit radius");
             Assert.That(Vector2.Distance(LogicPositionCm(engine, FindPlaced(engine, "ptree.cart.outer")), center), Is.EqualTo(850f).Within(2f),
                 "outer cart's placement override swaps in a wider orbit");
+
+            Vector2 innerBefore = LogicPositionCm(engine, FindPlaced(engine, "ptree.cart.inner"));
+            Vector2 outerBefore = LogicPositionCm(engine, FindPlaced(engine, "ptree.cart.outer"));
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 60);
+            float innerSweep = SweepRadians(center, innerBefore, LogicPositionCm(engine, FindPlaced(engine, "ptree.cart.inner")));
+            float outerSweep = SweepRadians(center, outerBefore, LogicPositionCm(engine, FindPlaced(engine, "ptree.cart.outer")));
+            Assert.That(outerSweep, Is.GreaterThan(innerSweep * 1.2f),
+                "the outer cart's 10 second lap sweeps farther in the same second than the inner cart's 14 second lap");
         }
 
         [Test]
@@ -336,8 +357,10 @@ namespace Ludots.Tests.Presentation
             List<PresenterView> p = SnapshotPresenters(engine);
             Assert.That(p.Count(x => x.Definition == "ptree.camp.tent.root"), Is.EqualTo(2), "both template-child tents get a visual");
             Assert.That(engine.World.Has<VisualTransform>(northTent), Is.True, "a template child without its own WorldPositionCm still gets a visual transform from its attachment");
-            Assert.That(Vector2.Distance(LogicPositionCm(engine, northTent), LogicPositionCm(engine, FindPlaced(engine, "ptree.camp.north"))), Is.LessThan(1000f),
-                "the tent lands at its camp, not at the world origin");
+            Assert.That(Vector2.Distance(LogicPositionCm(engine, northTent), LogicPositionCm(engine, FindPlaced(engine, "ptree.camp.north"))), Is.EqualTo(60f).Within(2f),
+                "the tent sits on the template local pose, 60 cm south of the camp");
+            Assert.That(p.Any(x => x.Definition == "ptree.label.mid" && x.Owner == "ptree.camp.north.hq"), Is.True,
+                "the north tent carries its own title presenter");
         }
 
         [TestCase("ptree.beacon.red", 1f, 0.25f, 0.2f, 3600f)]
@@ -367,10 +390,17 @@ namespace Ludots.Tests.Presentation
             Assert.That(Vector2.Distance(LogicPositionCm(engine, rider), LogicPositionCm(engine, cart)), Is.EqualTo(20f).Within(1f),
                 "rider sits on the seat offset");
 
-            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 360);
-            Assert.That(engine.World.Has<ChildOf>(rider), Is.False, "rider has stepped off at t≈9s");
-            Assert.That(Vector2.Distance(LogicPositionCm(engine, rider), LogicPositionCm(engine, cart)), Is.LessThan(500f),
-                "rider steps off next to the cart");
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 300);
+            Assert.That(engine.World.Has<ChildOf>(rider), Is.False, "rider has stepped off at t=8s");
+            Assert.That(Vector2.Distance(LogicPositionCm(engine, rider), LogicPositionCm(engine, cart)), Is.EqualTo(220f).Within(40f),
+                "rider steps off on the 220 cm ring around the cart");
+            Vector2 parked = LogicPositionCm(engine, rider);
+            Vector2 cartAtAlight = LogicPositionCm(engine, cart);
+            PresenterBlacksmithShowcaseTestHarness.Tick(engine, 60);
+            Assert.That(Vector2.Distance(LogicPositionCm(engine, rider), parked), Is.LessThan(1f),
+                "after stepping off, the rider stays put");
+            Assert.That(Vector2.Distance(LogicPositionCm(engine, cart), cartAtAlight), Is.GreaterThan(100f),
+                "the cart keeps circling after the rider has stepped off");
         }
 
         [Test]
@@ -392,6 +422,45 @@ namespace Ludots.Tests.Presentation
             Assert.That(targets[0], Is.EqualTo(new Vector2(3100f, 2700f)), "tour starts on the overview");
             Assert.That(targets[1], Is.EqualTo(new Vector2(900f, 1000f)), "first stop is A1");
             Assert.That(targets[10], Is.EqualTo(new Vector2(3100f, 2700f)), "tour loops back to the overview");
+        }
+
+        private static float SweepRadians(Vector2 center, Vector2 from, Vector2 to)
+        {
+            float start = MathF.Atan2(from.Y - center.Y, from.X - center.X);
+            float end = MathF.Atan2(to.Y - center.Y, to.X - center.X);
+            float delta = end - start;
+            if (delta > MathF.PI)
+            {
+                delta -= MathF.PI * 2f;
+            }
+            else if (delta < -MathF.PI)
+            {
+                delta += MathF.PI * 2f;
+            }
+
+            return MathF.Abs(delta);
+        }
+
+        private sealed class HandBoneStub : IBoneTransformProvider
+        {
+            private readonly int _stableId;
+            private readonly int _boneId;
+
+            public HandBoneStub(int stableId, int boneId)
+            {
+                _stableId = stableId;
+                _boneId = boneId;
+            }
+
+            public Vector3 Position { get; set; }
+
+            public bool TryGetBoneWorldTransform(int stableId, int boneId, out Vector3 position, out Quaternion rotation, out Vector3 scale)
+            {
+                position = Position;
+                rotation = Quaternion.Identity;
+                scale = Vector3.One;
+                return stableId == _stableId && boneId == _boneId;
+            }
         }
     }
 }

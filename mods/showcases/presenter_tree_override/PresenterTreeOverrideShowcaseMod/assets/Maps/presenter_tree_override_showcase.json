@@ -12,13 +12,13 @@
       "cameraTour": {
         "stopSeconds": 5,
         "stops": [
-          { "targetXCm": 900, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 2000, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 3100, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 4200, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 5300, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
+          { "targetXCm": 900, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 2000, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 3100, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 4200, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 5300, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
           { "targetXCm": 2000, "targetYCm": 2600, "distanceCm": 1700, "pitch": 48 },
-          { "targetXCm": 4600, "targetYCm": 2600, "distanceCm": 700, "pitch": 25 },
+          { "targetXCm": 4600, "targetYCm": 2600, "distanceCm": 1100, "pitch": 38 },
           { "targetXCm": 1550, "targetYCm": 4300, "distanceCm": 1800, "pitch": 40 },
           { "targetXCm": 4400, "targetYCm": 4300, "distanceCm": 1900, "pitch": 40 }
         ]
