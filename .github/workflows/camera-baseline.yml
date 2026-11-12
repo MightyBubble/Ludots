@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/camera-baseline.yml'
       - 'global.json'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/capabilities/camera/**'
@@ -21,6 +23,8 @@ on:
     paths:
       - '.github/workflows/camera-baseline.yml'
       - 'global.json'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
       - 'mods/capabilities/camera/**'
@@ -48,10 +52,20 @@ jobs:
 
       - name: Build core
         shell: pwsh
-        run: dotnet build src/Core/Ludots.Core.csproj -v minimal
+        run: |
+          dotnet build src/Core/Ludots.Core.csproj -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
 
       - name: Run camera baseline tests
         shell: pwsh
         run: |
           dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj --filter "FullyQualifiedName~Ludots.Tests.ThreeC.CameraRuntimeConvergenceTests" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
           dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "FullyQualifiedName~Ludots.Tests.Presentation.CoreProjectionCameraSnapshotTests" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }

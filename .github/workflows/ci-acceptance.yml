@@ -11,6 +11,8 @@ on:
     paths:
       - '.github/workflows/ci-acceptance.yml'
       - 'global.json'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'scripts/build-acceptance-index.py'
       - 'scripts/acceptance/**'
       - 'showcase.registry.json'
