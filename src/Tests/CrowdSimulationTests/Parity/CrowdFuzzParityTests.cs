@@ -35,8 +35,8 @@ public sealed class CrowdFuzzParityTests
     private static readonly FixtureCase[] Fixtures =
     {
         new(11111, "fuzz-parity-seed11111.json", 26),
-        new(424242, "fuzz-parity-seed424242.json", 13),
-        new(9001, "fuzz-parity-seed9001.json", 15),
+        new(424242, "fuzz-parity-seed424242.json", 18),
+        new(9001, "fuzz-parity-seed9001.json", 27),
     };
 
     [TestCaseSource(nameof(FixtureCases))]

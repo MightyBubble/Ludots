@@ -530,27 +530,25 @@ public static class CrowdWebFuzzRunner
             members = CaptureAllOwn(session, player);
         }
 
-        if (members.Length > 0)
+        // 没有单位也提交：fogTerrain 在空选择上仍然切换，移动指令本身不建立。
+        var cmd = new CrowdSimCommand
         {
-            var cmd = new CrowdSimCommand
-            {
-                Kind = CrowdSimCommandKind.Order,
-                Player = player,
-                XCm = (int)Math.Round(x * CmPerMeter),
-                YCm = (int)Math.Round(y * CmPerMeter),
-                ShapeId = shapeId,
-                HasAuto = true,
-                Auto = auto,
-                HasFace = drag,
-                FaceX = faceX ?? Fix64.Zero,
-                FaceY = faceY ?? Fix64.Zero,
-                WidthCm = widthCm,
-                HasFogTerrain = true,
-                FogTerrain = fogTerrain,
-                Members = members,
-            };
-            session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
-        }
+            Kind = CrowdSimCommandKind.Order,
+            Player = player,
+            XCm = (int)Math.Round(x * CmPerMeter),
+            YCm = (int)Math.Round(y * CmPerMeter),
+            ShapeId = shapeId,
+            HasAuto = true,
+            Auto = auto,
+            HasFace = drag,
+            FaceX = faceX ?? Fix64.Zero,
+            FaceY = faceY ?? Fix64.Zero,
+            WidthCm = widthCm,
+            HasFogTerrain = true,
+            FogTerrain = fogTerrain,
+            Members = members,
+        };
+        session.Commands.Submit<object?>(session, cmd, CrowdSimCommands.Exec);
         return new CrowdWebFuzzOpRecord
         {
             Kind = "order",
