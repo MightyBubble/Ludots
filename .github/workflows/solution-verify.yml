@@ -5,7 +5,6 @@ on:
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
-      - 'Directory.Build.targets'
       - '.gitattributes'
       - 'assets/**'
       - 'global.json'
@@ -26,7 +25,6 @@ on:
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
-      - 'Directory.Build.targets'
       - '.gitattributes'
       - 'assets/**'
       - 'global.json'
@@ -51,6 +49,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh
@@ -76,8 +76,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            9.0.x
+          global-json-file: global.json
 
       - name: Build maintained test project graphs
         shell: pwsh

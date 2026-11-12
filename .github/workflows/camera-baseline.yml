@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - '.github/workflows/camera-baseline.yml'
-      - 'Directory.Build.targets'
       - 'global.json'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
@@ -21,7 +20,6 @@ on:
       - main
     paths:
       - '.github/workflows/camera-baseline.yml'
-      - 'Directory.Build.targets'
       - 'global.json'
       - 'assets/Configs/Camera/**'
       - 'mods/LudotsCoreMod/assets/Entities/templates.json'
@@ -46,8 +44,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            9.0.x
+          global-json-file: global.json
 
       - name: Build core
         shell: pwsh

@@ -2,8 +2,6 @@
 <!-- Workaround. Remove once we're on 3.1.300+
 https://github.com/dotnet/sourcelink/issues/572 -->
 <Project>
-  <!-- 本文件挡住了仓库根的 Directory.Build.targets，下位目标框架的离线引用包钉死必须跟着进来。 -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
   <PropertyGroup>
     <TargetFrameworkMonikerAssemblyAttributesPath>$([System.IO.Path]::Combine('$(IntermediateOutputPath)','$(TargetFrameworkMoniker).AssemblyAttributes$(DefaultLanguageSourceExtension)'))</TargetFrameworkMonikerAssemblyAttributesPath>
   </PropertyGroup>

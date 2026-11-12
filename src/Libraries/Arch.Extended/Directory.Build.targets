@@ -1,6 +1,4 @@
 <Project>
-  <!-- 本文件挡住了仓库根的 Directory.Build.targets，下位目标框架的离线引用包钉死必须跟着进来。 -->
-  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))" />
   <Target Name="Unity"
           DependsOnTargets="Publish"
           Condition="'$(UnityPublish.Contains(true))'">

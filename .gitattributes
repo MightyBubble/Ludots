@@ -13,3 +13,4 @@
 *.config text eol=lf
 mods/showcases/capability_standard/graph_op_entries/**/GENERATED.txt text eol=lf
 # GraphNodeOp per-op gallery player videos (GitHub Pages + Showcase 画廊)
+external/nuget/chromiumembeddedframework.runtime.win-x64.148.0.9.nupkg filter=lfs diff=lfs merge=lfs -text
