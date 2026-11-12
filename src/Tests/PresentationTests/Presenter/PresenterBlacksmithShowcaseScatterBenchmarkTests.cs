@@ -27,6 +27,8 @@ namespace Ludots.Tests.Presentation
     {
         private const int DeclaredWarmupFrames = 12;
         private const int DeclaredMeasuredFrames = 120;
+        private const long StartupLiveByteCeiling = (2L * 1024 * 1024 * 1024) + (512L * 1024 * 1024);
+        private const int IsolatedScenarioTimeoutMs = 15 * 60 * 1000;
 
         private static int WarmupFrames => ReadPositiveEnvIntOrDeclaredDefault("LUDOTS_BLACKSMITH_BENCH_WARMUP_FRAMES", DeclaredWarmupFrames);
         private static int MeasuredFrames => ReadPositiveEnvIntOrDeclaredDefault("LUDOTS_BLACKSMITH_BENCH_MEASURED_FRAMES", DeclaredMeasuredFrames);
@@ -44,8 +46,47 @@ namespace Ludots.Tests.Presentation
         };
 
         [Test]
+        public void ShowcaseStartup_KeepsPresentationBuffersWithinThirtyThousandWorkingSet()
+        {
+            using var engine = PresenterBlacksmithShowcaseTestHarness.CreateEngine();
+            var presentation = engine.MergedConfig.Presentation;
+            Assert.That(presentation.PresenterInstanceCapacity, Is.EqualTo(400_000),
+                "30K blacksmiths use 12 presenters each (root, ten children, chimney smoke). 400000 leaves headroom; it is not a million-slot ceiling.");
+            Assert.That(presentation.PrimitiveDrawBufferCapacity, Is.EqualTo(200_000));
+            Assert.That(presentation.VisualSnapshotBufferCapacity, Is.EqualTo(200_000));
+            Assert.That(presentation.VisualProxyBufferCapacity, Is.EqualTo(200_000));
+            Assert.That(presentation.WorldHudCapacity, Is.EqualTo(65_536),
+                "Each building contributes one world bar and one world text. 65536 covers 60000 items.");
+            Assert.That(presentation.ScreenHudCapacity, Is.EqualTo(65_536),
+                "The flattened screen buffer holds bars and texts together, so 65536 must cover 60000 items.");
+            Assert.That(presentation.MinimapMarkerCapacity, Is.EqualTo(32_768));
+            Assert.That(presentation.RuntimeEntitySpawnQueueCapacity, Is.EqualTo(32_768));
+            Assert.That(presentation.GasPresentationEventCapacity, Is.LessThanOrEqualTo(131_072));
+            Assert.That(presentation.PresentationEventStreamCapacity, Is.LessThanOrEqualTo(262_144));
+            Assert.That(presentation.PresenterCommandCapacity, Is.LessThanOrEqualTo(262_144));
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long liveBytes = GC.GetTotalMemory(true);
+            long heapBytes = GC.GetGCMemoryInfo().HeapSizeBytes;
+            TestContext.Out.WriteLine(
+                $"Blacksmith showcase startup live={liveBytes / 1048576.0:F1} MiB heap={heapBytes / 1048576.0:F1} MiB");
+            Assert.That(liveBytes, Is.LessThan(StartupLiveByteCeiling),
+                "Startup must not preallocate the million-slot presentation buffers. The 30K working set fits well under this ceiling.");
+            Assert.That(heapBytes, Is.LessThan(StartupLiveByteCeiling));
+            GC.KeepAlive(engine);
+        }
+
+        [Test]
         public void Benchmark_ScatterBlacksmithShowcase_WritesReportAndValidatesCounts()
         {
+            if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LUDOTS_BLACKSMITH_BENCH_SCENARIO")))
+            {
+                RunScenariosInIsolatedProcesses();
+                return;
+            }
+
             ScatterScenario[] scenarios = ResolveScenarios();
             var results = new ScatterScenarioResult[scenarios.Length];
             for (int i = 0; i < scenarios.Length; i++)
@@ -55,8 +96,9 @@ namespace Ludots.Tests.Presentation
 
             string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-blacksmith-showcase-scatter");
             Directory.CreateDirectory(artifactDir);
-            string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
-            string tracePath = Path.Combine(artifactDir, "trace.jsonl");
+            string reportSuffix = scenarios.Length == 1 ? "-" + scenarios[0].Name : string.Empty;
+            string reportPath = Path.Combine(artifactDir, "benchmark-report" + reportSuffix + ".md");
+            string tracePath = Path.Combine(artifactDir, "trace" + reportSuffix + ".jsonl");
 
             File.WriteAllText(reportPath, BuildReport(results));
             File.WriteAllText(tracePath, BuildTrace(results));
@@ -1335,6 +1377,81 @@ namespace Ludots.Tests.Presentation
 
                 return count == 0 ? 0d : sum / count;
             }
+        }
+
+        private static void RunScenariosInIsolatedProcesses()
+        {
+            string repoRoot = PresenterBlacksmithShowcaseTestHarness.FindRepoRoot();
+            string project = Path.Combine(repoRoot, "src", "Tests", "PresentationTests", "PresentationTests.csproj");
+            string configuration = AppContext.BaseDirectory.Contains(
+                $"{Path.DirectorySeparatorChar}Release{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase)
+                ? "Release"
+                : "Debug";
+            const string filter =
+                "FullyQualifiedName=Ludots.Tests.Presentation.PresenterBlacksmithShowcaseScatterBenchmarkTests.Benchmark_ScatterBlacksmithShowcase_WritesReportAndValidatesCounts";
+
+            for (int i = 0; i < Scenarios.Length; i++)
+            {
+                string name = Scenarios[i].Name;
+                var start = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    WorkingDirectory = repoRoot,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                };
+                start.ArgumentList.Add("test");
+                start.ArgumentList.Add(project);
+                start.ArgumentList.Add("-c");
+                start.ArgumentList.Add(configuration);
+                start.ArgumentList.Add("--no-build");
+                start.ArgumentList.Add("--no-restore");
+                start.ArgumentList.Add("--filter");
+                start.ArgumentList.Add(filter);
+                start.Environment["LUDOTS_BLACKSMITH_BENCH_SCENARIO"] = name;
+
+                using var process = Process.Start(start)
+                    ?? throw new InvalidOperationException($"Failed to start isolated blacksmith scenario '{name}'.");
+                var stdout = new StringBuilder();
+                var stderr = new StringBuilder();
+                process.OutputDataReceived += (_, args) =>
+                {
+                    if (args.Data != null)
+                    {
+                        stdout.AppendLine(args.Data);
+                    }
+                };
+                process.ErrorDataReceived += (_, args) =>
+                {
+                    if (args.Data != null)
+                    {
+                        stderr.AppendLine(args.Data);
+                    }
+                };
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                if (!process.WaitForExit(IsolatedScenarioTimeoutMs))
+                {
+                    process.Kill(entireProcessTree: true);
+                    Assert.Fail($"Isolated scenario '{name}' did not exit within {IsolatedScenarioTimeoutMs}ms.");
+                }
+
+                string tail = Tail(stdout.ToString() + stderr.ToString(), 4000);
+                TestContext.Out.WriteLine($"isolated {name} exit={process.ExitCode}");
+                Assert.That(process.ExitCode, Is.EqualTo(0), $"Isolated scenario '{name}' failed.{Environment.NewLine}{tail}");
+            }
+        }
+
+        private static string Tail(string text, int maxChars)
+        {
+            if (text.Length <= maxChars)
+            {
+                return text;
+            }
+
+            return text[^maxChars..];
         }
 
         private static ScatterScenario[] ResolveScenarios()

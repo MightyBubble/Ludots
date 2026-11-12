@@ -173,7 +173,7 @@ Core runtime 类型：`MinimapRuntime`。
 - `FullMap`: 从 `WorldSizeSpec.Bounds` 推导全图半径。
 - `ExplicitCm`: 使用显式半径。
 
-`maxMarkersPerFieldPixel` 写每个 field 像素最多留几颗标记。不写或写 0 表示不封顶。10K 人群图写成 1：重叠单位只留一颗，知识解析也只跑这一颗；被知识判为不可见的单位会把像素让给后面的单位。
+`maxMarkersPerFieldPixel` 写每个 field 像素最多留几颗标记。不写或写 0 表示不封顶。10K 人群图写成 1：重叠单位只留一颗。占住像素的单位会做知识解析；判为不可见的把像素让出来，后面的单位再解析。
 
 若 board/bounds 缺失，runtime 报错；不得切换到其他推断路径。
 
