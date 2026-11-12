@@ -1,10 +1,15 @@
-// 导出为 Ludots Mod（AU-07 / AU-08）：把作者态测试场景生成结果写成 Ludots 资产文件。
-// 产物：.height（CHTM v2，uint16 缩放）、.navsurface（v1）、Maps/<id>.json（队伍 / 关系 / 阻挡物 / 桥）、
-//       CrowdSimulationConfig.json 覆盖片段、Navigation/navmesh.json 的地图地形事实、
-//       parity/s1-truth.json（FNV-1a 摘要；对拍口径见 crowdsimulation-and-navsurface.md 行为对拍定案）。
-// 正本在 Ludots 仓库（本文件即正本）；运行时位于 CrowdSimulation Web 沙盒的 scripts/ 下，
-// 依赖沙盒内 src/engine/ 的生成器（相对导入按该布局解析）。
-// 用法：node scripts/exportLudots.mjs --seed 1337 --map-id crowd_simulation_s1 --out exports/crowd_simulation_s1
+// 把作者态场景生成结果写成 Ludots 地形演示图资产。
+// 产物：terrain/<id>.height（CHTM v2，uint16 缩放）、
+//       Maps/<id>.json（队伍、玩家、阻挡物、桥；结构顺序见下方）、
+//       Navigation/navmesh.json（solver 为 crowd-simulation 的 maps.<id>）、
+//       CrowdSimulationConfig.json（world.seed、空开局部署、s7barrier）、
+//       parity/s1-truth.json（FNV-1a；对拍口径见 crowdsimulation-and-navsurface.md）。
+// .navsurface 不在这里写。加载器要头长 30 字节的链接候选布局，用
+// `nav bake-crowd-navsurface` 从地编网格、高度图和地图条带重烘。
+// 正本在 Ludots 仓库；运行时放在 CrowdSimulation Web 沙盒的 scripts/ 下，
+// 相对导入按该布局解析 src/engine/。
+// 用法：node scripts/exportLudots.mjs --seed 7 --map-id crowd_simulation_s7 --out exports/crowd_simulation_s7
+//       只写上面这些地图资产时加 --only map（跳过 S2 及之后的导航对拍）。
 import { register } from 'node:module';
 
 register('data:text/javascript,' + encodeURIComponent(`
@@ -28,7 +33,6 @@ const { DEFAULT_SOURCES, validateConfig } = await import('../src/engine/config.j
 const { generateWorld } = await import('../src/engine/terrain.js');
 const { generateStructures } = await import('../src/engine/structures/mapGen.js');
 const { personalRadius } = await import('../src/engine/core/space.js');
-const { entityList } = await import('../src/engine/structures/store.js');
 
 const sources = structuredClone(DEFAULT_SOURCES);
 sources.scenario.world.seed = seed;
@@ -61,27 +65,9 @@ class BW {
   build() { return Buffer.concat(this.parts); }
 }
 
-// ───────────────────────────── .navsurface v1 ─────────────────────────────
+// .navsurface 由 Ludots.Tool `nav bake-crowd-navsurface` 从地编网格烘出，本脚本不写那份旧布局。
 const N = world.N, cellSizeCm = Math.round(world.cellSize * 100);
 const terrainIds = config.terrainTypes.map((t) => t.id);
-{
-  const w = new BW();
-  w.u32(0x46534e4c); // "LNSF"
-  w.u16(1); // version
-  w.u16(32); // headerBytes
-  w.i32(N); w.i32(N); w.i32(cellSizeCm);
-  w.i32(world.jumps.count);
-  w.u16(terrainIds.length); w.u16(0); w.i32(0);
-  for (const id of terrainIds) { const b = Buffer.from(id, 'utf8'); w.u16(b.length); w.bytes(b); }
-  w.bytes(Buffer.from(world.type.buffer, world.type.byteOffset, N * N));
-  for (let k = 0; k < world.jumps.count; k++) {
-    const a = world.jumps.a[k], b = world.jumps.b[k];
-    w.u16(a % N); w.u16((a / N) | 0); w.u16(b % N); w.u16((b / N) | 0);
-    w.i32(Math.round(world.jumps.drop[k] * 100));
-    w.f32(world.jumps.len[k]);
-  }
-  writeFileSync(join(outRoot, 'terrain', `${mapId}.navsurface`), w.build());
-}
 
 // ───────────────────────────── .height（CHTM v2） ─────────────────────────────
 const B = world.B, HS = world.heightScale;
@@ -119,16 +105,18 @@ let heightRaw, heightOffsetCm, heightSpanCm;
 }
 
 // ───────────────────────────── 地图实体（阻挡物 / 桥） ─────────────────────────────
+// 顺序以 structures.footprint 的插入序为准（generateStructures 的 addEntity 序，
+// Simulation 持有的是同一张 Map）。Web 先放入全部建筑再放入全部桥。
+// C# 结构仓先给地图上的阻挡编号，再给条带续号，所以写出时建筑整段在前、桥整段在后，
+// 两段各自保持 footprint 里的相对顺序。不按坐标排序。
 const cm = (m) => Math.round(m * 100);
-const tplOf = (t) => config.structures.templates[t];
 const blockers = [], bridges = [];
-for (const e of entityList(structures)) {
-  const tpl = tplOf(e.tpl);
-  if (tpl.blocker) blockers.push({ xCm: cm(e.fp.x), yCm: cm(e.fp.y), sizeCm: cm(e.fp.hx * 2) });
-  else if (tpl.layered) bridges.push({ x0Cm: cm(e.fp.x0), y0Cm: cm(e.fp.y0), x1Cm: cm(e.fp.x1), y1Cm: cm(e.fp.y1), widthCm: cm(e.fp.w) });
+for (const [id, fp] of structures.footprint) {
+  const tpl = config.structures.templates[structures.tpl.get(id)];
+  if (tpl.blocker) blockers.push({ xCm: cm(fp.x), yCm: cm(fp.y), sizeCm: cm(fp.hx * 2) });
+  else if (tpl.layered) bridges.push({ fromXCm: cm(fp.x0), fromYCm: cm(fp.y0), toXCm: cm(fp.x1), toYCm: cm(fp.y1), widthCm: cm(fp.w) });
+  else throw new Error(`结构 ${id}（模板 ${tpl.id}）既不是阻挡也不是分层条带，地图导出没有对应实体。`);
 }
-// 实体按参考端 id 序(entityList 迭代序)写出,不排序——C# 结构仓的实体 id 按加载序分配,
-// 迷雾认知的逐 id 语义(残影/遗忘/共享)要求两端 id 同构(F02)。
 
 const entities = [
   {
@@ -155,7 +143,7 @@ const entities = [
     InstanceId: `bridge_${String(i + 1).padStart(4, '0')}`,
     Template: 'crowd_simulation_bridge',
     Overrides: {
-      CrowdSimulationBridgeSpan: { x0Cm: b.x0Cm, y0Cm: b.y0Cm, x1Cm: b.x1Cm, y1Cm: b.y1Cm, widthCm: b.widthCm },
+      CrowdSimulationPathSpan: { fromXCm: b.fromXCm, fromYCm: b.fromYCm, toXCm: b.toXCm, toYCm: b.toYCm, widthCm: b.widthCm },
     },
   })),
 ];
@@ -191,39 +179,52 @@ const mapJson = {
 writeFileSync(join(outRoot, 'Maps', `${mapId}.json`), JSON.stringify(mapJson, null, 2));
 
 // ───────────────────────────── CrowdSimulationConfig 覆盖片段 ─────────────────────────────
-// 不写 pairRules，也不写已删除的 relations。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
-// 地形类型到区域写在 navmesh.json 的 maps.<mapId>.terrainAreas（有序数组）。
-// .navsurface 从地图 ContinuousHeightmap.asset 推导（同主干，扩展名 .navsurface）。
-const cmPart = (num, den) => Math.round(worldCm * num / den);
-const terrainAreaById = { water: 'deep', shore: 'shallow', land: 'Default', mountain: 'rough', cliff: 'sheer' };
-const terrainAreas = [];
-for (const terrain of config.terrainTypes) {
-  const area = terrainAreaById[terrain.id];
-  if (!area) throw new Error(`地形类型 ${terrain.id} 没有导航区域。maps.${mapId}.terrainAreas 只认 water/shore/land/mountain/cliff。`);
-  terrainAreas.push({ terrainId: terrain.id, areaId: area });
+// 不写 pairRules。功能位在标准参数 Mod，地图边在上面的队伍代表 Relations。
+// .navsurface 从地图 ContinuousHeightmap.asset 推导（同主干，扩展名 .navsurface），由 Ludots 工具烘。
+const jump = config.terrain.jumpLinks;
+const maxGapCm = jump.maxCells * cellSizeCm;
+const linkSpacingCm = jump.spacingCells * cellSizeCm;
+if (!Number.isInteger(maxGapCm) || !Number.isInteger(linkSpacingCm)) {
+  throw new Error(`jumpLinks 换算不是整数厘米：maxGap=${maxGapCm} spacing=${linkSpacingCm}`);
 }
 writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
   maps: {
     [mapId]: {
       solver: 'crowd-simulation',
-      navAreas: ['Default', 'shallow', 'rough', 'sheer', 'deep', 'road', 'deck', 'flooded', 'burning'],
-      terrainAreas,
+      logicTerrainAsset: `terrain/${mapId}.map_data.bin`,
+      navCellSizeCm: cellSizeCm,
+      terrainTypes: terrainIds,
+      linkCandidateBake: {
+        jump: {
+          maxGapCm,
+          linkSpacingCm,
+          endpointMaxSlopeDeg: jump.endpointSlopeDeg,
+        },
+      },
     },
   },
 }, null, 2));
+const barrier = sources.templates.structures.find((s) => s.id === 's7barrier');
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
   world: { seed },
+  // 地形演示图开局不部署。Web 的 deploy.initialUnits 由 S4 那份覆盖片段单独写。
   deploy: {
-    bases: [
-      { playerId: 1, xCm: cmPart(3, 10), yCm: cmPart(7, 20), color: '#4DB2FF' },
-      { playerId: 2, xCm: cmPart(7, 10), yCm: cmPart(13, 20), color: '#7ED957' },
-      { playerId: 3, xCm: cmPart(7, 10), yCm: cmPart(3, 10), color: '#FFC53D' },
-      { playerId: 4, xCm: cmPart(3, 10), yCm: cmPart(7, 10), color: '#C792FF' },
-    ],
+    initialUnits: 0,
+    bases: config.players.map((p, i) => ({
+      playerId: i + 1,
+      xCm: cm(p.base[0] * world.size),
+      yCm: cm(p.base[1] * world.size),
+    })),
   },
   structures: {
     templates: {
-      s7barrier: { name: '路障', footprint: 'rect', blocker: true, lifetimeSec: 4 },
+      s7barrier: {
+        layer: 'base',
+        footprint: 'square',
+        effect: { kind: 'block', coverage: config.structures.blockCoverage },
+        placement: { kind: 'unrestricted' },
+        lifetimeSec: barrier.lifetimeSec,
+      },
     },
   },
 }, null, 2));
@@ -231,8 +232,8 @@ writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
 // ───────────────────────────── S1 对拍摘要（FNV-1a 32） ─────────────────────────────
 // 字节流契约（C# 端按同一顺序重建）：
 //   "LS1T" · i32 N · i32 cellSizeCm · u16 类型数 · 类型 id 表（u16 长 + utf8） · N² 类型栅格
-//   · N² 区域栅格（地形映射后） · N² 阻挡栅格 · i32 阻挡数 · 逐阻挡 i32 xCm/yCm/sizeCm（已排序）
-//   · i32 桥数 · 逐桥 i32 x0/y0/x1/y1/widthCm（已排序）
+//   · N² 区域栅格（地形映射后） · N² 阻挡栅格 · i32 阻挡数 · 逐阻挡 i32 xCm/yCm/sizeCm（footprint 插入序）
+//   · i32 桥数 · 逐桥 i32 fromX/fromY/toX/toY/widthCm（footprint 插入序）
 //   · i32 跳跃候选数 · 逐候选 u16 fromX/fromY/toX/toY · i32 dropCm · f32 lenCells
 function fnv1a(buf) {
   let h = 2166136261;
@@ -251,7 +252,7 @@ function fnv1a(buf) {
   w.i32(blockers.length);
   for (const b of blockers) { w.i32(b.xCm); w.i32(b.yCm); w.i32(b.sizeCm); }
   w.i32(bridges.length);
-  for (const b of bridges) { w.i32(b.x0Cm); w.i32(b.y0Cm); w.i32(b.x1Cm); w.i32(b.y1Cm); w.i32(b.widthCm); }
+  for (const b of bridges) { w.i32(b.fromXCm); w.i32(b.fromYCm); w.i32(b.toXCm); w.i32(b.toYCm); w.i32(b.widthCm); }
   w.i32(world.jumps.count);
   for (let k = 0; k < world.jumps.count; k++) {
     const a = world.jumps.a[k], b = world.jumps.b[k];
@@ -268,6 +269,11 @@ function fnv1a(buf) {
 }
 
 console.log(`[export] ${mapId} seed=${seed} cells=${N}x${N} blockers=${blockers.length} bridges=${bridges.length} jumps=${world.jumps.count} → ${outRoot}`);
+if (arg('only', '') === 'map') {
+  console.log('[export] only=map，跳过 S2 及之后的导航对拍');
+  process.exit(0);
+}
+if (arg('only', '') !== '') throw new Error(`--only 只接受 map，当前是 ${arg('only', '')}`);
 
 // ───────────────────────────── S2:逐导航上下文真相（量化高度输入） ─────────────────────────────
 // 两端读同一份量化高度（14.1）：navHeight / slope 从写出的 uint16 样本重建，再跑真实烘焙。
