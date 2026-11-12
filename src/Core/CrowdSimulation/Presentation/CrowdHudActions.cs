@@ -134,6 +134,7 @@ public sealed class CrowdHudActions
             CycleClickTemplate = a.CycleClickTemplate;
             CycleClickRadius = a.CycleClickRadius;
             ToggleMagicBox = a.ToggleMagicBox;
+            ToggleOptimisticTerrain = a.ToggleOptimisticTerrain;
             CycleShape = a.CycleShape;
             ClickCountDown = a.ClickCountDown;
             ClickCountUp = a.ClickCountUp;
@@ -155,6 +156,7 @@ public sealed class CrowdHudActions
         public string CycleClickTemplate { get; }
         public string CycleClickRadius { get; }
         public string ToggleMagicBox { get; }
+        public string ToggleOptimisticTerrain { get; }
         public string CycleShape { get; }
         public string ClickCountDown { get; }
         public string ClickCountUp { get; }

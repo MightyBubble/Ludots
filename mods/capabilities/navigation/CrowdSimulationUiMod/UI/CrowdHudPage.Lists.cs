@@ -81,13 +81,16 @@ internal sealed partial class CrowdHudPage
         Mark(true);
         if (c == null) return;
 
-        for (int i = 0; i < c.Formations.Count; i++)
+        if (_shapeDeclared)
         {
-            int index = i;
-            _formationChips.Add(Chip(SegRow(formations, i, FormationColumns), $"""<button class="nf-chip">{Html(c.Formations[i])}</button>""", "nf-chip-on", () => PickFormation(index)));
-        }
+            for (int i = 0; i < c.Formations.Count; i++)
+            {
+                int index = i;
+                _formationChips.Add(Chip(SegRow(formations, i, FormationColumns), $"""<button class="nf-chip">{Html(c.Formations[i])}</button>""", "nf-chip-on", () => PickFormation(index)));
+            }
 
-        PadSeg(formations, c.Formations.Count, FormationColumns);
+            PadSeg(formations, c.Formations.Count, FormationColumns);
+        }
 
         int types = Math.Min(c.UnitTypes.Count, MaxUnitTypes);
         for (int t = 0; t < types; t++)

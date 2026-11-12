@@ -24,6 +24,21 @@ internal sealed class CrowdHudActionSink
 
     public int PendingReleases => _edges.PendingReleases;
 
+    /// <summary>唯一本地座位的输入表里有这个动作。没有座位、座位不止一个、或表里没登记，都是没有。</summary>
+    public bool HasAction(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId)) return false;
+        if (!_engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats)
+            || seats == null
+            || !seats.TryGetSoleSeat(out ClientLocalSeat seat))
+        {
+            return false;
+        }
+
+        var handler = _edges.ResolveHandler(seat.SeatId);
+        return handler != null && handler.HasAction(actionId);
+    }
+
     public void Press(string actionId)
     {
         if (!_engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats)

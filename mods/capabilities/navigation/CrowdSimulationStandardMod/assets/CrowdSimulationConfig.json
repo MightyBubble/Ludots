@@ -39,7 +39,8 @@
     "slotCacheCapacity": 8,
     "variantCapacity": 64,
     "lineOfSight": false,
-    "eyeCm": 1000
+    "eyeCm": 1000,
+    "optimisticTerrain": true
   },
   "formation": {
     "spacingScale": 1.1,

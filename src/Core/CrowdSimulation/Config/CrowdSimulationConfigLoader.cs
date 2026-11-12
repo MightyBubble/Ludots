@@ -267,6 +267,7 @@ public sealed class CrowdSimulationConfigLoader
                 VariantCapacity = config.Fog.VariantCapacity,
                 LineOfSight = config.Fog.LineOfSight,
                 EyeCm = config.Fog.EyeCm,
+                OptimisticTerrain = config.Fog.OptimisticTerrain,
             },
             Formation = new RuntimeFormationSection
             {

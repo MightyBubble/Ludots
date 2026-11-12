@@ -106,7 +106,7 @@
 | `navtile` | `sizeCm`（须整除 `navCellSizeCm`）、`cacheCapacity` |
 | `flowfield` | `cacheCapacity`、`poolCapacity`、`corridorPaddingNavTiles`、`maxRebuildsPerTick` |
 | `planning` | `latencyTicks` 1–60、`refreshLatencyTicks`、`maxRefreshesPerTick`、`rebakeSlices` 1–3 |
-| `fog` | `rateHz`、`cellSizeCm`（≥ 100 cm 且整除导航格）、`visionCm`、`revealTicks`、`slotCacheCapacity`、`variantCapacity`、`lineOfSight`、`eyeCm` |
+| `fog` | `rateHz`、`cellSizeCm`（≥ 100 cm 且整除导航格）、`visionCm`、`revealTicks`、`slotCacheCapacity`、`variantCapacity`、`lineOfSight`、`eyeCm`、`optimisticTerrain` |
 | `formation` | 阵型尺度、领队、槽位、magic box、点积阈值等（见 `CrowdSimulationConfigValidator` 各 `Rule`） |
 | `formations.<id>` | `spacingDiameterScale`、`aspect`（均 > 0）、`wedge`；至少一条 |
 | `movement` | 子步、混合、转向、停滞等；`maxStepNavCells` ∈ (0, 1) |
@@ -206,18 +206,21 @@
 | 职责 | 默认提供方 | 演示常见覆盖 |
 | --- | --- | --- |
 | 共用底色 `plan` / `ink` / `paper` | `CrowdSimulationUiMod` · `CrowdSimulationPresentationPalette.json` | 一般不改 |
-| 玩家 HUD 与点选玩法 | `CrowdSimulationUiMod` · `CrowdSimulationPlayerView.json` | 演示 Mod 换相机、座位、模板列表、`labels`、`shapeLabels` 等 |
+| 玩家 HUD 与点选玩法 | `CrowdSimulationUiMod` · `CrowdSimulationPlayerView.json` | 演示 Mod 换相机、座位、`shapeLabels`。点选名单默认不写，进图后用这张图装上的单位 |
 | 调试叠层与检视 | `CrowdSimulationUiMod` · `CrowdSimulationDebugView.json` | 演示 Mod 改默认叠层、检视 agentType 等 |
 | 调试工具条 / 脚本 / HUD 文案 | `CrowdSimulationUiMod` · `CrowdSimulationDebug.json`（`tools`、`rates`、`fuzz`） | 演示 Mod 的 `presentation`（`deploy` 或 `path` 二选一）、`session.script` |
 
 合同要点：
 
 - **阵型文案**：`CrowdSimulationPlayerView.json` 的 `shapeLabels` 以 `CrowdSimulationConfig.json` 里 `formations.<id>` 为键，必须全覆盖；`defaultShapeId` 必须是其中之一。HUD 用这些字符串，不在调试 JSON 里重复。
+- **点选名单**：`clickTemplate` 和 `clickTemplates` 要么一起写（默认项必须在名单里），要么一起不写。不写时，进图后的名单就是这张图实际装上的单位：按移动类型的顺序，同一种里半径从小到大。界面这份默认文件不写演示里的单位。
+- **共用按钮**：阵型、视线、乐观迷雾、路线、迷雾核对的动作登记在界面 Mod 的 `Input/default_input.json`。输入表里没有的按钮不画出来，点不到。
 - **调试视图文案**：`CrowdSimulationDebug.json` → `presentation.viewLabels` 按视图 id 写全（如 `terrain` / `walkable` / `navmesh`）；每个带 `presentation.deploy` 的演示自己写完整表，供 V 键巡回与 HUD 占位符 `{view}`。
 - **`presentation` 块**：根下恰好 `deploy` 或 `path` 之一（无 `kind`）。`deploy` 含 `palette`、`actions`、放置预览色等；`path` 用于路径演示。带 `deploy` 时必须同时有 `tools`、`rates`、`fuzz`。
 - **`fuzz.ops`**：字符串 id 数组，只列操作名（如 `spawn`、`order`、`place`、`remove`、`placePath`、`removePath`、`kill`）；字段含义见 `CrowdSimRegressCatalog`。
 - **颜色对象**：玩家视图、调试视图、`presentation.deploy` 里的预览色统一 `{ "red", "green", "blue", "alpha" }`（0–255）。共用色只写在 `CrowdSimulationPresentationPalette.json`，视图 `colors` 不得与 palette 键重复（装载时 `CrowdPresentationPalette.MergeInto`）。
 - **视线初始值**：群体迷雾是否做遮挡采样只认 `CrowdSimulationConfig.json` → `fog.lineOfSight`（bool）。HUD 的 `ToggleLos` 走运行时 `fogSight` 命令，不在 PlayerView / Debug JSON 里再写一份初始开关。
+- **乐观地形开局值**：未探索地形是否先按可通行，只认 `fog.optimisticTerrain`（bool，必填，缺了装载失败）。玩家偏好的初值在绑定会话时抄这一字段。HUD「乐观迷雾」和动作 `CrowdSimulation.Player.ToggleOptimisticTerrain`（`]`）只改偏好；下一次拖拽成阵或右键 `crowdSimulationMove` 把偏好写进指令的 `fogTerrain`。开局已经是乐观时，这一笔令在重组导航组之前先同步认知槽，第一笔就按未探索可走来规划。PlayerView JSON 不再写一份开局开关。
 - **散开（scatter）范围**：`scatter` 指令给每名有单位的出生玩家随机 box 目标；坐标均匀取自 `[0, NavCellsPerSide × navCellSizeCm)`，由当前地图求解器板与 `navmesh` 推导，不在调试 JSON 里配置。
 - **爆炸（kill）半径**：`CrowdSimulationDebug.json` → `tools.boomRadiusCm`（> 0）与 `ringScale`（> 1）；外圈冲量用 `impulse`。演示左键爆炸时把该半径写入 `kill` 指令。
 - **玩家视角清场范围**：迷雾检查场景开局清场用的 `kill` 指令，圆心取导航板中心，半径取能盖住整块板的外接圆（`CrowdPlayerViewHost.BoardDisc`，板边长 = `NavCellsPerSide × navCellSizeCm`）。`CrowdSimulationPlayerView.json` 只写 `killRingScale`（> 1）和 `killImpulse`（≥ 0），不写坐标和半径。
@@ -226,7 +229,7 @@
 
 严格 DTO。带 `presentation.deploy` 时须同时有 `tools`、`rates`、`fuzz`。
 
-- `tools`：`boomRadiusCm`、`ringScale` > 1、`impulse` ≥ 0、`spawnCount` ≥ 1、`spawnTemplate`（单位模板 id）、`placeEntry`（须在 `presentation.deploy.palette[].entry`）、`speedStepsPermille`（严格递增且含 1000）
+- `tools`：`boomRadiusCm`、`ringScale` > 1、`impulse` ≥ 0、`spawnCount` ≥ 1、`spawnTemplate`（可以不写；不写时生成用这张图第一种单位，写了就必须是这张图里的单位模板，对不上就报错）、`placeEntry`（须在 `presentation.deploy.palette[].entry`）、`speedStepsPermille`（严格递增且含 1000）
 - `rates`：`avoidHzMin` / `avoidHzMax`（0 < min ≤ max）、`avoidStep` > 0
 - `fuzz`：`sliceMs`、`opCount`、`stepsPerOp`、`placeTemplate`、`pathTemplate` / `pathWidthCm` / `pathLengthCm`（若 `ops` 含 `placePath`）、`ops`（字符串 id 列表）
 - `presentation`：恰好 `deploy` 或 `path` 之一（无 `kind` 字段）；`deploy.palette[]` 的 `entry`、`selectAction`（不重复）

@@ -34,6 +34,8 @@ internal sealed partial class CrowdHudPage
     private readonly int[] _typeUnitsShown = new int[MaxUnitTypes];
     private bool _typeUnitsReady;
     private CrowdHudCatalog? _catalog;
+    private bool _shapeDeclared;
+    private bool _listsForShape;
 
     private double[][] _rings = null!;
     private int _histCount;
@@ -162,8 +164,9 @@ internal sealed partial class CrowdHudPage
     private void SyncCatalog()
     {
         CrowdHudCatalog? catalog = _feed.Catalog;
-        if (ReferenceEquals(catalog, _catalog)) return;
+        if (ReferenceEquals(catalog, _catalog) && _shapeDeclared == _listsForShape) return;
         _catalog = catalog;
+        _listsForShape = _shapeDeclared;
         _typeUnitsReady = false;
         BuildCatalogLists(catalog);
         if (catalog == null) return;
@@ -268,6 +271,7 @@ internal sealed partial class CrowdHudPage
         for (int i = 0; i < _formationChips.Count; i++) Mark(_formationChips[i].Set(i == p.ShapeIndex));
         Mark(_magicSwitch.Set(p.MagicBox));
         Mark(_losSwitch.Set(p.LineOfSight));
+        Mark(_optimisticSwitch.Set(p.OptimisticTerrain));
         Mark(_routeSwitch.Set(p.Route));
         Mark(_fogSwitch.Set(p.FogHide));
 

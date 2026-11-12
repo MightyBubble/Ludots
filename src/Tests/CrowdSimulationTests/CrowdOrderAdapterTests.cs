@@ -1,5 +1,7 @@
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.CrowdSimulation.Movement;
+using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.Engine;
@@ -54,6 +56,40 @@ public sealed class CrowdOrderAdapterTests
         Assert.That(order.HasAuto, Is.True);
         Assert.That(order.Auto, Is.False);
         Assert.That(order.ShapeId, Is.EqualTo("box"));
+        Assert.That(order.HasFogTerrain, Is.False);
+    }
+
+    [Test]
+    public void Prefs_CopyOptimisticTerrainOnlyWhenFogIsInstalled()
+    {
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        Assert.That(session.Config.Fog.OptimisticTerrain, Is.False);
+        Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 1, 1, 0, 0), Is.EqualTo(1));
+        var prefs = new CrowdPlayerOrderPrefs { ShapeId = "box", OptimisticTerrain = true };
+        CrowdSimulationOrderAdapter.Accept(session, new[] { OrderAt(session, 0) }, prefs);
+        Assert.That(session.Step(out _), Is.True);
+        Assert.That(session.Commands.Log[0].Cmd.HasFogTerrain, Is.False);
+
+        using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
+        session.BlockOnDueReplies = true;
+        Assert.That(session.Fog!.Terrain, Is.False);
+        prefs.OptimisticTerrain = true;
+        CrowdSimulationOrderAdapter.Accept(session, new[] { OrderAt(session, 0) }, prefs);
+        Assert.That(session.Step(out _), Is.True);
+        var on = session.Commands.Log[^1].Cmd;
+        Assert.That(on.HasFogTerrain, Is.True);
+        Assert.That(on.FogTerrain, Is.True);
+        Assert.That(session.Fog.Terrain, Is.True);
+
+        prefs.OptimisticTerrain = false;
+        CrowdSimulationOrderAdapter.Accept(session, new[] { OrderAt(session, 0) }, prefs);
+        Assert.That(session.Step(out _), Is.True);
+        var off = session.Commands.Log[^1].Cmd;
+        Assert.That(off.HasFogTerrain, Is.True);
+        Assert.That(off.FogTerrain, Is.False);
+        Assert.That(session.Fog.Terrain, Is.False);
     }
 
     [Test]

@@ -188,6 +188,15 @@ public sealed class CrowdPlayerViewTests
         var list = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(outside, "player-view"));
         Assert.That(list!.Message, Does.Contain("clickTemplate"));
 
+        var omitted = ViewJson();
+        omitted.Remove("clickTemplate");
+        omitted.Remove("clickTemplates");
+        Assert.DoesNotThrow(() => CrowdPlayerViewConfig.Load(omitted, "player-view"));
+        var half = ViewJson();
+        half.Remove("clickTemplates");
+        var halfEx = Assert.Throws<InvalidOperationException>(() => CrowdPlayerViewConfig.Load(half, "player-view"));
+        Assert.That(halfEx!.Message, Does.Contain("clickTemplates"));
+
         var missing = ViewJson();
         missing["clickTemplate"] = "missing.unit";
         missing["clickTemplates"] = new JsonArray("missing.unit");
@@ -276,7 +285,7 @@ public sealed class CrowdPlayerViewTests
         {
             "nextTeam", "selectAll", "clearSelection", "toggleLayer", "cycleLayer", "toggleFog",
             "sceneOutside", "sceneBehind", "toggleLos", "toggleRoute", "deployCountDown", "deployCountUp",
-            "cycleClickTemplate", "cycleClickRadius", "toggleMagicBox", "cycleShape", "clickCountDown",
+            "cycleClickTemplate", "cycleClickRadius", "toggleMagicBox", "toggleOptimisticTerrain", "cycleShape", "clickCountDown",
             "clickCountUp", "cycleRadiusRange", "boxSelectBegin", "secondaryHold", "formationCommit", "primaryTap",
         })
         {

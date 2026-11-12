@@ -25,8 +25,17 @@ public sealed class FogShowcaseTests
     private const int Me = CrowdUatKit.Player;
     private const int Ally = 3;
     private const int Squad = 30, NearCount = 5, NearOffsetCm = 20000;
-    private const int RerouteCount = 60, RerouteSizeCells = 11;
-    private const int ExploreMax = 4000, TravelMax = 1200, SeenPoll = 10, MaxTicks = 6000;
+    private const int ExploreMax = 4000, TravelMax = 1200;
+    // 种子 1337：陆地 (213,50) 向北到陆地 (213,84)。y=80..83 是一排水域，整块导航 tile 在开局视野外；岸上 y=79 放建筑。
+    private const int OptimisticCellCm = 6250;
+    private const int OptimisticSquad = 2;
+    private const int OptimisticStartX = 1334375, OptimisticStartY = 315625;
+    private const int OptimisticGoalX = 1334375, OptimisticGoalY = 528125;
+    private const int OptimisticBuildX = 1334375, OptimisticBuildY = 496875;
+    private const int OptimisticBuildSizeCm = 6250;
+    private const int OptimisticPlaceTick = 60;
+    private const int OptimisticWallX = 213, OptimisticWallY0 = 80, OptimisticWallY1 = 83;
+    private const int OptimisticArriveMax = 8000;
 
     [Test]
     public void Explore_HidesWhatTheViewerHasNotSeen_ThenShowsItOnceSeen()
@@ -123,89 +132,133 @@ public sealed class FogShowcaseTests
     }
 
     [Test]
-    public void Reroute_UnseenBuildingIsPlannedThroughUntilSeenThenAvoided()
+    public void OptimisticTerrain_StraightThroughUnexploredWaterThenReroutesAndArrives()
     {
         using var host = CrowdShowcaseHost.Start("CrowdSimulationFogRerouteShowcaseMod");
         var s = host.Session;
         var fog = s.Fog!;
-        int w = WorldCm(s);
-        int size = RerouteSizeCells * s.Config.NavCellSizeCm;
-        int[] places = host.TicksOf("placeStructure");
         Assert.Multiple(() =>
         {
-            AssertSpawn(host.CommandAt("spawnAt", 0), Me, ((int)(0.19 * w), (int)(0.5 * w)), RerouteCount);
+            Assert.That(s.Config.Fog.OptimisticTerrain, Is.True, "演示开局应把未探索地形当成能走");
+            Assert.That(fog.Terrain, Is.True, "进图时 CrowdFog.Terrain 应抄配置");
+            AssertSpawn(host.CommandAt("spawnAt", 0), Me, (OptimisticStartX, OptimisticStartY), OptimisticSquad);
             var order = host.CommandAt("order", 0);
-            AssertOrder(order, Me, ((int)(0.81 * w), (int)(0.5 * w)));
-            Assert.That(order["fogTerrain"]!.GetValue<bool>(), Is.False, "改道 UAT 关乐观迷雾");
-            Assert.That(places, Has.Length.EqualTo(2));
-            Assert.That(host.CommandAt("placeStructure", 0)["sizeCm"]!.GetValue<int>(), Is.EqualTo(size));
-            Assert.That(host.CommandAt("placeStructure", 1)["sizeCm"]!.GetValue<int>(), Is.EqualTo(size));
+            AssertOrder(order, Me, (OptimisticGoalX, OptimisticGoalY));
+            Assert.That(order["fogTerrain"]!.GetValue<bool>(), Is.True, "演示脚本打开乐观迷雾");
+            var place = host.CommandAt("placeStructure", 0);
+            Assert.That(host.TicksOf("placeStructure"), Is.EqualTo(new[] { OptimisticPlaceTick }));
+            Assert.That((place["xCm"]!.GetValue<int>(), place["yCm"]!.GetValue<int>(), place["sizeCm"]!.GetValue<int>()),
+                Is.EqualTo((OptimisticBuildX, OptimisticBuildY, OptimisticBuildSizeCm)));
         });
 
-        int v = Group(s, Me);
-        host.AdvanceTo(places[0]);
-        var g = ReadyGroup(s, Me);
-        Assert.That(g, Is.Not.Null, $"tick {places[0]} 放建筑时指令还没有领队");
-        var leader = g!.Leader!;
+        int viewer = Group(s, Me);
+        bool planned = host.AdvanceUntil(() => ReadyGroup(s, Me) != null, 60);
+        var before = ReadyGroup(s, Me);
+        Assert.That(planned && before != null, Is.True, "下令后没有规划完的领队");
+        Assert.That(before!.NavId, Is.Not.EqualTo(before.BodyNavId), "乐观开局应走认知导航，而不是真相导航");
+        var bodyNav = s.ResolveNavContext(before.BodyNavId);
+        var beliefNav = s.ResolveNavContext(before.NavId);
+        for (int y = OptimisticWallY0; y <= OptimisticWallY1; y++)
+        {
+            int i = y * bodyNav.NavCellsPerSide + OptimisticWallX;
+            Assert.That(bodyNav.Passable[i], Is.EqualTo(0), $"水域 ({OptimisticWallX},{y}) 在真相导航上应走不了");
+            Assert.That(beliefNav.Passable[i], Is.Not.EqualTo(0), $"水域 ({OptimisticWallX},{y}) 在认知导航上应被当成能走");
+        }
+
+        bool crossed = host.AdvanceUntil(() =>
+        {
+            var now = ReadyGroup(s, Me);
+            return now?.Leader != null && VisitsWall(PathOf(now.Leader));
+        }, 40);
+        Assert.That(crossed, Is.True, "乐观路径应直穿正前方那排水域");
+
+        host.AdvanceTo(OptimisticPlaceTick);
+        before = ReadyGroup(s, Me);
+        Assert.That(before, Is.Not.Null, "放建筑前领队丢了");
+        var path0 = PathOf(before!.Leader!);
+        Assert.That(VisitsWall(path0), Is.True, "放到建筑之前，乐观路径应仍直穿正前方的水域 " + Describe(path0));
+
         host.Advance();
         int id = s.Structures!.EntityIds.Max();
-        var at = s.Structures.FootprintOf(id);
-        Assert.That(at.Covers(Fix64.FromInt(host.CommandAt("placeStructure", 0)["xCm"]!.GetValue<int>()), Fix64.FromInt(host.CommandAt("placeStructure", 0)["yCm"]!.GetValue<int>())), Is.True, "第一栋建筑没放下");
-        int seenCells = FootprintCells(s, id).Count(c => Visible(fog, v, c));
-        Assert.That(seenCells, Is.Zero, $"场景无效：放置时足迹有 {seenCells} 个迷雾格对视野组可见");
-        bool planningAfterPlace = g.Planning;
-        Assert.That(places[1], Is.EqualTo(places[0] + 2), "第二栋建筑在第一栋之后 2 tick");
-        host.AdvanceTo(places[1]);
-        g = ReadyGroup(s, Me);
-        Assert.That(g, Is.Not.Null, $"放置后指令未完成规划 planning={planningAfterPlace}");
-        var errors = new List<string>();
-        if (planningAfterPlace) errors.Add("迷雾中放置建筑触发了重新规划（信息泄漏）");
-        if (fog.Belief[v].ContainsKey(id)) errors.Add("迷雾中的新建筑被提前知晓");
-        bool truthBlocked = LeaderBlocked(s, g!, g!.BodyNavId);
-        bool beliefBlocked = LeaderBlocked(s, g, g.NavId);
-        if (!truthBlocked) errors.Add("新建筑未阻挡领队路线（场景无效）");
-        if (beliefBlocked) errors.Add("视野组按未知建筑改道（应按认知规划）");
-        CheckBeliefs(s, "认知变体", errors);
+        Assert.That(s.Structures.FootprintOf(id).Covers(Fix64.FromInt(OptimisticBuildX), Fix64.FromInt(OptimisticBuildY)), Is.True, "岸上的建筑没放下");
+        Assert.That(fog.Belief[viewer].ContainsKey(id), Is.False, "没看见的建筑进了认知");
+        Assert.That(FootprintCells(s, id).Count(c => Visible(fog, viewer, c)), Is.Zero, "放置时建筑足迹已经可见");
+        bool heldReady = host.AdvanceUntil(() => ReadyGroup(s, Me) != null, 40);
+        var held = ReadyGroup(s, Me);
+        Assert.That(heldReady && held != null, Is.True, "放下未见建筑后领队没有回到可核对的路径");
+        path0 = PathOf(held!.Leader!);
+        Assert.That(VisitsWall(path0), Is.True, "放下还没看见的建筑后，乐观路径不应改去绕开正前方的水域 " + Describe(path0));
 
-        host.AdvanceTo(places[1] + 2);
-        Assert.That(s.Structures.EntityIds.Max(), Is.GreaterThan(id), "第二栋建筑没放下");
-        CheckBeliefs(s, "再次放置后认知变体", errors);
-
-        var path0 = PathOf(g.Leader!);
-        int seenAt = -1;
-        for (int t = 0; t < MaxTicks && seenAt < 0; t += SeenPoll)
+        bool leftWater = false;
+        bool seen = host.AdvanceUntil(() =>
         {
-            host.AdvanceTo(s.TickCount + SeenPoll);
-            if (fog.Belief[v].ContainsKey(id)) seenAt = s.TickCount;
+            if (!fog.Belief[viewer].ContainsKey(id)) return false;
+            var now = ReadyGroup(s, Me);
+            if (now == null) return false;
+            var path = PathOf(now.Leader!);
+            leftWater = !VisitsWall(path) && !SameRoute(path, path0);
+            return leftWater;
+        }, OptimisticArriveMax);
+        Assert.That(seen, Is.True,
+            $"看见建筑后路径仍穿过正前方的水域，或没有改道。建筑进认知={fog.Belief[viewer].ContainsKey(id)} tick={s.TickCount}");
+        Assert.That(fog.Belief[viewer].ContainsKey(id), Is.True, "改道时建筑还不在认知里");
+
+        bool arrived = host.AdvanceUntil(() => AllArrived(s, OptimisticSquad), OptimisticArriveMax);
+        TestContext.Out.WriteLine($"optimistic: plannedNav {before.NavId} body {before.BodyNavId} leftWater {leftWater} arrived {arrived} tick {s.TickCount}");
+        Assert.That(arrived, Is.True, $"{OptimisticArriveMax} tick 内没有全部到达 {Lagging(s)}");
+        CrowdSimulationValidator.ValidateSim(s);
+    }
+
+    [Test]
+    public void KnownTerrain_PathsAroundWaterFromTheFirstPlanAndArrives()
+    {
+        using var scene = CrowdUatKit.Scene();
+        var s = scene.Session;
+        Assert.That(s.Config.Fog.OptimisticTerrain, Is.False, "对拍沙盒开局应关闭乐观迷雾");
+        Assert.That(s.Fog!.Terrain, Is.False);
+        int spawned = CrowdUatKit.SpawnAt(s, Fix64.FromInt(OptimisticStartX), Fix64.FromInt(OptimisticStartY), OptimisticSquad, rIdx: 0);
+        Assert.That(spawned, Is.EqualTo(OptimisticSquad));
+        Order(s, Me, OptimisticGoalX, OptimisticGoalY, fogTerrain: false);
+        Assert.That(s.Fog.Terrain, Is.False);
+
+        var group = ReadyGroup(s, Me);
+        for (int t = 0; group == null && t < 60; t++)
+        {
+            CrowdUatKit.Step(s);
+            group = ReadyGroup(s, Me);
         }
 
-        bool replanned = false, blockedAfter = false;
-        if (seenAt < 0) errors.Add($"{MaxTicks} tick 内未看见建筑");
-        else
+        Assert.That(group, Is.Not.Null, "关闭乐观后没有规划完的领队");
+        Assert.That(group!.NavId, Is.EqualTo(group.BodyNavId), "没有未知实体时，关闭乐观应走真相导航");
+        var path0 = PathOf(group.Leader!);
+        Assert.That(VisitsWall(path0), Is.False, "已知地形的第一条路径不应穿过正前方那排水域 " + Describe(path0));
+        int id = Place(s, "building", OptimisticBuildX, OptimisticBuildY, OptimisticBuildSizeCm);
+        Assert.That(s.Fog.Belief[Group(s, Me)].ContainsKey(id), Is.False, "出发时岸上的建筑不应已在认知里");
+        CrowdUatKit.Step(s, 4);
+        var afterPlace = ReadyGroup(s, Me);
+        Assert.That(afterPlace, Is.Not.Null);
+        Assert.That(VisitsWall(PathOf(afterPlace!.Leader!)), Is.False,
+            "放下一栋还没看见的建筑后，已知路线不应改去穿过正前方的水域");
+
+        bool crossed = false;
+        bool arrived = false;
+        for (int t = 0; t < OptimisticArriveMax; t++)
         {
-            host.AdvanceTo(s.TickCount + s.Config.Fog.RevealTicks + s.Config.Planning.LatencyTicks + 30);
-            var after = ReadyGroup(s, Me);
-            if (after == null) errors.Add("看见建筑后指令丢失");
-            else
+            var now = ReadyGroup(s, Me);
+            if (now?.Leader != null && VisitsWall(PathOf(now.Leader)))
+                crossed = true;
+            if (AllArrived(s, OptimisticSquad))
             {
-                replanned = !PathOf(after.Leader!).SequenceEqual(path0);
-                blockedAfter = LeaderBlocked(s, after, after.BodyNavId);
-                if (blockedAfter) errors.Add("看见建筑后未改道（领队路线仍被真实导航阻挡）");
+                arrived = true;
+                break;
             }
+
+            CrowdUatKit.Step(s);
         }
 
-        try
-        {
-            CrowdSimulationValidator.ValidateSim(s);
-        }
-        catch (CrowdSimulationInvariantException ex)
-        {
-            errors.Add(ex.Message);
-        }
-
-        TestContext.Out.WriteLine(
-            $"reroute: placed {places[0]}/{places[1]} leaderAtPlace seg {leader.Seg}/{leader.PathCount}, planningAfterPlace {planningAfterPlace}, truthBlocked {truthBlocked}, beliefBlocked {beliefBlocked}, seenAt {seenAt}, replanned {replanned}, blockedAfter {blockedAfter}, ticks {s.TickCount}");
-        Assert.That(errors, Is.Empty, string.Join("；", errors));
+        TestContext.Out.WriteLine($"known: nav {group.NavId} crossed {crossed} arrived {arrived} tick {s.TickCount}");
+        Assert.That(crossed, Is.False, "已知路线中途改去穿过水域");
+        Assert.That(arrived, Is.True, $"{OptimisticArriveMax} tick 内没有全部到达 {Lagging(s)}");
     }
 
     [Test]
@@ -341,5 +394,112 @@ public sealed class FogShowcaseTests
     {
         Assert.That(cmd["player"]!.GetValue<int>(), Is.EqualTo(player), "下令的玩家");
         Assert.That((cmd["xCm"]!.GetValue<int>(), cmd["yCm"]!.GetValue<int>()), Is.EqualTo(at), $"玩家 {player} 指令目标");
+    }
+
+    private static string Lagging(CrowdSimSession session)
+    {
+        int arrivedCount = 0;
+        var lag = new List<string>();
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            if (CrowdUatKit.StateAt(session, i).State == (byte)CrowdUnitState.Arrived) arrivedCount++;
+            else
+            {
+                var p = CrowdUatKit.PositionAt(session, i);
+                lag.Add($"#{i}@({(int)(p.X.ToDouble() / OptimisticCellCm)},{(int)(p.Y.ToDouble() / OptimisticCellCm)})");
+            }
+        }
+
+        return $"到达 {arrivedCount}/{session.Units.Count} 落后 {string.Join(" ", lag)}";
+    }
+
+    /// <summary>领队会把路径起点改成自己的当前位置。后面的路点不动，才算同一条路线。</summary>
+    private static bool SameRoute(Fix64Vec2[] path, Fix64Vec2[] prior)
+    {
+        if (path.Length != prior.Length || path.Length < 2) return false;
+        for (int i = 1; i < path.Length; i++)
+        {
+            if (path[i].X != prior[i].X || path[i].Y != prior[i].Y) return false;
+        }
+
+        return true;
+    }
+
+    private static string Describe(Fix64Vec2[] path)
+    {
+        static string At(Fix64Vec2 p)
+        {
+            int x = (int)(p.X.ToDouble() / OptimisticCellCm);
+            int y = (int)(p.Y.ToDouble() / OptimisticCellCm);
+            return $"({x},{y})";
+        }
+
+        if (path.Length == 0) return "空路径";
+        return $"共 {path.Length} 点 " + string.Join(" ", path.Select(At));
+    }
+
+    private static bool AllArrived(CrowdSimSession session, int count)
+    {
+        if (session.Units.Count != count) return false;
+        for (int i = 0; i < count; i++)
+        {
+            if (CrowdUatKit.StateAt(session, i).State != (byte)CrowdUnitState.Arrived) return false;
+        }
+
+        return true;
+    }
+
+    private static bool VisitsWall(Fix64Vec2[] path)
+    {
+        for (int y = OptimisticWallY0; y <= OptimisticWallY1; y++)
+        {
+            if (Visits(path, OptimisticWallX, y)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>折线是否走进这一格。点落在哪一格按厘米整除；线段用格步进补上中间格。</summary>
+    private static bool Visits(Fix64Vec2[] path, int cellX, int cellY)
+    {
+        bool hit = false;
+        void Consider(int x, int y)
+        {
+            if (x == cellX && y == cellY) hit = true;
+        }
+
+        for (int i = 0; i < path.Length; i++)
+        {
+            int x = (int)(path[i].X.ToDouble() / OptimisticCellCm);
+            int y = (int)(path[i].Y.ToDouble() / OptimisticCellCm);
+            if (i > 0)
+            {
+                int px = (int)(path[i - 1].X.ToDouble() / OptimisticCellCm);
+                int py = (int)(path[i - 1].Y.ToDouble() / OptimisticCellCm);
+                int dx = Math.Abs(x - px), dy = Math.Abs(y - py);
+                int sx = px < x ? 1 : -1, sy = py < y ? 1 : -1;
+                int err = dx - dy;
+                while (px != x || py != y)
+                {
+                    Consider(px, py);
+                    int e2 = err * 2;
+                    if (e2 > -dy)
+                    {
+                        err -= dy;
+                        px += sx;
+                    }
+
+                    if (e2 < dx)
+                    {
+                        err += dx;
+                        py += sy;
+                    }
+                }
+            }
+
+            Consider(x, y);
+        }
+
+        return hit;
     }
 }

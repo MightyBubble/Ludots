@@ -46,7 +46,7 @@ public sealed class CrowdFog
     public readonly Dictionary<int, (int TplIndex, CrowdStructureFootprint Fp)>[] Belief;
     /// <summary>地形知识:组探索过的导航 tile 集(乐观迷雾开启时,未探索 tile 按可通行假设)。</summary>
     public readonly HashSet<int>[] Tiles;
-    public bool Terrain;            // order 的 fogTerrain 选项切换(随指令日志回放)
+    public bool Terrain;            // 开局取 fog.optimisticTerrain；order 的 fogTerrain 可改，并随指令日志回放
     public bool Los;                // fogSight 命令切换
     public readonly int EyeCm;
     public int Period;
@@ -98,6 +98,7 @@ public sealed class CrowdFog
         FogCellsPerSide = (NavCellsPerSide + NavCellsPerFogCell - 1) / NavCellsPerFogCell;
         FogCellSizeCm = fc.FogCellSizeCm;
         Los = fc.LineOfSight;
+        Terrain = fc.OptimisticTerrain;
         EyeCm = fc.EyeCm;
         _eyeM = CrowdReferenceMeters.CmToMPrecise(EyeCm);
         NavCellsPerTile = config.Hpa.NavCellsPerTile;

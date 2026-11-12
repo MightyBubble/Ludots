@@ -6,9 +6,9 @@
         "cmd": {
           "type": "spawnAt",
           "player": 1,
-          "xCm": 304000,
-          "yCm": 800000,
-          "count": 60,
+          "xCm": 1334375,
+          "yCm": 315625,
+          "count": 2,
           "template": "crowd_simulation.unit.infantry.r100"
         }
       },
@@ -17,36 +17,26 @@
         "cmd": {
           "type": "order",
           "player": 1,
-          "xCm": 1296000,
-          "yCm": 800000,
+          "xCm": 1334375,
+          "yCm": 528125,
           "shape": "box",
           "auto": false,
-          "fogTerrain": false
+          "fogTerrain": true
         }
       },
       {
-        "tick": 10,
+        "tick": 60,
         "cmd": {
           "type": "placeStructure",
           "template": "building",
-          "xCm": 1221778,
-          "yCm": 697781,
-          "sizeCm": 68750
-        }
-      },
-      {
-        "tick": 12,
-        "cmd": {
-          "type": "placeStructure",
-          "template": "building",
-          "xCm": 1421778,
-          "yCm": 897781,
-          "sizeCm": 68750
+          "xCm": 1334375,
+          "yCm": 496875,
+          "sizeCm": 6250
         }
       }
     ]
   },
   "presentation": {
-    "title": "CrowdSimulation 演示 · 看见建筑后改道（迷雾里放到路线上的建筑先穿过，看见再绕开）"
+    "title": "CrowdSimulation 演示 · 乐观迷雾（没探索过的水域先当成能走，看见岸上的建筑和真实水域后再改道）"
   }
 }

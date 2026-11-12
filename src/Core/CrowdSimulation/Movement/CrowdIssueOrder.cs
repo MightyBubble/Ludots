@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Ludots.Core.Components;
+using Ludots.Core.CrowdSimulation.Fog;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -19,6 +20,9 @@ public static class CrowdIssueOrder
         CrowdSimSession sim, Fix64 wxCm, Fix64 wyCm, int player,
         string shapeId, bool? auto, Fix64Vec2? face, Fix64 widthCm, ReadOnlySpan<uint> members)
     {
+        // 开局 Terrain 已是 true 时，order 不再因开关变化去同步。新组按当前槽挂导航；
+        // 槽还停在真相，第一笔令就规划在真相上。落帧时这条已知路线在乐观场上仍走得通，不会改道。
+        if (sim.Fog is { Terrain: true }) CrowdBeliefSync.Sync(sim);
         var world = sim.World;
         var units = sim.Units;
         sim.BindMemberSet(members, player);

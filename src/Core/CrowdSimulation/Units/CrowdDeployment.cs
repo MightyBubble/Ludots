@@ -240,6 +240,40 @@ public static class CrowdDeployment
     /// <summary>全体半径级，radiusCm 升序去重。</summary>
     public static IReadOnlyList<int> DistinctRadiusClasses(CrowdSimulationRuntimeConfig cfg) => cfg.RadiusClasses;
 
+    /// <summary>
+    /// 这张图实际装上的单位模板。移动类型沿遍历表的顺序，同一种里半径从小到大。
+    /// 界面不点名演示单位时，点选名单和生成都用这份。
+    /// </summary>
+    public static string[] ListTemplateIds(CrowdSimulationRuntimeConfig cfg)
+    {
+        ArgumentNullException.ThrowIfNull(cfg);
+        int count = 0;
+        int widest = 0;
+        for (int t = 0; t < cfg.UnitTypes.Count; t++)
+        {
+            var templates = cfg.UnitTypes[t].TemplatesByRadiusCm;
+            if (templates == null) continue;
+            count += templates.Count;
+            if (templates.Count > widest) widest = templates.Count;
+        }
+
+        if (count == 0) return Array.Empty<string>();
+        var ids = new string[count];
+        var keys = new int[widest];
+        int n = 0;
+        for (int t = 0; t < cfg.UnitTypes.Count; t++)
+        {
+            var templates = cfg.UnitTypes[t].TemplatesByRadiusCm;
+            if (templates == null || templates.Count == 0) continue;
+            int k = 0;
+            foreach (int radius in templates.Keys) keys[k++] = radius;
+            Array.Sort(keys, 0, k);
+            for (int i = 0; i < k; i++) ids[n++] = templates[keys[i]];
+        }
+
+        return ids;
+    }
+
     /// <summary>单位模板 id → (单位行, 半径级)。表里没有这个 id 即报错。</summary>
     public static (int UnitType, int RadiusIndex) LocateTemplate(CrowdSimulationRuntimeConfig cfg, string templateId)
     {

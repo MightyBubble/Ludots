@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Units;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Presentation;
@@ -214,6 +215,23 @@ public sealed class CrowdPresentationConfigTests
         };
         var missing = Assert.Throws<InvalidOperationException>(() => tools.ResolveSpawn(session.Config));
         Assert.That(missing!.Message, Does.Contain("missing.unit"));
+
+        var omitted = MinimalTools();
+        omitted.Remove("spawnTemplate");
+        Assert.DoesNotThrow(() => CrowdSimulationDebugConfig.Load(new JsonObject { ["tools"] = omitted }));
+        var derived = new CrowdDebugTools
+        {
+            BoomRadiusCm = 12500,
+            RingScale = 2,
+            Impulse = 4,
+            SpawnCount = 24,
+            PlaceEntry = "building",
+            SpeedStepsPermille = new[] { 500, 1000, 2000, 4000 },
+        };
+        derived.ResolveSpawn(session.Config);
+        var (unitType, radius) = CrowdDeployment.LocateTemplate(session.Config, "crowd_simulation.unit.infantry.r100");
+        Assert.That(derived.ResolvedUnitType, Is.EqualTo(unitType));
+        Assert.That(derived.ResolvedRadiusClass, Is.EqualTo(radius));
     }
 
     [Test]

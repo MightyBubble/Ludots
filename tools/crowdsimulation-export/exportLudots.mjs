@@ -206,6 +206,7 @@ writeFileSync(join(outRoot, 'Navigation', 'navmesh.json'), JSON.stringify({
 }, null, 2));
 const barrier = sources.templates.structures.find((s) => s.id === 's7barrier');
 writeFileSync(join(outRoot, 'CrowdSimulationConfig.json'), JSON.stringify({
+  fog: { optimisticTerrain: false },
   world: { seed },
   // 地形演示图开局不部署。Web 的 deploy.initialUnits 由 S4 那份覆盖片段单独写。
   deploy: {

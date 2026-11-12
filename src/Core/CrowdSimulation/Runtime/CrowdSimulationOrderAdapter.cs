@@ -79,6 +79,8 @@ public static class CrowdSimulationOrderAdapter
         }
 
         var point = first.Args.Spatial.WorldCm;
+        bool carryFog = session.Fog != null;
+        bool optimistic = carryFog && (prefs == null ? session.Config.Fog.OptimisticTerrain : prefs.OptimisticTerrain);
         session.Commands.Schedule(session, new[]
         {
             new Units.CrowdCommand(session.TickCount, new Units.CrowdSimCommand
@@ -90,6 +92,8 @@ public static class CrowdSimulationOrderAdapter
                 ShapeId = prefs == null ? PlainClickShapeId : prefs.ShapeId,
                 HasAuto = prefs != null,
                 Auto = prefs != null && prefs.MagicBox,
+                HasFogTerrain = carryFog,
+                FogTerrain = optimistic,
                 Members = members,
             }),
         });
