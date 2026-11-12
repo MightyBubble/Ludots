@@ -1,6 +1,6 @@
 # Agent 调试桥（Agent Debug Bridge）
 
-设计 SSOT：[`RFC-0066`](https://github.com/mightybubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)。任务实操见 [Agent Bridge](../agent-bridge.md)。
+设计 SSOT：[`RFC-0066`](https://github.com/mightybubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)。WebUI 面板内部控件查询是后续切片 [`RFC-0067`](../../docs/rfcs/RFC-0067-webui-interactive-inventory.md)（[#1493](https://github.com/MightyBubble/Ludots/issues/1493)）。任务实操见 [Agent Bridge](../agent-bridge.md)。
 
 语义层是 `IAgentTool` 注册表；客户端走同一环回 HTTP JSON-RPC（`method` = 工具名）。
 
@@ -60,7 +60,7 @@ TaskCompletionSource 回包
 | 导航 | `ludots.nav.project` · `ludots.nav.findPath` | 世界点 → 可行走三角形投影；A→B 寻路 + 路径点 + 代价（生产 `NavQueryService`） |
 | 实体 | `ludots.entities.query` | 世界坐标→屏幕投影 rect、**屏幕占比**、可见性；`offset/limit/nameFilter/onScreenOnly` |
 | Presenter | `ludots.presenters.query` · `ludots.presenters.desync` · `ludots.presenters.screen` | 逻辑→视觉→presenter→emit 全链只读观测；四跳 desync（hop1–4）；按 seat 投影屏内清单；可选 seat×knowledge `shouldSee`/`actualDrawn` 差异（#1062） |
-| UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击 |
+| UI | `ludots.ui.tree` · `ludots.ui.query` · `ludots.ui.click` | 统一 UiScene 遍历（markup / composite / reactive 三写法归一，browser canvas 节点有标注）；CSS 选择器；elementId 或坐标点击。WebUI 面板内部控件目前还看不见——方案见 [RFC-0067](../../docs/rfcs/RFC-0067-webui-interactive-inventory.md) / [#1493](https://github.com/MightyBubble/Ludots/issues/1493) |
 | GAS | `ludots.gas.entity` · `ludots.gas.diagnostics` | tags（名称解析）/ attributes / active effects / ability 槽位；诊断事件缓冲转储 |
 | 订单 | `ludots.orders.inspect` · `ludots.orders.issue` | 准入/终态缓冲明细；经正式 intake 路径下发订单，全生命周期可观测 |
 | 输入 | `ludots.input.state` · `ludots.input.inject` · `ludots.input.raw` | 输入状态与 UI 捕获；**语义层**注入（press/release/set，走 `PlayerInputHandler.Inject*`）；**窗口层**注入（pointerMove/click/scroll/press/type，经 `SyntheticInputDevice` 与物理输入同管线） |
@@ -73,6 +73,12 @@ TaskCompletionSource 回包
 
 - **语义动作层**（`input.inject`）：直接写 `PlayerInputHandler` 的注入表，绕过硬件与 UI——用来驱动游戏行为（放技能、下命令）。
 - **窗口原始层**（`input.raw`）：事件从宿主输入轮询点进入，UI 命中测试、指针捕获、键位绑定全部生效——用来验证"用户真的点这个按钮会怎样"。
+
+### WebUI 面板内部控件（缺口）
+
+`ui.tree` / `ui.query` 只遍历 UiScene。WebUI 面板在树上是一块 browser canvas，页面里的按钮不在查询空间里；`ui.click` 走 `UiScene.Dispatch`，到不了 `IUiCanvasInputSink`，所以点 canvas 会 `handled:false`。`input.raw` 和 `screenshot` 已经能驱动、能取证。
+
+不要内嵌 Chrome DevTools / CDP 来填这个洞。后续切片是页面上报可点控件清单，投影进查询覆盖层；点击改走 `UIRoot.HandleInput`。提案：[RFC-0067](../../docs/rfcs/RFC-0067-webui-interactive-inventory.md)，issue [#1493](https://github.com/MightyBubble/Ludots/issues/1493)。
 
 ### 六边形端口
 

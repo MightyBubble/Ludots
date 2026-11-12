@@ -4,6 +4,7 @@
 
 - 实操本页；架构：[Agent 调试桥](architecture/agent-debug-bridge.md)
 - 设计：[RFC-0066](https://github.com/mightyBubble/Ludots/blob/main/docs/rfcs/RFC-0066-agent-debug-bridge.md) · 计划 [epic #1056](https://github.com/MightyBubble/Ludots/issues/1056)
+- WebUI 面板内部控件：[RFC-0067](../docs/rfcs/RFC-0067-webui-interactive-inventory.md)（[#1493](https://github.com/MightyBubble/Ludots/issues/1493)；提案，尚未实现）
 - 引擎资产验收：[Raylib 资产验收台](raylib-asset-acceptance.md)
 
 ## 60 秒上手
@@ -58,8 +59,8 @@ Inspector（浏览器面板）：`cd src/Tools/Ludots.Inspector.React && npm run
 | 一片区域里有谁（半径/扇形/直线） | `ludots.spatial.query` | `shape: radius/aabb/cone/rect/line` + 中心与尺寸参数；直走生产空间查询服务（技能/自动索敌同层），带 `distanceCmToCenter` 与 `dropped` 诊断 |
 | 某点可不可走 / A→B 怎么走 | `ludots.nav.project` / `ludots.nav.findPath` | project 命中可行走三角形；findPath 返回 `status`（NotReady=瓦片未就绪）+ 路径点 + `travelCostCm` |
 | 看某实体的血量/属性/技能槽 | `ludots.gas.entity` | `{entityId}`；tags 名称已解析、attributes 只列非零 |
-| 看面板/按钮长什么样 | `ludots.ui.tree` / `ludots.ui.query` | tree 全量；query 用 CSS 选择器——**实测注意**：选择器按 tag/`#id`/`.class` 匹配，本仓 UI 多用 tag（`selector:"button"` 命中 10 个，`.button` 命中 0 个，因为节点没有 class） |
-| 点一个按钮 | `ludots.ui.click` | `{elementId}` 或裸坐标 `{x,y}`；返回 `handled:true/false` + 命中节点的 rect/pseudoState——点到容器会 `handled:false`，换 elementId |
+| 看面板/按钮长什么样 | `ludots.ui.tree` / `ludots.ui.query` | tree 全量；query 用 CSS 选择器——**实测注意**：选择器按 tag/`#id`/`.class` 匹配，本仓 UI 多用 tag（`selector:"button"` 命中 10 个，`.button` 命中 0 个，因为节点没有 class）。**WebUI 浏览器面板内部目前查不到**：tree 只到 canvas 表面，`selector:"button"` 对网页按钮返回 0 |
+| 点一个按钮 | `ludots.ui.click` | `{elementId}` 或裸坐标 `{x,y}`；返回 `handled:true/false` + 命中节点的 rect/pseudoState——点到容器会 `handled:false`，换 elementId。点 WebUI canvas 时同样 `handled:false`；要现在就驱动网页按钮，用 `input.raw` |
 | 让实体做一件事（移动/施法/攻击） | `ludots.orders.issue` | `orderType` 是**字符串键或数字 id**；合法键在 `mods/LudotsCoreMod/assets/GAS/order_types.json`：实测 `castAbility` / `moveTo` / `attackTarget` / `stop` / `chainPass` 等；`targetEntityId` 或 `worldXCm/worldYCm` 按订单类型二选一 |
 | 模拟按键（放技能） | `ludots.input.inject` | `{actionId, mode:"press"|"release"|"set", seatId?}`——语义层，走游戏输入绑定表；分屏时 `seatId` 路由到该 seat 自己的输入通道（不传=全局链，多 seat 下全局链按设计 dormant）；**press 后记得 release** |
 | 模拟真实鼠标键盘（验证 UI 交互） | `ludots.input.raw` | `{op:"pointerMove"|...,"x","y"}`——窗口层，UI 命中/指针捕获全生效；下一帧才应用 |
@@ -123,7 +124,7 @@ npm install && npm run dev   # http://127.0.0.1:5179 ，默认连 47921
 
 1. **`orderType` 键源**：合法键在 `mods/LudotsCoreMod/assets/GAS/order_types.json`（`castAbility`/`moveTo`/`attackTarget`/`stop`…）；`ludots.orders.inspect` 响应的 `orderTypes` 字段也带键清单（id/key/label），`orders.issue` 键名报错时会指向这两个来源。
 2. **CSS 选择器按属性匹配**：`.button` 匹配的是 `class="button"`，本仓多数按钮只有 tag——用 `selector:"button"` 或 `#elementId`。
-3. **`ui.click` 的 `handled:false` 不是故障**：命中了容器节点但无点击处理器；用 `ui.query` 拿真实按钮的 `elementId` 再点。
+3. **`ui.click` 的 `handled:false` 不是故障**：命中了容器节点但无点击处理器；用 `ui.query` 拿真实按钮的 `elementId` 再点。例外：点在 WebUI 的 browser canvas 上时，现在也会 `handled:false` 且画面不动——DOM 里的按钮不在 UiScene 里。对照路径用 `input.raw`。补查询与点击入口的方案是 [RFC-0067](../docs/rfcs/RFC-0067-webui-interactive-inventory.md)（[#1493](https://github.com/MightyBubble/Ludots/issues/1493)），不是内嵌 Chrome DevTools。
 4. **`input.inject` 的 press 是"按住"语义**：press 之后必须 release，否则按键悬挂。
 5. **`logs.tail` 只有激活后的日志**：想看启动期日志要靠 `game.log` 文件重定向，环里没有。
 6. **`pumpCount` 停涨** = 主循环停了（真死或被 pause 卡住），先 `/health` 再谈别的。
