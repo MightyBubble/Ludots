@@ -31,7 +31,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 
 `CrowdSimulationS4DeployMod` 是种子 1337 上的交互部署场景：进图按 `deploy.initialUnits` 部署开局单位，并到点自动回放对拍。HUD 显示当前工具、避让频率、暂停/倍速、重烘切片、tick、单位状态分布、最近一笔重烘报告（脏 tile、代价/可通行变化、缓存命中、重规划、耗时）和回放结论。进入交互后自动回放停用；暂停时 tick 不推进但指令仍执行；倍速走 TimeFlow 的 Simulation 缩放；重烘脏 tile 会闪烁。
 
-键位在 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/default_input.json`，HUD 第一行也有摘要。常用项：N 关闭工具、K 爆炸、G 生成、H 建筑、J 拆除、F 部署、R 散开、Y 满员、T 清缓存、`-`/`=` 避让频率、P 暂停、PgUp/PgDn 倍速、V 切视图、B 建造开关、X 拆除光标处、1–6 选结构模板、左键按当前工具提交。方形、圆、固定道路、两点连线都走 `placeStructure`。演示脚本可含迷雾命令（`reveal` / `obscure` / `forget` / `fogTerrain`），单位按认知改道；调试 HUD 读玩家 1 的可见/探索/残影格（`fogCells vis/explored/ghost`）。
+键位在 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/Input/default_input.json`，HUD 第一行也有摘要。常用项：N 关闭工具、K 爆炸、G 生成、H 建筑、J 拆除、F 部署、R 散开、Y 满员、T 清缓存、`-`/`=` 避让频率、P 暂停、PgUp/PgDn 倍速、V 切视图、B 建造开关、X 拆除光标处、1–6 选结构模板、左键按当前工具提交。方形、圆、固定道路、两点连线都走 `placeStructure`。演示脚本可含迷雾命令（`reveal` / `obscure` / `forget` / `fogTerrain`），单位按认知改道。S4 开局配置是开。tick 40 玩家 1 的行军写明 `fogTerrain` false，先按已知地形走；tick 200 写成 true；tick 240 写回 false。调试 HUD 读玩家 1 的可见/探索/残影格（`fogCells vis/explored/ghost`）。
 
 ## S3 路径演示
 
@@ -40,7 +40,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 ## 组成
 
 - `CrowdSimulationShowcaseStageMod`：所有场景共用的舞台。依赖 S4 部署演示，把开局部署人数设为 0，清空 S4 的演示脚本，关掉自动回放，玩家视图按迷雾隐藏敌方。
-- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 700,000 cm、目标 (1334375, 421875)，对着这段南北向的穿越），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
+- 场景 Mod：`assets/CrowdSimulationDebug.json` 写 `session.script` 和标题，`assets/Camera/virtual_cameras.json` 按 id 覆盖 `CrowdSimulation.Camera.S4Deploy` 的镜头位置、距离和角度（行军、折返、连点和三个迷雾场景用俯角 80°、偏航 180°，东在右；目标点偏下放，单位不压在左上角的面板下。迷雾探索把镜头拉到 2,900,000 cm、目标 (10000, 315000)，整张地图连同四边都在画面里，能看出迷雾盖到地图边缘。乐观迷雾把镜头收到距离 280,000 cm、目标 (1332450, 429000)，罩住出发点和导航格 x=213、y=80..83 那排水域。领队折线由本场景的 `CrowdSimulationDebugView.json` 打开 `overlays.funnel`，画在界面最上层。窗口 1280×1100，调试视图「缓存」页的会话 tick 落在画面里），`assets/game.json` 指向 `crowd_simulation_s1337`。5 万单位场景另外打开遥测面板、关掉迷雾隐藏。
 - 脚本可以引用文件：`session.scriptAsset` 写 mod 内相对路径，指向根上有 `script` 数组的文档（和回归场景同一种格式）。会话先跑这份文件里的行，再跑 `session.script`，合起来仍须按 tick 升序。行军、折返、连点三个场景共用的 120 人开局写在舞台 Mod 的 `assets/CrowdSimulation/showcase/formation-120.json`，三个场景只写自己的指令。5 万单位场景直接引用 50k 门禁读的 `assets/CrowdSimulation/regress/stress-50k.json`，演示和门禁是同一个文件。
 - 行军和连点的第一条指令都是 tick 0 走到 A 点，这一行没有抽出来：它是各自场景的第一步，连点场景后面八次点击也是同一个 A 点，抽成共享文件反而要拆成两层引用。
 
@@ -64,7 +64,7 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 | 行军 | `march_leg1_a.png`（300）、`march_leg2_b.png`（472）、`march.png`（712，转向后） |
 | 连点 | `repeat_click_leg1_settling.png`（300）、`repeat_click_leg2_clicks.png`（480）、`repeat_click.png`（630） |
 | 迷雾探索 | `fog_explore_before.png`（60）、`fog_explore_enemy_in_view.png`（150）、`fog_explore_seen.png`（2760） |
-| 乐观迷雾 | `fog_reroute_optimistic.png`（开，引擎 tick 230，开关开着，两人还在走）、`fog_reroute_known.png`（关，引擎 tick 3442，开关关掉，两人已到） |
+| 乐观迷雾 | `fog_reroute_optimistic.png`（下令按开局，会话 tick 40，折线直穿那排水）、`fog_reroute_known.png`（同一会话 tick 40，下令把 fogTerrain 写成 false，折线从第一条就绕开。左栏开关是开局偏好，两张都开着） |
 | 共享视野 | `fog_shared_vision_before.png`（20）、`fog_shared_vision_seen.png`（226）、`fog_shared_vision_enemy_shown.png`（642）、`fog_shared_vision_ghost_kept.png`（1032）、`fog_shared_vision_ghost_cleared.png`（1332） |
 | 5 万单位 | `stress_50k_hud_paused.png`（134，暂停步进）、`stress_50k_hud.png`（149，实时） |
 

@@ -602,7 +602,7 @@ internal sealed class CrowdDebugViewFrame
     private void EmitGenerated(int count, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, Vector4 color, float alphaScale)
         => EmitScratch(count, overlay, projector, height, ref used, budget, perKind: false, color, alphaScale);
 
-    private void EmitScratch(int count, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, bool perKind, Vector4 color, float alphaScale)
+    private void EmitScratch(int count, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, bool perKind, Vector4 color, float alphaScale, PresentationOverlayLayer layer = PresentationOverlayLayer.UnderUi)
     {
         if (count <= 0 || used >= budget || _scratch == null) return;
         int room = budget - used;
@@ -614,7 +614,7 @@ internal sealed class CrowdDebugViewFrame
         for (int i = 0; i < clipped && used < budget; i++)
         {
             var ink = perKind ? KindColor(_clip[i].Kind, alphaScale) : color;
-            EmitSegment(_clip[i], overlay, projector, height, ref used, budget, ink);
+            EmitSegment(_clip[i], overlay, projector, height, ref used, budget, ink, layer);
         }
     }
 
@@ -625,7 +625,8 @@ internal sealed class CrowdDebugViewFrame
         int seenCount = 0;
         int count = CrowdDebugOverlayGeometry.AppendFunnel(session.Groups.Groups, ControllingPlayer, seen, ref seenCount, scratch, 0);
         for (int i = 0; i < seenCount; i++) seen[i] = null;
-        EmitScratch(count, overlay, projector, height, ref used, budget, perKind: true, default, 1f);
+        // 漏斗画在界面最上层。地形和迷雾合成会盖住 UnderUi 上的这条线，开和关的路线就分不出来。
+        EmitScratch(count, overlay, projector, height, ref used, budget, perKind: true, default, 1f, PresentationOverlayLayer.TopMost);
     }
 
     private void EmitFormationSlots(CrowdSimSession session, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget)
@@ -722,12 +723,12 @@ internal sealed class CrowdDebugViewFrame
         return CrowdDebugViewColors.At(_config.Colors.Templates, index, path, "colors.templates");
     }
 
-    private void EmitSegment(CrowdDebugSegment segment, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, Vector4 color)
+    private void EmitSegment(CrowdDebugSegment segment, ScreenOverlayBuffer overlay, IScreenProjector projector, IContinuousHeightmap height, ref int used, int budget, Vector4 color, PresentationOverlayLayer layer = PresentationOverlayLayer.UnderUi)
     {
         if (used >= budget) return;
         if (!TryScreen(segment.X0, segment.Y0, projector, height, out int x0, out int y0)) return;
         if (!TryScreen(segment.X1, segment.Y1, projector, height, out int x1, out int y1)) return;
-        if (overlay.AddLine(PresentationOverlayLayer.UnderUi, x0, y0, x1, y1, _config.LineThicknessPx, color))
+        if (overlay.AddLine(layer, x0, y0, x1, y1, _config.LineThicknessPx, color))
             used = overlay.Count;
     }
 

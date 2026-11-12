@@ -106,7 +106,8 @@
           "player": 1,
           "xCm": 1200000,
           "yCm": 800000,
-          "shape": "box"
+          "shape": "box",
+          "fogTerrain": false
         }
       },
       {
