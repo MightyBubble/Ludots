@@ -1,5 +1,6 @@
 {
   "commit": "a412d9f581712b683d84bf644c9b594095ed11e3",
+  "note": "到达格仍是 commit 那次采样。s7crecycle 认知组只改了 materialized 与 navVersion：挂组即物化，版本 = 槽号 × 1048576。",
   "scenarios": {
     "s7fog-truth.json": {
       "ticks": 360,
@@ -254407,8 +254408,8 @@
               "count": 8,
               "navId": 131073,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 2097152,
               "arrivalCells": null,
               "reached": null
             }
@@ -254424,8 +254425,8 @@
               "count": 8,
               "navId": 262145,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 4194304,
               "arrivalCells": null,
               "reached": null
             }
@@ -254441,8 +254442,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254458,8 +254459,8 @@
               "count": 8,
               "navId": 458753,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 7340032,
               "arrivalCells": null,
               "reached": null
             }
@@ -254475,8 +254476,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254509,8 +254510,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254543,8 +254544,8 @@
               "count": 8,
               "navId": 851969,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 13631488,
               "arrivalCells": null,
               "reached": null
             }
@@ -254560,8 +254561,8 @@
               "count": 8,
               "navId": 917505,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 14680064,
               "arrivalCells": null,
               "reached": null
             }
@@ -254577,8 +254578,8 @@
               "count": 8,
               "navId": 1048577,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 16777216,
               "arrivalCells": null,
               "reached": null
             }
@@ -254594,8 +254595,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254611,8 +254612,8 @@
               "count": 8,
               "navId": 1245185,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 19922944,
               "arrivalCells": null,
               "reached": null
             }
@@ -254628,8 +254629,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254662,8 +254663,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254696,8 +254697,8 @@
               "count": 8,
               "navId": 1638401,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 26214400,
               "arrivalCells": null,
               "reached": null
             }
@@ -254713,8 +254714,8 @@
               "count": 8,
               "navId": 65537,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 1048576,
               "arrivalCells": null,
               "reached": null
             }
@@ -254747,8 +254748,8 @@
               "count": 8,
               "navId": 1835009,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 29360128,
               "arrivalCells": null,
               "reached": null
             }
@@ -254764,8 +254765,8 @@
               "count": 8,
               "navId": 1900545,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 30408704,
               "arrivalCells": null,
               "reached": null
             }
@@ -254781,8 +254782,8 @@
               "count": 8,
               "navId": 2031617,
               "cognitive": true,
-              "materialized": false,
-              "navVersion": null,
+              "materialized": true,
+              "navVersion": 32505856,
               "arrivalCells": null,
               "reached": null
             }

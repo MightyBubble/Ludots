@@ -224,8 +224,9 @@ public sealed class L76FogGateTests
     }
 
     /// <summary>
-    /// 换雾实现前的 s7 雾脚本和回收脚本：认知导航是否物化、版本、流场到达格、到达单位句柄。
-    /// 夹具是那次运行的采样。当前会话重采后，认知组先对照，再对照其余组的到达格。
+    /// s7 雾脚本和回收脚本：认知导航是否物化、版本、流场到达格、到达单位句柄。
+    /// 挂组会解析认知导航，版本是槽号乘 1048576。回收脚本里这些组只改了是否物化和版本。
+    /// 到达格仍是夹具 commit 那次采样。同一目标格下到达格变了，夹具不改写，断言停在第一条到达格差异。
     /// </summary>
     [Test]
     public void CognitiveNavVersion_AndArrivalCells_MatchBaseline()

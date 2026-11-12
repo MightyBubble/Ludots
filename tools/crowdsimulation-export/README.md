@@ -34,7 +34,7 @@ dotnet test src/Tests/CrowdSimulationTests --filter "FullyQualifiedName~CrowdFuz
 
 ## benchmarkStress50k.mjs
 
-读 `stress-50k.json`（厘米、玩家 1..4），换成 Web 的米制和 0 基玩家后，用无头内核跑文件里的预热段和测量段。不读 `BENCH_SCENARIOS`。输出 JSON 供文档对照 C# `CrowdKernel50KBenchmarkTests`。
+读 `stress-50k.json`（厘米、玩家 1..4），换成 Web 的米制和 0 基玩家后，用无头内核跑文件里的预热段和测量段。不读 `BENCH_SCENARIOS`。输出 JSON 供文档对照 C# `CrowdKernel50KBenchmarkTests`。已入库的那次对照是忙机器上的数字，已撤下。重测要在空闲机器上与 C# 紧挨着做，1 分钟负载明显低于核数，两端产物一起换。
 
 ```bash
 node scripts/benchmarkStress50k.mjs --scenario mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json

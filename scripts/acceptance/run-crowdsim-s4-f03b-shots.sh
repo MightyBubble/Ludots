@@ -26,7 +26,7 @@ LAUNCHER=
 rpc() { curl -s -m 5 -X POST "$BRIDGE/rpc" -H 'Content-Type: application/json' -d "$1"; }
 crowdtick() {
   python3 - <<'PY'
-import json, urllib.request
+import json, sys, urllib.request
 body = json.dumps({
     "jsonrpc": "2.0", "id": 1, "method": "ludots.ui.query",
     "params": {"selector": "[ui-text=NavTick]", "limit": 1},
@@ -36,9 +36,12 @@ req = urllib.request.Request(
 try:
     with urllib.request.urlopen(req, timeout=5) as resp:
         payload = json.loads(resp.read().decode())
-except Exception:
-    print("")
-    raise SystemExit(0)
+except Exception as ex:
+    print(f"crowd tick query failed: {ex}", file=sys.stderr)
+    raise SystemExit(1)
+if payload.get("error"):
+    print(f"crowd tick query failed: {payload['error']}", file=sys.stderr)
+    raise SystemExit(1)
 nodes = (payload.get("result") or {}).get("nodes") or []
 text = ((nodes[0].get("text") if nodes else "") or "").strip()
 head = text.split("/")[0].strip()
@@ -48,17 +51,28 @@ PY
 shot() {
   local base="$1"
   local tick
-  tick=$(crowdtick)
-  [ -n "$tick" ] || tick=unknown
+  if ! tick=$(crowdtick); then
+    echo "crowd tick query failed while shooting ${base}" >&2
+    exit 1
+  fi
+  if [ -z "$tick" ]; then
+    echo "crowd tick unreadable while shooting ${base}" >&2
+    exit 1
+  fi
   rpc "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"ludots.screenshot\",\"params\":{\"name\":\"${base}-t${tick}.png\"}}" >/dev/null
 }
 inject() { rpc "{\"jsonrpc\":\"2.0\",\"id\":$2,\"method\":\"ludots.input.inject\",\"params\":{\"actionId\":\"$1\",\"mode\":\"$3\"}}" >/dev/null; }
-waittick() { # 等 HUD 上的会话 tick ≥ $1
+waittick() { # 等 HUD 上的会话 tick ≥ $1；查询失败或超时都返回非 0
+  local T
   for i in $(seq 1 400); do
-    T=$(crowdtick)
-    [ -n "$T" ] && [ "$T" -ge "$1" ] && return 0
+    if ! T=$(crowdtick); then
+      echo "crowd tick query failed while waiting for $1" >&2
+      return 1
+    fi
+    if [ -n "$T" ] && [ "$T" -ge "$1" ]; then return 0; fi
     sleep 0.25
   done
+  echo "crowd tick did not reach $1" >&2
   return 1
 }
 launch_host() {
@@ -109,30 +123,59 @@ for i in $(seq 1 180); do
 done
 curl -s -m 2 "$BRIDGE/health" || { echo "BRIDGE NOT UP"; kill_host; exit 1; }
 echo; echo "[bridge up]"
+GOT_TICK=
 for i in $(seq 1 60); do
   rpc '{"jsonrpc":"2.0","id":1,"method":"ludots.ui.click","params":{"elementId":"crowd-dv-tab-cache"}}' >/dev/null
   sleep 0.8
-  if [ -n "$(crowdtick)" ]; then break; fi
+  if ! GOT_TICK=$(crowdtick); then
+    echo "crowd tick query failed" >&2
+    kill_host
+    exit 1
+  fi
+  if [ -n "$GOT_TICK" ]; then break; fi
 done
-echo "[crowd tick] $(crowdtick)"
+if [ -z "$GOT_TICK" ]; then
+  echo "crowd tick unreadable after opening the cache tab" >&2
+  kill_host
+  exit 1
+fi
+echo "[crowd tick] $GOT_TICK"
 
 # 重烘帧:等脚本建筑 op(tick 120)落地,高频连发截图(每张 RPC 含 PNG 落盘,
 # 实际采样间隔由桥的泵串行化决定,约 0.2~0.5s/张);闪窗=报告(→123)后真实
 # 时间 2.5s,风暴期帧慢,连发 20 张保证窗内有多帧命中
-waittick 120 || echo "[warn] crowd tick did not reach 120"
+waittick 120 || { kill_host; exit 1; }
 SHOTPIDS=()
 for k in $(seq 1 20); do
   shot "f03b-rebake-b$k" &
   SHOTPIDS+=($!)
   sleep 0.2
 done
-wait "${SHOTPIDS[@]}"
-echo "[shots] rebake x20 @crowd $(crowdtick)"
+SHOT_FAIL=0
+for pid in "${SHOTPIDS[@]}"; do
+  wait "$pid" || SHOT_FAIL=1
+done
+if [ "$SHOT_FAIL" -ne 0 ]; then
+  echo "rebake shot failed: crowd tick unreadable" >&2
+  kill_host
+  exit 1
+fi
+REBAKE_TICK=$(crowdtick) || { kill_host; exit 1; }
+if [ -z "$REBAKE_TICK" ]; then
+  echo "crowd tick unreadable after rebake shots" >&2
+  kill_host
+  exit 1
+fi
+echo "[shots] rebake x20 @crowd $REBAKE_TICK"
 
 # HUD 常态帧:等自动回放完成且逐位一致(日志 replay 行 status=1;兜底 crowd≥400)
 for i in $(seq 1 600); do
   if grep -aq "CrowdSimulation replay at tick .*status=1" "$LOG"; then break; fi
-  T=$(crowdtick)
+  if ! T=$(crowdtick); then
+    echo "crowd tick query failed while waiting for replay" >&2
+    kill_host
+    exit 1
+  fi
   [ -n "$T" ] && [ "$T" -ge 400 ] && break
   sleep 0.5
 done
