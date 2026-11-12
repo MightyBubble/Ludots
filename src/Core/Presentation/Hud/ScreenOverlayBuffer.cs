@@ -13,6 +13,7 @@ namespace Ludots.Core.Presentation.Hud
 
     public struct ScreenOverlayItem
     {
+        public PresentationOverlayLayer Layer;
         public int StableId;
         public int DirtySerial;
         public ScreenOverlayItemKind Kind;
@@ -32,6 +33,8 @@ namespace Ludots.Core.Presentation.Hud
     /// <summary>
     /// Per-frame screen-space overlay buffer.
     /// Produced by mod/presentation systems and consumed by platform adapter.
+    /// Every item names its compositor layer: markers that follow the world go <see cref="PresentationOverlayLayer.UnderUi"/>
+    /// so UI panels cover them; window-anchored panels and input feedback that must stay above UI go <see cref="PresentationOverlayLayer.TopMost"/>.
     /// </summary>
     public sealed class ScreenOverlayBuffer
     {
@@ -59,12 +62,12 @@ namespace Ludots.Core.Presentation.Hud
             return _strings[id];
         }
 
-        public bool AddText(int x, int y, string text, int fontSize, Vector4 color)
+        public bool AddText(PresentationOverlayLayer layer, int x, int y, string text, int fontSize, Vector4 color)
         {
-            return AddText(x, y, text, fontSize, color, stableId: 0, dirtySerial: 0);
+            return AddText(layer, x, y, text, fontSize, color, stableId: 0, dirtySerial: 0);
         }
 
-        public bool AddText(int x, int y, string text, int fontSize, Vector4 color, int stableId, int dirtySerial)
+        public bool AddText(PresentationOverlayLayer layer, int x, int y, string text, int fontSize, Vector4 color, int stableId, int dirtySerial)
         {
             if (_count >= MaxItems) return false;
             int stringId = RegisterString(text);
@@ -72,6 +75,7 @@ namespace Ludots.Core.Presentation.Hud
 
             _items[_count++] = new ScreenOverlayItem
             {
+                Layer = layer,
                 StableId = stableId,
                 DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Text,
@@ -84,17 +88,18 @@ namespace Ludots.Core.Presentation.Hud
             return true;
         }
 
-        public bool AddText(int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color)
+        public bool AddText(PresentationOverlayLayer layer, int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color)
         {
-            return AddText(x, y, in text, fontSize, color, stableId: 0, dirtySerial: 0);
+            return AddText(layer, x, y, in text, fontSize, color, stableId: 0, dirtySerial: 0);
         }
 
-        public bool AddText(int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color, int stableId, int dirtySerial)
+        public bool AddText(PresentationOverlayLayer layer, int x, int y, in PresentationTextPacket text, int fontSize, Vector4 color, int stableId, int dirtySerial)
         {
             if (_count >= MaxItems) return false;
 
             _items[_count++] = new ScreenOverlayItem
             {
+                Layer = layer,
                 StableId = stableId,
                 DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Text,
@@ -107,17 +112,18 @@ namespace Ludots.Core.Presentation.Hud
             return true;
         }
 
-        public bool AddRect(int x, int y, int width, int height, Vector4 fill, Vector4 border)
+        public bool AddRect(PresentationOverlayLayer layer, int x, int y, int width, int height, Vector4 fill, Vector4 border)
         {
-            return AddRect(x, y, width, height, fill, border, stableId: 0, dirtySerial: 0);
+            return AddRect(layer, x, y, width, height, fill, border, stableId: 0, dirtySerial: 0);
         }
 
-        public bool AddRect(int x, int y, int width, int height, Vector4 fill, Vector4 border, int stableId, int dirtySerial)
+        public bool AddRect(PresentationOverlayLayer layer, int x, int y, int width, int height, Vector4 fill, Vector4 border, int stableId, int dirtySerial)
         {
-            return AddRect(x, y, width, height, fill, border, stableId, dirtySerial, PresentationClipShape.None);
+            return AddRect(layer, x, y, width, height, fill, border, stableId, dirtySerial, PresentationClipShape.None);
         }
 
         public bool AddRect(
+            PresentationOverlayLayer layer,
             int x,
             int y,
             int width,
@@ -132,6 +138,7 @@ namespace Ludots.Core.Presentation.Hud
 
             _items[_count++] = new ScreenOverlayItem
             {
+                Layer = layer,
                 StableId = stableId,
                 DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Rect,
@@ -146,17 +153,18 @@ namespace Ludots.Core.Presentation.Hud
             return true;
         }
 
-        public bool AddLine(int x0, int y0, int x1, int y1, int thickness, Vector4 color)
+        public bool AddLine(PresentationOverlayLayer layer, int x0, int y0, int x1, int y1, int thickness, Vector4 color)
         {
-            return AddLine(x0, y0, x1, y1, thickness, color, stableId: 0, dirtySerial: 0);
+            return AddLine(layer, x0, y0, x1, y1, thickness, color, stableId: 0, dirtySerial: 0);
         }
 
-        public bool AddLine(int x0, int y0, int x1, int y1, int thickness, Vector4 color, int stableId, int dirtySerial)
+        public bool AddLine(PresentationOverlayLayer layer, int x0, int y0, int x1, int y1, int thickness, Vector4 color, int stableId, int dirtySerial)
         {
-            return AddLine(x0, y0, x1, y1, thickness, color, stableId, dirtySerial, PresentationClipShape.None);
+            return AddLine(layer, x0, y0, x1, y1, thickness, color, stableId, dirtySerial, PresentationClipShape.None);
         }
 
         public bool AddLine(
+            PresentationOverlayLayer layer,
             int x0,
             int y0,
             int x1,
@@ -172,6 +180,7 @@ namespace Ludots.Core.Presentation.Hud
 
             _items[_count++] = new ScreenOverlayItem
             {
+                Layer = layer,
                 StableId = stableId,
                 DirtySerial = dirtySerial,
                 Kind = ScreenOverlayItemKind.Line,

@@ -429,12 +429,12 @@ namespace ChampionSkillSandboxMod.Runtime
 
             int x = 20;
             int y = 120;
-            overlay.AddRect(x, y, 520, 182, SelectionPanelFill, SelectionPanelBorder, stableId: 42100, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 26, "Selection SSOT", 20, SelectionPanelTitle, stableId: 42101, dirtySerial: 1);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, 520, 182, SelectionPanelFill, SelectionPanelBorder, stableId: 42100, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 26, "Selection SSOT", 20, SelectionPanelTitle, stableId: 42101, dirtySerial: 1);
 
             if (!TryResolveActiveCollection(engine, collections, out Entity owner, out EntityCollectionHandle handle, out EntityCollectionView current))
             {
-                overlay.AddText(x + 16, y + 54, "No active selection view.", 15, SelectionPanelText, stableId: 42102, dirtySerial: 1);
+                overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 54, "No active selection view.", 15, SelectionPanelText, stableId: 42102, dirtySerial: 1);
                 return;
             }
 
@@ -442,11 +442,11 @@ namespace ChampionSkillSandboxMod.Runtime
             string primaryLabel = ResolveEntityLabel(engine.World, current.PrimaryEntity) ?? "(none)";
             string members = BuildSelectionMemberPreview(engine.World, collections, handle, current.Count);
 
-            overlay.AddText(x + 16, y + 54, $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveSelectionViewChoice(engine))} | owner={viewerLabel} | key={current.Key}", 15, SelectionPanelText, stableId: 42103, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 78, $"Collection {current.Key} | role={current.Role} | rev={current.Revision} | count={current.Count}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 100, $"Primary {primaryLabel}", 14, SelectionPanelText, stableId: 42105, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 122, $"Members {members}", 13, SelectionPanelHint, stableId: 42106, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 146, "Buttons: P1/P1F | AI/AIF | CMD", 13, SelectionPanelHint, stableId: 42107, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 54, $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveSelectionViewChoice(engine))} | owner={viewerLabel} | key={current.Key}", 15, SelectionPanelText, stableId: 42103, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 78, $"Collection {current.Key} | role={current.Role} | rev={current.Revision} | count={current.Count}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 100, $"Primary {primaryLabel}", 14, SelectionPanelText, stableId: 42105, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 122, $"Members {members}", 13, SelectionPanelHint, stableId: 42106, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 146, "Buttons: P1/P1F | AI/AIF | CMD", 13, SelectionPanelHint, stableId: 42107, dirtySerial: 1);
         }
 
         private static void EnsureControllableOwnership(GameEngine engine)

@@ -10,7 +10,7 @@ Before NAV-4, navmesh bake read logical terrain through `VertexMap` only. `WalkM
 
 Logical terrain and visual terrain remain separate:
 
-- Terrain classification owns height, water, ramp, blocked and area keys. Per-agent traversal cost belongs to pathing (`agentTypes[].navMesh.areaCosts`), as specified by #372. The current `LogicTerrainCell.Cost` field is a remaining implementation debt, not the target authoring contract.
+- Terrain classification owns height, water, ramp, blocked and area keys. Per-agent traversal cost belongs to pathing (`agentTypes[].navMesh.areaCosts`), as specified by #372. `LogicTerrainCell` does not carry `Cost`. Navmesh areas carry `id`, `areaId`, and `slopeFree`.
 - Visual terrain is rendering truth: continuous centimeter height, used by presentation and grounding.
 - Visual height never changes walkability unless a caller explicitly runs the projection adapter.
 

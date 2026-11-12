@@ -1,0 +1,16 @@
+[
+  {
+    "id": "crowd_simulation.unit.square",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
+  },
+  {
+    "id": "crowd_simulation.unit.circle",
+    "type": "Primitive",
+    "primitiveKind": "Sphere"
+  },
+  {
+    "id": "crowd_simulation.unit.triangle",
+    "type": "Model"
+  }
+]

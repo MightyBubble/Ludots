@@ -140,8 +140,10 @@ namespace Ludots.Core.UI.PanelHosting
                 }
 
                 bool changed = false;
-                foreach (PanelPin pin in entry.Template.Pins)
+                IReadOnlyList<PanelPin> pins = entry.Template.Pins;
+                for (int p = 0; p < pins.Count; p++)
                 {
+                    PanelPin pin = pins[p];
                     if (!pin.Realtime)
                     {
                         continue;
@@ -273,12 +275,20 @@ namespace Ludots.Core.UI.PanelHosting
         public IReadOnlyList<PanelHostInstanceInfo> SnapshotInstances()
         {
             var list = new List<PanelHostInstanceInfo>(Count);
+            CopyInstancesTo(list);
+            return list;
+        }
+
+        public void CopyInstancesTo(List<PanelHostInstanceInfo> destination)
+        {
+            ArgumentNullException.ThrowIfNull(destination);
+            destination.Clear();
             for (int i = 0; i < _entries.Count; i++)
             {
                 Entry entry = _entries[i];
                 if (entry.Alive)
                 {
-                    list.Add(new PanelHostInstanceInfo(
+                    destination.Add(new PanelHostInstanceInfo(
                         new PanelInstanceHandle(i, entry.Generation),
                         entry.Template.Id,
                         entry.Anchor,
@@ -288,8 +298,6 @@ namespace Ludots.Core.UI.PanelHosting
                         entry.ZOrder));
                 }
             }
-
-            return list;
         }
 
         private void EvaluateAll(Entry entry)

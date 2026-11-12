@@ -96,6 +96,11 @@ namespace Ludots.Core.Fields
             return true;
         }
 
+        public void EnsureChunk(FieldCell2D cell)
+        {
+            GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));
+        }
+
         public bool Set(FieldCell2D cell, T value)
         {
             FieldChunk2D<T> chunk = GetOrCreateChunk(Grid.ChunkCoord(cell.X), Grid.ChunkCoord(cell.Y));
@@ -361,6 +366,26 @@ namespace Ludots.Core.Fields
             }
 
             return scaled;
+        }
+
+        internal FieldChunk2D<T> GetChunk(int chunkX, int chunkY)
+        {
+            if (!TryGetChunkIndex(chunkX, chunkY, out int chunkIndex))
+            {
+                throw new InvalidOperationException($"Chunk {chunkX},{chunkY} is not materialized.");
+            }
+
+            return _chunks[chunkIndex];
+        }
+
+        internal void NoteDirty(FieldChunk2D<T> chunk, int local)
+        {
+            MarkDirtyInChunk(chunk, local);
+        }
+
+        internal void AddNonDefault(int delta)
+        {
+            _nonDefaultCount += delta;
         }
 
         public FieldChunk2D<T> GetChunkAt(int index)

@@ -1,0 +1,17 @@
+{
+  "name": "Terrain1743EvidenceMod",
+  "version": "1.0.0",
+  "description": "工单 #1743 地形取证夹具:引用 crowd s1337 高度资产的纯地形地图 + targetSource=Fixed 钉死机位(误判最密坑洞区),近/中/远三档距离前后同位对照。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "fixture",
+    "terrain",
+    "acceptance",
+    "issue-1743"
+  ]
+}

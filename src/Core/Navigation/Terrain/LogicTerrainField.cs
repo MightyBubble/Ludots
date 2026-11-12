@@ -28,14 +28,12 @@ namespace Ludots.Core.Navigation.Terrain
             byte heightLevel,
             byte waterHeightLevel,
             LogicTerrainSurfaceFlags surfaceFlags,
-            byte areaId = 0,
-            float cost = 1f)
+            byte areaId = 0)
         {
             HeightLevel = ClampHeight(heightLevel);
             WaterHeightLevel = ClampHeight(waterHeightLevel);
             SurfaceFlags = surfaceFlags;
             AreaId = areaId;
-            Cost = cost > 0f && !float.IsNaN(cost) ? cost : throw new ArgumentOutOfRangeException(nameof(cost));
         }
 
         public byte HeightLevel { get; }
@@ -45,8 +43,6 @@ namespace Ludots.Core.Navigation.Terrain
         public LogicTerrainSurfaceFlags SurfaceFlags { get; }
 
         public byte AreaId { get; }
-
-        public float Cost { get; }
 
         public bool IsRamp => (SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0;
 
@@ -208,7 +204,7 @@ namespace Ludots.Core.Navigation.Terrain
             CellSizeCm = cellSizeCm;
             _originXcm = originXcm;
             _originZcm = originZcm;
-            _cell = cell.Cost > 0f ? cell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+            _cell = cell;
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
@@ -308,7 +304,7 @@ namespace Ludots.Core.Navigation.Terrain
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            _defaultCell = defaultCell.Cost > 0f ? defaultCell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+            _defaultCell = defaultCell;
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;

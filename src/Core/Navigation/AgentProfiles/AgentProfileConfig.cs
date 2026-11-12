@@ -12,6 +12,7 @@ namespace Ludots.Core.Navigation.AgentProfiles
         public float BeamCm { get; set; }
         public float Mass { get; set; }
         public int Layer { get; set; }
+        public string NavProfileId { get; set; } = string.Empty;
 
         public void Validate(int index)
         {
@@ -45,6 +46,16 @@ namespace Ludots.Core.Navigation.AgentProfiles
             if (Layer < 0)
             {
                 throw new InvalidOperationException($"AgentProfile '{Id}' requires Layer >= 0.");
+            }
+
+            if (string.IsNullOrWhiteSpace(NavProfileId))
+            {
+                throw new InvalidOperationException($"AgentProfile '{Id}' requires navProfileId.");
+            }
+
+            if (!string.Equals(NavProfileId.Trim(), NavProfileId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"AgentProfile '{Id}' navProfileId must not contain leading or trailing whitespace.");
             }
         }
 

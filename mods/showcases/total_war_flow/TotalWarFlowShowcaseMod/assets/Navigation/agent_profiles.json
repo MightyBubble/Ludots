@@ -7,6 +7,7 @@
     "draftCm": 0.0,
     "beamCm": 0.0,
     "mass": 2.0,
-    "layer": 0
+    "layer": 0,
+    "navProfileId": "tw.agent"
   }
 ]

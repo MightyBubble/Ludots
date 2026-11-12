@@ -1,7 +1,6 @@
 {
-  "agentTypes": [
-    {
-      "id": "tw.agent",
+  "agentTypes": {
+    "tw.agent": {
       "profileId": "tw.agent",
       "selection": {
         "mode": "PreferMesh",
@@ -14,7 +13,8 @@
         "areaCosts": [
           {
             "areaId": 0,
-            "cost": 1.0
+            "cost": 1.0,
+            "passable": true
           }
         ]
       },
@@ -26,5 +26,5 @@
         "tagCostRules": []
       }
     }
-  ]
+  }
 }

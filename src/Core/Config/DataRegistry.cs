@@ -18,12 +18,22 @@ namespace Ludots.Core.Config
 
         public void Load(string relativePath, ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
+            ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
+            LoadTracked(relativePath, catalog, tracked);
+            return 0;
+            });
+        }
+
+        private void LoadTracked(string relativePath, ConfigCatalog catalog, ConfigConflictReport report)
+        {
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
-            int count = 0;
+            // 这一条相对路径就是整张表：再装一次整表替换，装失败时旧表原样保留。
+            var next = new Dictionary<string, T>(merged.Count, StringComparer.Ordinal);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = false, IncludeFields = true };
 
             for (int i = 0; i < merged.Count; i++)
@@ -45,14 +55,13 @@ namespace Ludots.Core.Config
                                 $"DataRegistry<{typeof(T).Name}> id mismatch in {relativePath}: catalog entry '{merged[i].Id}' vs item Id '{item.Id}'.");
                         }
 
-                        if (_data.ContainsKey(item.Id))
+                        if (next.ContainsKey(item.Id))
                         {
                             throw new InvalidOperationException(
                                 $"DataRegistry<{typeof(T).Name}> duplicate id '{item.Id}' after merge.");
                         }
 
-                        _data[item.Id] = item;
-                        count++;
+                        next[item.Id] = item;
                     }
                 }
                 catch (Exception ex)
@@ -63,7 +72,13 @@ namespace Ludots.Core.Config
                 }
             }
 
-            Log.Info(in LogChannels.Config, $"Loaded {count} DataRegistry<{typeof(T).Name}> items.");
+            _data.Clear();
+            foreach (var pair in next)
+            {
+                _data.Add(pair.Key, pair.Value);
+            }
+
+            Log.Info(in LogChannels.Config, $"Loaded {next.Count} DataRegistry<{typeof(T).Name}> items.");
         }
 
         public T Get(string id)

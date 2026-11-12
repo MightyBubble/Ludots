@@ -1,0 +1,91 @@
+using System;
+using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Terrain;
+
+namespace Ludots.Core.CrowdSimulation.World;
+
+/// <summary>
+/// 导航分辨率的高度场与坡度。
+/// 从 .height 资产（uint16 缩放样本）推导：样本先在 double 里做 offset + raw × num / den，再 Fix64.FromDouble。
+/// 不调用 ContinuousHeightSampleScale.Decode（那个返回 float）。盒式平均后中心差分得坡度。
+/// 边界邻格被钳到自身，分母仍是 2×格边长，边缘坡度是单侧差分的一半。
+/// </summary>
+public sealed class NavHeightField
+{
+    public required int NavCellsPerSide { get; init; }
+    public required int NavCellSizeCm { get; init; }
+    /// <summary>导航格平均高度（厘米，Fix64）。</summary>
+    public required Fix64[] HeightsCm { get; init; }
+    /// <summary>逐格坡度（无量纲，rise / run）。</summary>
+    public required Fix64[] Slope { get; init; }
+
+    public static NavHeightField FromHeightmap(ContinuousHeightmapAsset asset, int navCellCount, int navCellSizeCm)
+    {
+        ArgumentNullException.ThrowIfNull(asset);
+        if (!asset.UsesRawUInt16Samples)
+        {
+            throw new InvalidOperationException("NavHeightField 需要 uint16 缩放布局的 .height 资产。");
+        }
+
+        int b = asset.SampleColumns;
+        var scale = asset.SampleScale;
+        int navCellsPerSide = navCellCount;
+        var raw = asset.HeightSamplesRaw;
+
+        // 逐样本解码先在 double 完成（asset 契约的小数cm值是实数：offset + raw × num / den;
+        // uint16 与 int 的小幅面乘积在 double 内精确），盒式平均后一次性转 Fix64——
+        // 定点域内 raw × num 会溢出 Fix64 的 Q31.32 上限,必须先除后乘。
+        int count = b * b;
+        var sampleCm = new double[count];
+        for (int i = 0; i < count; i++)
+        {
+            sampleCm[i] = scale.OffsetCm + (raw[i] * (double)scale.UnitsPerSampleNumeratorCm) / scale.UnitsPerSampleDenominator;
+        }
+
+        var heights = new Fix64[navCellsPerSide * navCellsPerSide];
+        for (int y = 0; y < navCellsPerSide; y++)
+        {
+            int by0 = y * b / navCellsPerSide;
+            int by1 = Math.Max(by0 + 1, (y + 1) * b / navCellsPerSide);
+            for (int x = 0; x < navCellsPerSide; x++)
+            {
+                int bx0 = x * b / navCellsPerSide;
+                int bx1 = Math.Max(bx0 + 1, (x + 1) * b / navCellsPerSide);
+                double sum = 0;
+                int cnt = 0;
+                for (int by = by0; by < by1; by++)
+                {
+                    for (int bx = bx0; bx < bx1; bx++)
+                    {
+                        sum += sampleCm[by * b + bx];
+                        cnt++;
+                    }
+                }
+
+                heights[y * navCellsPerSide + x] = Fix64.FromDouble(sum / cnt);
+            }
+        }
+
+        var slope = new Fix64[navCellsPerSide * navCellsPerSide];
+        Fix64 k2 = Fix64.OneValue / Fix64.FromInt(2 * navCellSizeCm);
+        for (int y = 0; y < navCellsPerSide; y++)
+        {
+            for (int x = 0; x < navCellsPerSide; x++)
+            {
+                int xl = Math.Max(0, x - 1), xr = Math.Min(navCellsPerSide - 1, x + 1);
+                int yu = Math.Max(0, y - 1), yd = Math.Min(navCellsPerSide - 1, y + 1);
+                Fix64 gx = (heights[y * navCellsPerSide + xr] - heights[y * navCellsPerSide + xl]) * k2;
+                Fix64 gy = (heights[yd * navCellsPerSide + x] - heights[yu * navCellsPerSide + x]) * k2;
+                slope[y * navCellsPerSide + x] = Fix64Math.Sqrt(gx * gx + gy * gy);
+            }
+        }
+
+        return new NavHeightField
+        {
+            NavCellsPerSide = navCellsPerSide,
+            NavCellSizeCm = navCellSizeCm,
+            HeightsCm = heights,
+            Slope = slope,
+        };
+    }
+}

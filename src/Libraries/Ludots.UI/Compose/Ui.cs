@@ -41,6 +41,11 @@ public static class Ui
 		return new UiElementBuilder(UiNodeKind.Text, "span").Text(text);
 	}
 
+	public static UiElementBuilder Text(UiTextBinding binding)
+	{
+		return new UiElementBuilder(UiNodeKind.Text, "span").Text(binding);
+	}
+
 	public static UiElementBuilder Image(string source)
 	{
 		return new UiElementBuilder(UiNodeKind.Image, "img").Src(source);

@@ -52,6 +52,7 @@ namespace Ludots.Tests.Presentation
             .WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
 
         private const int ExpectedAgentCount = 10_000;
+        private const int FullMapScreenMarkerCollapseLimit = 1_000;
         private const int ExpectedTeamCount = 4;
         private const float FixedDeltaSeconds = 1f / 60f;
         private const int MaxWarmupFrames = 240;
@@ -136,16 +137,15 @@ namespace Ludots.Tests.Presentation
             string diagnostics = sample.Diagnostics;
 
             Assert.That(minimapRuntime.Visible, Is.True, diagnostics);
+            Assert.That(engine.MergedConfig.Presentation.Minimap.MaxMarkersPerFieldPixel, Is.EqualTo(1),
+                "10K crowd minimap keeps one marker per field pixel. The field has more pixels than agents; the collapse comes from projecting the whole map.");
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(minimapScreenMarkers.Count, Is.GreaterThan(0), diagnostics);
             Assert.That(minimapScreenMarkers.Count, Is.LessThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.MinimapSnapshot.VisibleMarkerCount, Is.GreaterThan(0), diagnostics);
-            Assert.That(
-                sample.MinimapSnapshot.VisibleMarkerCount,
-                Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
-                diagnostics);
+            AssertFullMapScreenMarkersMatchOccupiedPixels(engine, minimapRuntime, minimapMarkers, minimapScreenMarkers);
             Assert.That(sample.WorldHudBars, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(sample.WorldHudText, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
             Assert.That(screenHud.BarCount, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -385,8 +385,9 @@ namespace Ludots.Tests.Presentation
                 $"Steady-state budget over {observationFrames} ticks: minimapProjection median={projectionMs[observationFrames / 2]:F3}ms mean={projectionMean:F3}ms p95={projectionMs[(int)(observationFrames * 0.95)]:F3}ms max={projectionMs[^1]:F3}ms (reprojected median={Median(reprojectedCounts)}, retained median={Median(retainedCounts)}, fullRebuilds={minimapRuntime.FullProjectionRebuildCount}); attributeAggregator median={aggregatorMs[observationFrames / 2]:F3}ms p95={aggregatorMs[(int)(observationFrames * 0.95)]:F3}ms max={aggregatorMs[^1]:F3}ms (dirtyEntities median={Median(aggregatorProcessed)}, max={Maximum(aggregatorProcessed)}); screenMarkers min={Minimum(screenMarkerCounts)}");
             Assert.That(Minimum(screenMarkerCounts), Is.GreaterThan(0),
                 "Steady-state ticks must keep the minimap screen buffer populated.");
-            Assert.That(Maximum(screenMarkerCounts), Is.LessThanOrEqualTo(minimapRuntime.FieldSize * minimapRuntime.FieldSize),
-                "The one-marker-per-field-pixel cap bounds staged screen markers to occupied field pixels.");
+            Assert.That(Maximum(screenMarkerCounts), Is.LessThan(FullMapScreenMarkerCollapseLimit),
+                "Full-map steady-state screen markers must stay far below the 10K agent count.");
+            AssertFullMapScreenMarkersMatchOccupiedPixels(engine, minimapRuntime, minimapMarkers, minimapScreenMarkers);
             Assert.That(projectionMs[observationFrames / 2], Is.LessThanOrEqualTo(0.5d),
                 $"Minimap projection median {projectionMs[observationFrames / 2]:F3}ms exceeds the 0.5ms steady-state budget.");
             Assert.That(projectionMean, Is.LessThanOrEqualTo(0.6d),
@@ -464,6 +465,109 @@ namespace Ludots.Tests.Presentation
                 "Steady-state authored binding must amortize its scan over agent slices instead of hashing the full population every tick.");
             Assert.That(steady.P95Ms, Is.LessThanOrEqualTo(8.0d),
                 $"Steady-state sim p95 {steady.P95Ms:F3}ms exceeds the cadence agent-slice amortization budget.");
+        }
+
+        private static void AssertFullMapScreenMarkersMatchOccupiedPixels(
+            GameEngine engine,
+            MinimapRuntime minimapRuntime,
+            MinimapMarkerBuffer markers,
+            MinimapScreenMarkerBuffer screenMarkers)
+        {
+            Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap));
+            Assert.That(minimapRuntime.RotateWithCamera, Is.False,
+                "Full-map occupancy is counted on the axis-aligned field.");
+            if (minimapRuntime.ZoomNormalized > 0.999f)
+            {
+                minimapRuntime.SetZoomNormalized(0f);
+                minimapRuntime.Refresh(engine, markers, screenMarkers);
+            }
+
+            minimapRuntime.SetZoomNormalized(1f);
+            minimapRuntime.Refresh(engine, markers, screenMarkers);
+            Assert.That(minimapRuntime.ZoomNormalized, Is.EqualTo(1f).Within(0.0001d));
+            Assert.That(minimapRuntime.ReprojectedMarkerCountLastFrame, Is.GreaterThan(0),
+                "The full-map check must read a fresh projection, not a retained screen buffer.");
+            int occupiedPixels = CountDisclosedOccupiedFieldPixels(engine, minimapRuntime, markers);
+            Assert.That(screenMarkers.Count, Is.EqualTo(occupiedPixels),
+                "Full-map screen markers must equal the field pixels occupied by disclosed agents.");
+            Assert.That(screenMarkers.Count, Is.GreaterThan(0));
+            Assert.That(screenMarkers.Count, Is.LessThan(FullMapScreenMarkerCollapseLimit),
+                "Full-map zoom must collapse 10K agents onto far fewer field pixels than the agent count.");
+        }
+
+        private static int CountDisclosedOccupiedFieldPixels(
+            GameEngine engine,
+            MinimapRuntime runtime,
+            MinimapMarkerBuffer markers)
+        {
+            bool hasResolver = KnowledgeProjectionConsumer.TryGetResolveContext(
+                engine.GlobalContext,
+                out KnowledgeProjectionResolver resolver,
+                out int tick);
+            bool hasViewer = false;
+            Entity viewer = Entity.Null;
+            if (hasResolver &&
+                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider provider) &&
+                provider(engine, out viewer) &&
+                viewer != Entity.Null &&
+                engine.World.IsAlive(viewer))
+            {
+                hasViewer = true;
+            }
+
+            int fieldSize = runtime.FieldSize;
+            float fieldScale = fieldSize - 1f;
+            float fieldX = runtime.FieldX;
+            float fieldY = runtime.FieldY;
+            var occupied = new HashSet<int>();
+            ReadOnlySpan<float> worldX = markers.WorldXcm;
+            ReadOnlySpan<float> worldY = markers.WorldYcm;
+            ReadOnlySpan<Entity> owners = markers.Owners;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                if (!WorldPlane2D.TryProjectWorldCmToScreenAxisAligned(
+                        worldX[i],
+                        worldY[i],
+                        runtime.CenterXcm,
+                        runtime.CenterYcm,
+                        runtime.HalfExtentCm,
+                        fieldX,
+                        fieldY,
+                        fieldScale,
+                        out _,
+                        out _,
+                        out float screenX,
+                        out float screenY))
+                {
+                    continue;
+                }
+
+                int px = (int)MathF.Floor(screenX) - (int)fieldX;
+                int py = (int)MathF.Floor(screenY) - (int)fieldY;
+                if ((uint)px >= (uint)fieldSize || (uint)py >= (uint)fieldSize)
+                {
+                    continue;
+                }
+
+                if (hasResolver && owners[i] != Entity.Null)
+                {
+                    if (!hasViewer ||
+                        !KnowledgeProjectionConsumer.TryResolveDisclosure(
+                            resolver,
+                            tick,
+                            viewer,
+                            owners[i],
+                            out KnowledgeDisclosureRecord disclosure) ||
+                        disclosure.Position < KnowledgePositionAccess.LastKnown)
+                    {
+                        continue;
+                    }
+                }
+
+                occupied.Add((py * fieldSize) + px);
+            }
+
+            return occupied.Count;
         }
 
         private sealed class SimBudgetSample

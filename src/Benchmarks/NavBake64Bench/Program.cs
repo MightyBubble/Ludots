@@ -152,7 +152,7 @@ var probes = new (string Kind, float U, float V)[]
     ("sea", (sea.Rx + 0.5f) / bx, (sea.Rz + 0.5f) / bz),
 };
 
-var agentProfile = new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 };
+var agentProfile = new AgentProfileConfig { Id = "Small", NavProfileId = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 };
 var navProfile = new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 };
 var legacyConfig = new NavBuildConfig(HeightScaleMeters, 0.6f, cliffHeightThreshold: 1);
 var obstacles = new NavObstacleSet();

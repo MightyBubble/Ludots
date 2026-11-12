@@ -1,5 +1,57 @@
 Set-StrictMode -Version Latest
 
+function Repair-WindowsProcessEnvironment {
+    # Git Bash 启动 Windows PowerShell 时会把 TEMP/HOME 换成 /tmp、/home/...，并可能不带 PATHEXT。
+    if ($env:OS -ne 'Windows_NT') {
+        return
+    }
+
+    if ([string]::IsNullOrWhiteSpace($env:PATHEXT)) {
+        $env:PATHEXT = '.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC'
+    }
+
+    $tempPoisoned = (Test-PosixProcessPath $env:TEMP) -or (Test-PosixProcessPath $env:TMP)
+    if ($tempPoisoned) {
+        $temp = [Environment]::GetEnvironmentVariable('TEMP', 'User')
+        if (-not (Test-WindowsProcessPath $temp)) {
+            $temp = [Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+        }
+
+        if (-not (Test-WindowsProcessPath $temp)) {
+            $local = [Environment]::GetFolderPath('LocalApplicationData')
+            if ([string]::IsNullOrWhiteSpace($local)) {
+                throw 'Windows TEMP/TMP are POSIX paths and no Windows temp directory is available.'
+            }
+
+            $temp = Join-Path $local 'Temp'
+        }
+
+        $env:TEMP = $temp
+        $env:TMP = $temp
+    }
+
+    if (Test-PosixProcessPath $env:HOME) {
+        $profile = [Environment]::GetFolderPath('UserProfile')
+        if ([string]::IsNullOrWhiteSpace($profile) -or (Test-PosixProcessPath $profile)) {
+            throw 'Windows HOME is a POSIX path and UserProfile is unavailable.'
+        }
+
+        $env:HOME = $profile
+    }
+}
+
+function Test-PosixProcessPath {
+    param([string]$Value)
+    return -not [string]::IsNullOrWhiteSpace($Value) -and ($Value.StartsWith('/') -or $Value.StartsWith('~'))
+}
+
+function Test-WindowsProcessPath {
+    param([string]$Value)
+    return -not [string]::IsNullOrWhiteSpace($Value) -and -not (Test-PosixProcessPath $Value)
+}
+
+Repair-WindowsProcessEnvironment
+
 function Get-DotnetCommand {
     return 'dotnet'
 }

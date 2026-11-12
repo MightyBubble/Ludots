@@ -56,6 +56,17 @@
 | 条目缺 id / 未登记路径 | 启动失败 |
 | 引用不存在的 id | 启动失败，指明引用方与目标 |
 | 依赖缺失或版本不符 | 启动失败（cfg-01） |
+| 严格装载时类型不对或校验失败 | 启动失败。错误末尾写出配置路径、按合并顺序排列的片段地址、实际采用的片段或每个 id 的胜出 |
+
+目前只有这些装载会附上合并来源：`CrowdSimulationConfigLoader`（`CrowdSimulationConfig.json`）、`CrowdSimulationRuntime` 装载 `CrowdSimulationDebug.json`、`NavMeshBakeConfigLoader`（`Navigation/navmesh.json`）、`PathingConfigLoader`（`Navigation/pathing.json`）、`AgentProfileConfigLoader`（`Navigation/agent_profiles.json`）、`DataRegistry`（`Entities/templates.json`）。GAS、物品、输入和地图装载器外层不附。
+
+错误末尾固定三行：
+
+- `配置路径:` 相对路径，例如 `CrowdSimulationConfig.json`
+- `合并顺序:` 片段地址，用 ` | ` 隔开，顺序就是合并顺序。引擎默认写成 `Core:{相对路径}`，mod 写成 `{mod名}:assets/{相对路径}`
+- `胜出:` DeepObject 和 Replace 写最后一份实际并入的对象。对象里更早的键仍可能来自更早的片段；数组整段替换。跳过的非对象不是这一行的地址。ArrayReplace 写实际采用的那份数组所在片段。ArrayById 写成 `id=地址`。ArrayAppend 没有单一胜出
+
+作者工作室「合并溯源」按文件列出同一份信息：合并顺序、最后一份片段或采用的数组、每个 id 的胜出、删除（带删除者地址）、重复 id、模板组件覆盖链。这一页不画逐字段时间线。
 
 ## 6. 实例
 

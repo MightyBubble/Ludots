@@ -6,6 +6,7 @@ using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.TimeFlowCore;
 
@@ -16,8 +17,7 @@ public sealed class TimeFlowCoreAcceptanceTests
     [Test]
     public void TimeFlowCore_MinimalScenario_WritesAcceptanceArtifacts()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "timeflow-core");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/timeflow-core");
         Directory.CreateDirectory(artifactDir);
 
         var service = new TimeFlowService();
@@ -171,23 +171,6 @@ public sealed class TimeFlowCoreAcceptanceTests
             "    D --> E[Pause simulation parent domain]",
             "    E --> F[All child domains report paused]"
         }) + Environment.NewLine;
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        for (int i = 0; i < 10 && dir != null; i++)
-        {
-            string candidate = Path.Combine(dir.FullName, "src", "Core", "Ludots.Core.csproj");
-            if (File.Exists(candidate))
-            {
-                return dir.FullName;
-            }
-
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Could not locate repository root from test output directory.");
     }
 
     private sealed record PhaseRow(

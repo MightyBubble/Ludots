@@ -1,0 +1,14 @@
+[
+  {
+    "id": "crowd_simulation_player",
+    "initialInteractionContext": "interaction.context.crowd_simulation.battle",
+    "components": {
+      "BlackboardFloatBuffer": {},
+      "BlackboardIntBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "WorldPositionCm": {
+        "Value": { "X": 0, "Y": 0 }
+      }
+    }
+  }
+]

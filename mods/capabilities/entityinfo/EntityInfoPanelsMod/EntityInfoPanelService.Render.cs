@@ -20,6 +20,7 @@ public sealed partial class EntityInfoPanelService
             ResolveRect(layout, screenWidth, screenHeight, out int x, out int y, out int width, out int height);
 
             overlay.AddRect(
+                PresentationOverlayLayer.TopMost,
                 x,
                 y,
                 width,
@@ -29,8 +30,8 @@ public sealed partial class EntityInfoPanelService
                 ComposeStableId(slot, 1),
                 ComposeHash(width, height, _contentSerials[slot], 1));
 
-            overlay.AddText(x + 12, y + 10, _titles[slot] ?? string.Empty, 16, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 2), ComposeTextSerial(_titles[slot], 16));
-            overlay.AddText(x + 12, y + 30, _subtitles[slot] ?? string.Empty, 12, new Vector4(0.63f, 0.71f, 0.79f, 1f), ComposeStableId(slot, 3), ComposeTextSerial(_subtitles[slot], 12));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y + 10, _titles[slot] ?? string.Empty, 16, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 2), ComposeTextSerial(_titles[slot], 16));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y + 30, _subtitles[slot] ?? string.Empty, 12, new Vector4(0.63f, 0.71f, 0.79f, 1f), ComposeStableId(slot, 3), ComposeTextSerial(_subtitles[slot], 12));
 
             int lineY = y + 52;
             int bottom = y + height - 14;
@@ -60,7 +61,7 @@ public sealed partial class EntityInfoPanelService
             string sectionName = GetComponentSectionName(slot, section);
             bool expanded = IsComponentExpanded(slot, section);
             string header = $"{(expanded ? "[-]" : "[+]")} {sectionName}";
-            overlay.AddText(x, y, header, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 100 + section), ComposeTextSerial(header, 13));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x, y, header, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 100 + section), ComposeTextSerial(header, 13));
             y += 18;
 
             if (!expanded)
@@ -72,7 +73,7 @@ public sealed partial class EntityInfoPanelService
             for (int line = 0; line < lineCount && y <= bottom; line++)
             {
                 string text = GetComponentSectionLine(slot, section, line);
-                overlay.AddText(x + 12, y, text, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 1000 + (section * 64) + line), ComposeTextSerial(text, 12));
+                overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y, text, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 1000 + (section * 64) + line), ComposeTextSerial(text, 12));
                 y += 16;
             }
         }
@@ -86,6 +87,7 @@ public sealed partial class EntityInfoPanelService
             string text = GetGasLine(slot, line);
             bool sectionLine = text.StartsWith("[", StringComparison.Ordinal);
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 x,
                 y,
                 text,
@@ -100,7 +102,7 @@ public sealed partial class EntityInfoPanelService
     private void RenderEntityCollectionOverlay(ScreenOverlayBuffer overlay, int slot, int x, ref int y, int bottom)
     {
         string summary = $"{GetEntityCollectionSourceTitle(slot)} | {GetEntityCollectionSourceSummary(slot)}";
-        overlay.AddText(x, y, summary, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(summary, 13));
+        overlay.AddText(PresentationOverlayLayer.TopMost, x, y, summary, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(summary, 13));
         y += 18;
 
         int categoryCount = Math.Min(4, _entityCollectionCategoryCounts[slot]);
@@ -122,7 +124,7 @@ public sealed partial class EntityInfoPanelService
             if (labels.Count > 0)
             {
                 string categoryLine = string.Join(" | ", labels);
-                overlay.AddText(x, y, categoryLine, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3001), ComposeTextSerial(categoryLine, 12));
+                overlay.AddText(PresentationOverlayLayer.TopMost, x, y, categoryLine, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3001), ComposeTextSerial(categoryLine, 12));
                 y += 16;
             }
         }
@@ -137,6 +139,7 @@ public sealed partial class EntityInfoPanelService
 
             string text = $"#{row.EntityId} {row.Name} | {row.AttributesSummary}";
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 x,
                 y,
                 text,
@@ -153,7 +156,7 @@ public sealed partial class EntityInfoPanelService
         string genre = GetInsightGenreLabel(slot);
         if (!string.IsNullOrWhiteSpace(genre))
         {
-            overlay.AddText(x, y, genre, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(genre, 13));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x, y, genre, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(genre, 13));
             y += 18;
         }
 
@@ -161,7 +164,7 @@ public sealed partial class EntityInfoPanelService
         for (int statIndex = 0; statIndex < statCount && y <= bottom; statIndex++)
         {
             string statText = $"{GetInsightStatLabel(slot, statIndex)}: {GetInsightStatValueText(slot, statIndex)}";
-            overlay.AddText(x, y, statText, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3010 + statIndex), ComposeTextSerial(statText, 12));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x, y, statText, 12, new Vector4(0.82f, 0.86f, 0.91f, 1f), ComposeStableId(slot, 3010 + statIndex), ComposeTextSerial(statText, 12));
             y += 16;
         }
 
@@ -169,7 +172,7 @@ public sealed partial class EntityInfoPanelService
         for (int tipIndex = 0; tipIndex < tipCount && y <= bottom; tipIndex++)
         {
             string tipText = GetInsightTipText(slot, tipIndex);
-            overlay.AddText(x, y, tipText, 12, new Vector4(0.93f, 0.82f, 0.67f, 1f), ComposeStableId(slot, 3030 + tipIndex), ComposeTextSerial(tipText, 12));
+            overlay.AddText(PresentationOverlayLayer.TopMost, x, y, tipText, 12, new Vector4(0.93f, 0.82f, 0.67f, 1f), ComposeStableId(slot, 3030 + tipIndex), ComposeTextSerial(tipText, 12));
             y += 16;
         }
     }

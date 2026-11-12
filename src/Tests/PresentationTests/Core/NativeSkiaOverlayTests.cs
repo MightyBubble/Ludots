@@ -55,9 +55,9 @@ public sealed class NativeSkiaOverlayTests
             Text = textPacket,
         });
 
-        overlayBuffer.AddRect(100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
-        overlayBuffer.AddText(108, 116, "Telemetry", 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
-        overlayBuffer.AddLine(112, 120, 156, 132, 4, new Vector4(1f, 0.85f, 0.2f, 1f));
+        overlayBuffer.AddRect(PresentationOverlayLayer.TopMost, 100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
+        overlayBuffer.AddText(PresentationOverlayLayer.TopMost, 108, 116, "Telemetry", 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
+        overlayBuffer.AddLine(PresentationOverlayLayer.TopMost, 112, 120, 156, 132, 4, new Vector4(1f, 0.85f, 0.2f, 1f));
         minimapMarkers.TryAdd(303, 144f, 152f, new Vector4(0.18f, 0.82f, 1f, 1f), 8f);
 
         var builder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, catalog, locale, overlayBuffer, minimapMarkers);
@@ -154,14 +154,14 @@ public sealed class NativeSkiaOverlayTests
         var builder = new PresentationOverlaySceneBuilder(screenHud, null, null, null, overlayBuffer);
         var scene = new PresentationOverlayScene(16);
 
-        overlayBuffer.AddText(108, 116, "NO MINIMAP SIGNALS", 14, new Vector4(1f, 0.7f, 0.4f, 1f));
+        overlayBuffer.AddText(PresentationOverlayLayer.TopMost, 108, 116, "NO MINIMAP SIGNALS", 14, new Vector4(1f, 0.7f, 0.4f, 1f));
         builder.Build(scene);
 
         Assert.That(GetSingleTopMostText(scene), Is.EqualTo("NO MINIMAP SIGNALS"));
         int topTextVersion = scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
 
         overlayBuffer.Clear();
-        overlayBuffer.AddText(108, 116, "RTS full-map preset", 14, new Vector4(0.7f, 0.9f, 1f, 1f));
+        overlayBuffer.AddText(PresentationOverlayLayer.TopMost, 108, 116, "RTS full-map preset", 14, new Vector4(0.7f, 0.9f, 1f, 1f));
         builder.Build(scene);
 
         Assert.That(GetSingleTopMostText(scene), Is.EqualTo("RTS full-map preset"));
@@ -990,8 +990,8 @@ public sealed class NativeSkiaOverlayTests
             Value0 = 42f,
         });
 
-        overlayBuffer.AddRect(100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
-        overlayBuffer.AddText(108, 116, topText, 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
+        overlayBuffer.AddRect(PresentationOverlayLayer.TopMost, 100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
+        overlayBuffer.AddText(PresentationOverlayLayer.TopMost, 108, 116, topText, 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
     }
 
     private static string GetSingleTopMostText(PresentationOverlayScene scene)

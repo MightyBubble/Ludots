@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Hud;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -42,11 +43,7 @@ namespace Ludots.Tests.Presentation
             BenchmarkResult result = RunMeasured(world, entities, screenHud, builder, scene, healthAttributeId, ref randomState);
             HudSyncValidation validation = ValidateFinalHud(world, entities, screenHud, healthAttributeId);
 
-            string artifactDir = Path.Combine(
-                FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presentation-entity-health-hud-50k");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presentation-entity-health-hud-50k");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

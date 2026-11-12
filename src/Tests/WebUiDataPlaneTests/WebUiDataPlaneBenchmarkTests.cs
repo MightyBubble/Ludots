@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.UI.Browser;
 using Ludots.WebUI.Browser;
 using Ludots.WebUI.DataPlane;
+using Ludots.Tests;
 using NUnit.Framework;
 
 namespace Ludots.Tests.WebUiDataPlane;
@@ -384,20 +385,7 @@ public sealed class WebUiDataPlaneBenchmarkTests
 
 	private static string GetArtifactDirectory()
 	{
-		string current = TestContext.CurrentContext.TestDirectory;
-		while (!string.IsNullOrEmpty(current))
-		{
-			if (File.Exists(Path.Combine(current, "Ludots.sln")) ||
-				File.Exists(Path.Combine(current, ".git")) ||
-				Directory.Exists(Path.Combine(current, ".git")))
-			{
-				return Path.Combine(current, "artifacts", "benchmarks", "webui-dataplane");
-			}
-
-			current = Directory.GetParent(current)?.FullName ?? string.Empty;
-		}
-
-		return Path.Combine(TestContext.CurrentContext.TestDirectory, "artifacts", "benchmarks", "webui-dataplane");
+		return CommittedTestArtifacts.Resolve("artifacts/benchmarks/webui-dataplane");
 	}
 
 	private sealed record WebUiDataPlaneBenchmarkRow(

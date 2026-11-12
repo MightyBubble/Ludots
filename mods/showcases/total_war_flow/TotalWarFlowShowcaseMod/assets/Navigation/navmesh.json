@@ -1,27 +1,26 @@
 {
   "mode": "offline",
   "algorithm": "recast",
-  "profiles": [
-    {
-      "id": "tw.agent",
+  "profiles": {
+    "tw.agent": {
       "maxClimbCm": 40,
       "maxSlopeDeg": 45,
-      "cellSizeCm": 15
+      "cellSizeCm": 15,
+      "agentProfileId": "tw.agent"
     }
-  ],
+  },
   "layers": [
     {
       "id": "Ground",
       "layer": 0
     }
   ],
-  "areas": [
-    {
-      "id": "Default",
+  "areas": {
+    "Default": {
       "areaId": 0,
-      "cost": 1.0
+      "slopeFree": false
     }
-  ],
+  },
   "runtimeIncremental": {
     "tileBudgetPerFixedTick": 1,
     "includeNeighborTiles": true,
@@ -31,12 +30,19 @@
   },
   "maps": {
     "total_war_flow_field": {
+      "solver": "mass-navigation",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,
           "tileWorldHeightCm": 6400
         }
-      }
+      },
+      "navProfiles": [
+        "tw.agent"
+      ],
+      "navAreas": [
+        "Default"
+      ]
     }
   }
 }

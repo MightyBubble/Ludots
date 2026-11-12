@@ -8,6 +8,11 @@ namespace Ludots.Core.Spatial
     public static class SpatialScaleDefaults
     {
         public const int CellCm = 100;
+
+        /// <summary>
+        /// 每米厘米数。数值与 <see cref="CellCm"/> 相同，但板格边长可以改，米换算不能跟着改。
+        /// </summary>
+        public const int CentimetersPerMeter = 100;
         public const int DefaultHexEdgeLengthCm = 400;
         public const int TerrainPageCells = MapTile.Size;
         public const int DefaultBoardWidthPages = 64;
@@ -27,8 +32,8 @@ namespace Ludots.Core.Spatial
         public const int NavPortalInitialCapacity = TerrainChunkCells;
         public const int ContourRingInitialCapacity = TerrainChunkCells;
 
-        public static float MetersToCentimeters(float meters) => meters * CellCm;
+        public static float MetersToCentimeters(float meters) => meters * CentimetersPerMeter;
 
-        public static float CentimetersToMeters(int centimeters) => centimeters / (float)CellCm;
+        public static float CentimetersToMeters(int centimeters) => centimeters / (float)CentimetersPerMeter;
     }
 }

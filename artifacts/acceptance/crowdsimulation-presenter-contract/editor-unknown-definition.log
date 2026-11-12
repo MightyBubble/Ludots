@@ -1,0 +1,3 @@
+presenter section: 
+presenter error: Presenter 'crowd_minimal.units.bootstrap' rules[0]: EntitySpawned 'crowd_minimal.unit' creates unknown presenter definition 'crowd_minimal.unit_typo'. Written by CrowdSimulationMinimalMod:assets/Presentation/presenters.json.
+CrowdSimulationMinimalMod CrowdSimulationMinimalMod:assets/Presentation/presenters.json

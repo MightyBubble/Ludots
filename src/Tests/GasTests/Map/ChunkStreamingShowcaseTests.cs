@@ -10,6 +10,7 @@ using Ludots.Core.Map.Board;
 using NUnit.Framework;
 using RoadNetworkShowcaseMod.Runtime;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS
 {
@@ -55,7 +56,7 @@ namespace Ludots.Tests.GAS
             Assert.That(timeline[2].LoadedSplineRibbonCount, Is.GreaterThan(0));
             Assert.That(timeline[3].ChunkSignature, Is.EqualTo(timeline[0].ChunkSignature));
 
-            string artifactDir = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "chunk_streaming_showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/chunk_streaming_showcase");
             Directory.CreateDirectory(artifactDir);
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline));
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTrace(timeline));

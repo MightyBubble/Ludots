@@ -92,6 +92,8 @@ namespace Ludots.Core.Persistence
             AddComponentFormatter(formatters, new MapEntityFormatter());
             AddComponentFormatter(formatters, new PresentationFrameStateFormatter());
             AddComponentFormatter(formatters, new Physics2DRuntimeStateFormatter());
+            AddComponentFormatter(formatters, new MassNavigationAgentFormatter());
+            AddComponentFormatter(formatters, new CrowdSimulationStructureFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters, candidateAssemblies);
             // Hand-written pruners (e.g. Physics2D perf, discovered from its own assembly) must
             // come after unmanaged discovery and overwrite the raw-bytes default: their whole

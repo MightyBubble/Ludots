@@ -1,0 +1,30 @@
+{
+  "profiles": [
+    {
+      "id": "interaction.context.crowd_simulation.battle",
+      "commandIntentId": "intent.command.crowd_simulation",
+      "inputContextId": "CrowdSimulation.Controls",
+      "bindings": [
+        "CrowdSimulation.BoxSelectBegin",
+        "CrowdSimulation.BoxSelectEnd",
+        "CrowdSimulation.Command"
+      ],
+      "triggers": [
+        { "trigger": "graph.crowd_simulation.box_begin" },
+        { "trigger": "graph.crowd_simulation.command_commit" }
+      ]
+    },
+    {
+      "id": "interaction.context.crowd_simulation.boxing",
+      "foreground": true,
+      "bindings": [
+        "CrowdSimulation.BoxSelectEnd",
+        "CrowdSimulation.PrimaryTap"
+      ],
+      "triggers": [
+        { "trigger": "graph.crowd_simulation.box_commit" },
+        { "trigger": "graph.crowd_simulation.primary_tap" }
+      ]
+    }
+  ]
+}

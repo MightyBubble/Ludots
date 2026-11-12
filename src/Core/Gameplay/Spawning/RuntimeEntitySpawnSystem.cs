@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -17,6 +18,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Gameplay.MapTriggers;
 using Ludots.Core.Map;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -51,6 +53,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly VisualTransform[] _presenterBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
         private readonly CullState[] _presenterBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
+        private readonly int[] _batchInitializerIndices = new int[BatchEntityScratchCapacity];
+        private IRuntimeSpawnInstanceInitializer[] _instanceInitializers = new IRuntimeSpawnInstanceInitializer[4];
+        private int _instanceInitializerCount;
         private readonly PresenterEntityRuntime? _presenterRuntime;
         private readonly PresenterDefinitionRegistry? _presenterDefinitions;
         private readonly CompiledPresenterBootstrapRegistry? _presenterBootstrap;
@@ -145,6 +150,55 @@ namespace Ludots.Core.Gameplay.Spawning
             _initialInteractionContexts = initialInteractionContexts;
         }
 
+        public int LargestTemplateBatch => _templateBatchSpawner.LargestCreatedBatch;
+
+        public void RegisterBatchComponent<T>(string componentName) where T : unmanaged
+        {
+            _templateBatchSpawner.RegisterBatchComponent<T>(componentName);
+        }
+
+        public bool UnregisterBatchComponent(string componentName)
+        {
+            return _templateBatchSpawner.UnregisterBatchComponent(componentName);
+        }
+
+        /// <summary>返回 1 基 kind。初始化器挂在这个系统实例上，不进进程静态，避免回放和活会话串世界。</summary>
+        public ushort RegisterInstanceInitializer(IRuntimeSpawnInstanceInitializer initializer)
+        {
+            if (initializer == null)
+            {
+                throw new ArgumentNullException(nameof(initializer));
+            }
+
+            if (_instanceInitializerCount == ushort.MaxValue)
+            {
+                throw new InvalidOperationException("SPAWN.RUNTIME.ERR.InstanceInitializerCapacity");
+            }
+
+            if (_instanceInitializerCount == _instanceInitializers.Length)
+            {
+                Array.Resize(ref _instanceInitializers, _instanceInitializers.Length * 2);
+            }
+
+            _instanceInitializers[_instanceInitializerCount] = initializer;
+            _instanceInitializerCount++;
+            return (ushort)_instanceInitializerCount;
+        }
+
+        public void UnregisterInstanceInitializer(ushort kind)
+        {
+            if (kind == 0 || kind > _instanceInitializerCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            }
+
+            _instanceInitializers[kind - 1] = null!;
+        }
+
+        /// <summary>
+        /// 排空阶段队列。不能在 Arch 查询回调里调用：Create / Add / Destroy 是结构变更。
+        /// vendored Arch 没有公开的查询深度，这里只写合同，不放调试断言。
+        /// </summary>
         public override void Update(in float dt)
         {
             while (_requests.TryPeek(out var peek))
@@ -157,6 +211,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 {
                     if (TryCopyTemplateBatch(peek.TemplateId, out int batchCount) && batchCount > 0)
                     {
+                        // 阶段队列：多于一条才走批车道。单独一条留在单车道，不预挂 PresentationLifecycleState。
+                        // Materialize 不走这里，见 MaterializeCohortUsesBatchLane。
                         if (batchCount > 1)
                         {
                             PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
@@ -165,13 +221,7 @@ namespace Ludots.Core.Gameplay.Spawning
                                 break;
                             }
 
-                            if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
-                            {
-                                throw new InvalidOperationException(
-                                    $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
-                                    "The production path must stay on the validated bulk lane.");
-                            }
-
+                            MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
                             continue;
                         }
 
@@ -182,11 +232,7 @@ namespace Ludots.Core.Gameplay.Spawning
                         }
 
                         var singleRequest = _batchRequests[0];
-                        var spawnedSingle = SpawnTemplate(singleRequest, in singleRelationshipPlan);
-                        PublishSpawnReceipt(in singleRequest, spawnedSingle);
-                        PublishOnSpawnEffect(in singleRequest, spawnedSingle);
-                        MountTemplateTriggerGraphs(spawnedSingle, peek.TemplateId, template);
-                        MountTemplateInitialInteractionContext(spawnedSingle, peek.TemplateId, template);
+                        MaterializePrepared(in singleRequest, in singleRelationshipPlan);
                         continue;
                     }
 
@@ -202,22 +248,172 @@ namespace Ludots.Core.Gameplay.Spawning
                     break;
                 }
 
-                var spawned = request.Kind switch
-                {
-                    RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
-                    RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
-                    RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
-                    _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
-                };
+                MaterializePrepared(in request, in relationshipPlan);
+            }
+        }
 
-                PublishOnSpawnEffect(in request, spawned);
-                PublishSpawnReceipt(in request, spawned);
-                if (request.Kind == RuntimeEntitySpawnKind.Template &&
-                    TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+        /// <summary>
+        /// 同步物化调用方给出的这批请求，不读不写阶段队列。
+        /// 把这次 span 当成同一批：批车道兼容的请求不论条数都走批车道，presenter 只来自直接引导规则。
+        /// 没有直接引导、但有不能编进直接引导的 EntitySpawned 规则时抛错，不生成实体。
+        /// <see cref="Update"/> 仍是多于一条才走批车道，单独一条留在单车道。
+        /// 模板 children 在这次调用里继续物化，也不进阶段队列。
+        /// 失败不回滚已经创建的实体。还没物化的子请求会丢掉，异常写明条数，不静默吞掉。
+        /// 私有子请求表在调用结束时清空，下一次调用不接着上次的半截。
+        /// 不能在 Arch 查询回调里调用：Create / Add / Destroy 是结构变更。
+        /// vendored Arch 没有公开的查询深度，这里只写合同，不放调试断言。
+        /// EffectProcessing 里的 <see cref="Update"/> 仍只排空阶段队列。
+        /// </summary>
+        public void Materialize(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
+        {
+            if (_materializingDirect)
+            {
+                throw new InvalidOperationException("SPAWN.RUNTIME.ERR.MaterializeReentered");
+            }
+
+            _materializingDirect = true;
+            _directChildren?.Clear();
+            int childCursor = 0;
+            try
+            {
+                MaterializeSpan(requests);
+                while (_directChildren != null && childCursor < _directChildren.Count)
                 {
-                    MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
-                    MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
+                    RuntimeEntitySpawnRequest child = _directChildren[childCursor++];
+                    MaterializeSpan(MemoryMarshal.CreateReadOnlySpan(ref child, 1));
                 }
+            }
+            catch (Exception ex)
+            {
+                int pending = _directChildren == null ? 0 : _directChildren.Count - childCursor;
+                if (pending > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"SPAWN.RUNTIME.ERR.MaterializeIncomplete: {pending} follow-up child request(s) were not materialized and are discarded. Entities already created in this call are not rolled back.",
+                        ex);
+                }
+
+                throw;
+            }
+            finally
+            {
+                _materializingDirect = false;
+                _directChildren?.Clear();
+            }
+        }
+
+        private bool _materializingDirect;
+        private List<RuntimeEntitySpawnRequest>? _directChildren;
+
+        private void MaterializeSpan(ReadOnlySpan<RuntimeEntitySpawnRequest> requests)
+        {
+            int index = 0;
+            while (index < requests.Length)
+            {
+                RuntimeEntitySpawnRequest peek = requests[index];
+                if (peek.Kind == RuntimeEntitySpawnKind.Template &&
+                    TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
+                    MaterializeCohortUsesBatchLane(in peek, template))
+                {
+                    RequireMaterializeDirectPresenter(peek.TemplateId);
+                    int batchCount = CopyTemplateBatchFromSpan(requests, index);
+                    if (batchCount >= 1)
+                    {
+                        PreflightTemplateBatchBeforeDrain(peek.TemplateId, template, batchCount);
+                        MaterializeCopiedTemplateBatch(peek.TemplateId, template, batchCount);
+                        index += batchCount;
+                        continue;
+                    }
+                }
+
+                MaterializePrepared(in peek, PreflightSingleSpawnBeforeDrain(in peek));
+                index++;
+            }
+        }
+
+        /// <summary>
+        /// Materialize 把调用方的 span 当成同一批。
+        /// 批车道兼容、且请求本身是批成员的，不论条数都走批车道。
+        /// presenter 只走直接引导规则。父链接和 attachment 不是批成员，仍走单车道。
+        /// </summary>
+        private bool MaterializeCohortUsesBatchLane(in RuntimeEntitySpawnRequest request, EntityTemplate template)
+        {
+            return request.Kind == RuntimeEntitySpawnKind.Template
+                && !HasComponentPatches(in request)
+                && !string.IsNullOrWhiteSpace(request.TemplateId)
+                && _templateBatchSpawner.IsBatchCompatible(request.TemplateId, template)
+                && IsTemplateBatchMember(request.TemplateId, request.InstanceInitializerKind, in request);
+        }
+
+        /// <summary>
+        /// 批车道会写上 PresentationLifecycleState，生命周期系统就不再发布 EntitySpawned。
+        /// 没有直接引导规则时，只能靠那次发布才能建 presenter 的模板不能进这条车道。
+        /// </summary>
+        private void RequireMaterializeDirectPresenter(string templateId)
+        {
+            if (_presenterBootstrap == null)
+            {
+                return;
+            }
+
+            int templateKeyId = _templateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                return;
+            }
+
+            bool hasDirect = HasDirectEntitySpawnBootstrap(templateKeyId);
+            if (!hasDirect && _presenterBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.MaterializePresenter: template '{templateId}' has EntitySpawned presenter rules that are not direct bootstrap. " +
+                    "Materialize sends every batch-compatible request through the batch lane, which only creates presenters from direct bootstrap rules.");
+            }
+        }
+
+        private int CopyTemplateBatchFromSpan(ReadOnlySpan<RuntimeEntitySpawnRequest> requests, int index)
+        {
+            string templateId = requests[index].TemplateId;
+            ushort initializerKind = requests[index].InstanceInitializerKind;
+            int count = 0;
+            while (index + count < requests.Length &&
+                   count < _batchRequests.Length &&
+                   IsTemplateBatchMember(templateId, initializerKind, requests[index + count]))
+            {
+                _batchRequests[count] = requests[index + count];
+                count++;
+            }
+
+            return count;
+        }
+
+        private void MaterializeCopiedTemplateBatch(string templateId, EntityTemplate template, int batchCount)
+        {
+            if (!TrySpawnTemplateBatch(templateId, template, batchCount))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch spawn failed after template '{templateId}' was classified as batch-compatible. " +
+                    "The production path must stay on the validated bulk lane.");
+            }
+        }
+
+        private void MaterializePrepared(in RuntimeEntitySpawnRequest request, in SpawnRelationshipPlan relationshipPlan)
+        {
+            var spawned = request.Kind switch
+            {
+                RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request, in relationshipPlan),
+                RuntimeEntitySpawnKind.Template => SpawnTemplate(request, in relationshipPlan),
+                RuntimeEntitySpawnKind.Assembly => SpawnAssembly(request, in relationshipPlan),
+                _ => throw new InvalidOperationException($"Unsupported runtime spawn kind '{request.Kind}'."),
+            };
+
+            PublishOnSpawnEffect(in request, spawned);
+            PublishSpawnReceipt(in request, spawned);
+            if (request.Kind == RuntimeEntitySpawnKind.Template &&
+                TryGetTemplate(request.TemplateId, out EntityTemplate spawnedTemplate))
+            {
+                MountTemplateTriggerGraphs(spawned, request.TemplateId, spawnedTemplate);
+                MountTemplateInitialInteractionContext(spawned, request.TemplateId, spawnedTemplate);
             }
         }
 
@@ -315,6 +511,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
             ApplyRelationshipPlan(in relationshipPlan, entity);
+            ApplyInstanceInitializer(in request, entity);
             TryBootstrapPresenter(entity, request.TemplateId);
             EnqueueTemplateChildren(in request, entity);
             return entity;
@@ -488,6 +685,22 @@ namespace Ludots.Core.Gameplay.Spawning
 
         }
 
+        private void EnqueueFollowup(in RuntimeEntitySpawnRequest request, string parentTemplateId, string childTemplateId)
+        {
+            if (_materializingDirect)
+            {
+                _directChildren ??= new List<RuntimeEntitySpawnRequest>(4);
+                _directChildren.Add(request);
+                return;
+            }
+
+            if (!_requests.TryEnqueue(in request))
+            {
+                throw new InvalidOperationException(
+                    $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{parentTemplateId}', child='{childTemplateId}'.");
+            }
+        }
+
         private void EnqueueChildNodes(
             List<EntityTemplateChild> children,
             in RuntimeEntitySpawnRequest request,
@@ -571,11 +784,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     InstanceId = request.InstanceId,
                     AddressablePath = childPath,
                 };
-                if (!_requests.TryEnqueue(in childRequest))
-                {
-                    throw new InvalidOperationException(
-                        $"SPAWN.RUNTIME.ERR.TemplateChildrenQueueFull: template='{request.TemplateId}', child='{child.Template}'.");
-                }
+                EnqueueFollowup(in childRequest, request.TemplateId, child.Template);
             }
         }
 
@@ -606,9 +815,15 @@ namespace Ludots.Core.Gameplay.Spawning
                 return false;
             }
 
+            if (!_requests.TryPeek(out RuntimeEntitySpawnRequest head))
+            {
+                return false;
+            }
+
+            ushort initializerKind = head.InstanceInitializerKind;
             while (count < _batchRequests.Length &&
                    _requests.TryPeekAt(count, out var next) &&
-                   IsTemplateBatchMember(templateId, in next))
+                   IsTemplateBatchMember(templateId, initializerKind, in next))
             {
                 _batchRequests[count] = next;
                 count++;
@@ -619,6 +834,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private bool TryDrainCopiedTemplateBatch(string templateId, int count)
         {
+            ushort initializerKind = _batchRequests[0].InstanceInitializerKind;
             for (int i = 0; i < count; i++)
             {
                 if (!_requests.TryDequeue(out RuntimeEntitySpawnRequest drained))
@@ -626,7 +842,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     return false;
                 }
 
-                if (!IsTemplateBatchMember(templateId, in drained))
+                if (!IsTemplateBatchMember(templateId, initializerKind, in drained))
                 {
                     throw new InvalidOperationException(
                         $"Runtime template batch queue changed during preflight: template='{templateId}', row={i}.");
@@ -638,13 +854,15 @@ namespace Ludots.Core.Gameplay.Spawning
             return true;
         }
 
-        private static bool IsTemplateBatchMember(string templateId, in RuntimeEntitySpawnRequest request)
+        private static bool IsTemplateBatchMember(string templateId, ushort initializerKind, in RuntimeEntitySpawnRequest request)
         {
             // 带父链接/attachment 局部姿的请求只能走单实体 lane（batch lane 不处理父子链接）。
             // 未设置 Parent 的请求字段是 default(Entity)（0,0,0），不等于 Entity.Null——
             // 两种"无父"都要放行 batch lane（先例：EntityTriggerGraphMounts）。
+            // 初始化器 kind 不同不能进同一批：WriteChunk 只拿队头的那一个。
             return request.Kind == RuntimeEntitySpawnKind.Template &&
                    !HasComponentPatches(in request) &&
+                   request.InstanceInitializerKind == initializerKind &&
                    (request.Parent == Entity.Null || request.Parent == default) &&
                    request.LinkSourceAsParent == 0 &&
                    request.HasAttachedLocalPose == 0 &&
@@ -755,11 +973,16 @@ namespace Ludots.Core.Gameplay.Spawning
         {
             long prepareStart = Stopwatch.GetTimestamp();
             bool allHaveMapEntity = true;
+            ushort initializerKind = _batchRequests[0].InstanceInitializerKind;
+            IRuntimeSpawnInstanceInitializer? instanceInitializer = initializerKind == 0
+                ? null
+                : RequireInitializer(initializerKind);
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
                 MapEntity? mapEntity = TryResolveMapEntity(in request);
                 allHaveMapEntity &= mapEntity.HasValue;
+                _batchInitializerIndices[i] = request.InstanceInitializerIndex;
                 _templateBatchRequests[i] = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
                     request.WorldPositionCm,
                     hasWorldPosition: request.HasWorldPosition != 0,
@@ -814,7 +1037,9 @@ namespace Ludots.Core.Gameplay.Spawning
                 out ReadOnlySpan<Entity> created,
                 _presenterBatchStableIds.AsSpan(0, count),
                 _presenterBatchOwnerTransforms.AsSpan(0, count),
-                _presenterBatchOwnerCulls.AsSpan(0, count)))
+                _presenterBatchOwnerCulls.AsSpan(0, count),
+                instanceInitializer,
+                _batchInitializerIndices.AsSpan(0, count)))
             {
                 return false;
             }
@@ -1021,6 +1246,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void ApplyTemplateKey(Entity entity, string templateId)
         {
+            if (TryGetTemplate(templateId, out EntityTemplate boundTemplate))
+            {
+                NavSessionBinding.RequireMassNavigationTemplate(boundTemplate);
+            }
+
             int templateKeyId = _templateKeys.GetId(templateId);
             if (templateKeyId <= 0)
             {
@@ -1139,6 +1369,26 @@ namespace Ludots.Core.Gameplay.Spawning
             ParticipantIdentityProjector.UpsertTeam(World, entity, team.Id);
         }
 
+        private void ApplyInstanceInitializer(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (request.InstanceInitializerKind == 0)
+            {
+                return;
+            }
+
+            RequireInitializer(request.InstanceInitializerKind).ApplyEntity(World, entity, request.InstanceInitializerIndex);
+        }
+
+        private IRuntimeSpawnInstanceInitializer RequireInitializer(ushort kind)
+        {
+            if (kind == 0 || kind > _instanceInitializerCount || _instanceInitializers[kind - 1] == null)
+            {
+                throw new InvalidOperationException($"SPAWN.RUNTIME.ERR.UnknownInstanceInitializer: kind={kind}.");
+            }
+
+            return _instanceInitializers[kind - 1];
+        }
+
         private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
         {
             PlayerOwner owner;
@@ -1158,8 +1408,14 @@ namespace Ludots.Core.Gameplay.Spawning
                 owner = World.Get<PlayerOwner>(request.Source);
             }
 
-            if (_ownership != null && _playerLookup != null &&
-                _playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
+            // 没有归属解析器或玩家表时只写组件，不建边。这是无头合同，不是“代表还没进表”的暂存。
+            if (_ownership == null || _playerLookup == null)
+            {
+                ParticipantIdentityProjector.UpsertPlayerOwner(World, entity, owner.PlayerId);
+                return;
+            }
+
+            if (_playerLookup.TryGet(owner.PlayerId, out Entity playerRep) && World.IsAlive(playerRep))
             {
                 if (!World.Has<PlayerIdentity>(playerRep))
                 {

@@ -25,7 +25,7 @@ namespace Ludots.Tests.Presentation
         public void RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig()
         {
             using var world = World.Create();
-            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out Entity direct);
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
             var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
             var pathService = new FakePathService(
                 store,
@@ -44,19 +44,9 @@ namespace Ludots.Tests.Presentation
                 requestId: 77,
                 maxExpanded: 128,
                 maxPoints: 8);
-            MassNavigationRouteSinkResult directTrack = sink.TrackRouteTarget(
-                runtime,
-                world,
-                direct,
-                agentIndex: 1,
-                destinationWorldCm: new Vector2(5_800, 5_000),
-                requestId: 77,
-                maxExpanded: 128,
-                maxPoints: 8);
             sink.EndSync();
 
             Assert.That(routedTrack.Tracked, Is.True);
-            Assert.That(directTrack.Status, Is.EqualTo(MassNavigationRouteSinkStatus.NoConfiguredAgentType));
             Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
 
             MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
@@ -66,7 +56,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(pathService.SolveCount, Is.EqualTo(1));
             Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float routedX, out float routedY), Is.True);
             Assert.That(new Vector2(routedX, routedY), Is.EqualTo(new Vector2(5_300, 5_000)));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out float directX, out float directY), Is.True);
+            Assert.That(new Vector2(directX, directY), Is.EqualTo(runtime.GetAgentWorldPositionCm(1)),
+                "A profile omitted from pathing config keeps its idle hold and does not receive the route waypoint.");
         }
 
         [Test]
@@ -116,7 +108,10 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.PathStatus, Is.EqualTo(PathStatus.NoPath));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float heldX, out float heldY), Is.True);
+            Assert.That(new Vector2(heldX, heldY), Is.EqualTo(runtime.GetAgentWorldPositionCm(0)),
+                "A failed configured-profile solve must leave the idle hold, not steer at the requested destination.");
+            Assert.That(new Vector2(heldX, heldY), Is.Not.EqualTo(new Vector2(5_800, 5_000)));
         }
 
         [Test]
@@ -141,9 +136,12 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(result.Status, Is.EqualTo(MassNavigationRouteSinkStatus.SolveFailed));
             Assert.That(result.AgentIndex, Is.EqualTo(1));
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out _, out _), Is.False,
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float firstX, out float firstY), Is.True);
+            Assert.That(new Vector2(firstX, firstY), Is.EqualTo(runtime.GetAgentWorldPositionCm(0)),
                 "Route execution must prepare the full OrderId batch before committing any member target.");
-            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out _, out _), Is.False);
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(1, out float secondX, out float secondY), Is.True);
+            Assert.That(new Vector2(secondX, secondY), Is.EqualTo(runtime.GetAgentWorldPositionCm(1)),
+                "A failed member must not receive the requested destination either.");
         }
 
         [Test]
@@ -347,7 +345,7 @@ namespace Ludots.Tests.Presentation
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
             int directProfile = MassNavigationProfileRegistry.Register("direct");
-            routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
             direct = world.Create(new MassNavigationAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
@@ -374,8 +372,8 @@ namespace Ludots.Tests.Presentation
             out Entity second)
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
-            first = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
-            second = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            first = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
+            second = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);
@@ -400,8 +398,8 @@ namespace Ludots.Tests.Presentation
             out Entity mover)
         {
             int routedProfile = MassNavigationProfileRegistry.Register("routed");
-            mover = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
-            Entity blocker = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            mover = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
+            Entity blocker = world.Create(new MassNavigationAgent { ProfileId = routedProfile, AgentTypeId = "routed.agent" }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationOrderChainTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);

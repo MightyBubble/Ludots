@@ -1410,6 +1410,178 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_LeavesSharedQueueUntouched()
+        {
+            UnitTypeRegistry.Clear();
+            try
+            {
+                int queuedType = UnitTypeRegistry.Register("QueuedWolf");
+                int directType = UnitTypeRegistry.Register("DirectWolf");
+                using World world = World.Create();
+                var queue = new RuntimeEntitySpawnQueue(4);
+                var system = new RuntimeEntitySpawnSystem(
+                    world,
+                    queue,
+                    new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }")),
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator());
+                That(queue.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.UnitType,
+                    UnitTypeId = queuedType,
+                    WorldPositionCm = Fix64Vec2.FromInt(1, 1),
+                }), Is.True);
+
+                system.Materialize(new[]
+                {
+                    new RuntimeEntitySpawnRequest
+                    {
+                        Kind = RuntimeEntitySpawnKind.UnitType,
+                        UnitTypeId = directType,
+                        WorldPositionCm = Fix64Vec2.FromInt(9, 9),
+                    },
+                });
+
+                That(queue.Count, Is.EqualTo(1));
+                That(queue.TryPeek(out RuntimeEntitySpawnRequest stillQueued), Is.True);
+                That(stillQueued.UnitTypeId, Is.EqualTo(queuedType));
+                int direct = 0;
+                int queued = 0;
+                var query = new QueryDescription().WithAll<Name>();
+                world.Query(in query, (ref Name name) =>
+                {
+                    if (name.Value == "Unit:DirectWolf") direct++;
+                    if (name.Value == "Unit:QueuedWolf") queued++;
+                });
+                That(direct, Is.EqualTo(1));
+                That(queued, Is.EqualTo(0));
+            }
+            finally
+            {
+                UnitTypeRegistry.Clear();
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_Size1_SetsPresentationLifecycleState()
+        {
+            using World world = World.Create();
+            RuntimeEntitySpawnSystem system = CreateLanePoseSpawnSystem(world, out RuntimeEntitySpawnQueue queue, out _);
+            system.Materialize(new[] { LanePoseRequest() });
+            Entity entity = FindNamed(world, "LanePose");
+            That(world.Has<PresentationLifecycleState>(entity), Is.True);
+            That(world.Get<PresentationLifecycleState>(entity).Spawned, Is.True);
+            That(queue.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_Update_Size1_LeavesPresentationLifecycleStateUnset()
+        {
+            using World world = World.Create();
+            RuntimeEntitySpawnSystem system = CreateLanePoseSpawnSystem(world, out RuntimeEntitySpawnQueue queue, out _);
+            That(queue.TryEnqueue(LanePoseRequest()), Is.True);
+            system.Update(0f);
+            Entity entity = FindNamed(world, "LanePose");
+            That(world.Has<PresentationLifecycleState>(entity), Is.False);
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_LifecycleOnlyPresenterRules_ThrowsBeforeCreate()
+        {
+            using World world = World.Create();
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int templateKeyId = templateKeys.Register("lane_pose");
+            var definitions = new Ludots.Core.Presentation.Presenters.PresenterDefinitionRegistry();
+            int definitionId = definitions.GetOrRegisterId("lane.lifecycle.only");
+            definitions.Register("lane.lifecycle.only", new Ludots.Core.Presentation.Presenters.PresenterDefinition
+            {
+                Rules =
+                [
+                    new Ludots.Core.Presentation.Presenters.PresenterRule
+                    {
+                        Event = new Ludots.Core.Presentation.Presenters.EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Condition = new Ludots.Core.Presentation.Presenters.ConditionRef { GraphProgramId = 1 },
+                        Command = new Ludots.Core.Presentation.Presenters.PresenterCommand
+                        {
+                            CommandKind = Ludots.Core.Presentation.Presenters.PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = definitionId,
+                            ScopeSource = Ludots.Core.Presentation.Presenters.PresenterCommandScopeSource.EventPayloadA,
+                            AnchorKind = Ludots.Core.Presentation.Commands.PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            RuntimeEntitySpawnSystem system = CreateLanePoseSpawnSystem(
+                world, out _, out _, templateKeys, definitions);
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Materialize(new[] { LanePoseRequest() }))!;
+            That(ex.Message, Does.Contain("SPAWN.RUNTIME.ERR.MaterializePresenter"));
+            That(world.Size, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_Materialize_UnprocessedChildren_AreNamedOnFailure()
+        {
+            const string pose = """
+                "components": {
+                  "Name": { "Value": "Piece" },
+                  "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+                  "FacingDirection": { "AngleRad": 0 }
+                }
+                """;
+            const string poseChild = """
+                "localPose": { "offsetXCm": 0, "offsetYCm": 0, "facingDeg": 0, "inheritParentFacing": true, "offsetRotation": "None" }
+                """;
+            string templatesJson = $$"""
+                [
+                  {
+                    "id": "child_a",
+                    {{pose}}
+                  },
+                  {
+                    "id": "child_c",
+                    {{pose}}
+                  },
+                  {
+                    "id": "parent_with_children",
+                    {{pose}},
+                    "children": [
+                      { "template": "child_a", {{poseChild}} },
+                      { "template": "missing_child", {{poseChild}} },
+                      { "template": "child_c", {{poseChild}} }
+                    ]
+                  }
+                ]
+                """;
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            using World world = World.Create();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                new RuntimeEntitySpawnQueue(4),
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator());
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Materialize(new[]
+            {
+                new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "parent_with_children",
+                    HasWorldPosition = 1,
+                    WorldPositionCm = Fix64Vec2.FromInt(1, 1),
+                    HasFacing = 1,
+                },
+            }))!;
+            That(ex.Message, Does.Contain("SPAWN.RUNTIME.ERR.MaterializeIncomplete: 1 follow-up"));
+            That(ex.InnerException, Is.Not.Null);
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_ConfiguredOnSpawnEffect_RequiresEffectRequestQueue()
         {
             UnitTypeRegistry.Clear();
@@ -2980,6 +3152,68 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             }
 
             return new SpawnRelationshipHarness(relationships, teams, memberOfTypeId);
+        }
+
+        private const string LanePoseTemplateJson = """
+            [
+              {
+                "id": "lane_pose",
+                "components": {
+                  "Name": { "Value": "LanePose" },
+                  "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+                  "FacingDirection": { "AngleRad": 0 }
+                }
+              }
+            ]
+            """;
+
+        private static RuntimeEntitySpawnRequest LanePoseRequest()
+        {
+            return new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "lane_pose",
+                HasWorldPosition = 1,
+                WorldPositionCm = Fix64Vec2.FromInt(3, 4),
+                HasFacing = 1,
+                FacingAngleRad = 0f,
+            };
+        }
+
+        private static RuntimeEntitySpawnSystem CreateLanePoseSpawnSystem(
+            World world,
+            out RuntimeEntitySpawnQueue queue,
+            out DataRegistry<EntityTemplate> templates,
+            EntityTemplateKeyRegistry templateKeys = null,
+            Ludots.Core.Presentation.Presenters.PresenterDefinitionRegistry presenterDefinitions = null)
+        {
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", LanePoseTemplateJson);
+            templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            queue = new RuntimeEntitySpawnQueue(4);
+            templateKeys ??= new EntityTemplateKeyRegistry();
+            return new RuntimeEntitySpawnSystem(
+                world,
+                queue,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                presenterDefinitions: presenterDefinitions);
+        }
+
+        private static Entity FindNamed(World world, string name)
+        {
+            Entity found = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name component) =>
+            {
+                if (component.Value == name)
+                {
+                    found = entity;
+                }
+            });
+            That(found, Is.Not.EqualTo(Entity.Null));
+            return found;
         }
 
         private static ConfigPipeline CreateMinimalPipeline(string effectJson, string templatesJson = null)

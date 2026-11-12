@@ -1,0 +1,50 @@
+{
+  "areas": {
+    "road": { "ignoresSlope": false },
+    "deck": { "ignoresSlope": true },
+    "flooded": { "ignoresSlope": true },
+    "burning": { "ignoresSlope": false }
+  },
+  "agentTypes": {
+    "foot": {
+      "cells": {
+        "road": { "cost": 0.7, "speedDivisor": 0.7, "depart": [], "arrive": [] },
+        "deck": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "flooded": { "cost": 3, "speedDivisor": 3, "depart": [], "arrive": [] },
+        "burning": { "cost": 8, "speedDivisor": 8, "depart": [], "arrive": [] }
+      }
+    },
+    "hull": {
+      "cells": {
+        "road": false,
+        "deck": false,
+        "flooded": { "cost": 1.2, "speedDivisor": 1.2, "depart": [], "arrive": [] },
+        "burning": false
+      }
+    },
+    "climber": {
+      "cells": {
+        "road": { "cost": 0.8, "speedDivisor": 0.8, "depart": [], "arrive": [] },
+        "deck": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "flooded": { "cost": 3.5, "speedDivisor": 3.5, "depart": [], "arrive": [] },
+        "burning": { "cost": 8, "speedDivisor": 8, "depart": [], "arrive": [] }
+      }
+    },
+    "amphib": {
+      "cells": {
+        "road": { "cost": 0.9, "speedDivisor": 0.9, "depart": [], "arrive": [] },
+        "deck": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "flooded": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "burning": false
+      }
+    },
+    "leaper": {
+      "cells": {
+        "road": { "cost": 0.8, "speedDivisor": 0.8, "depart": ["jump"], "arrive": ["jump"] },
+        "deck": { "cost": 1, "speedDivisor": 1, "depart": [], "arrive": [] },
+        "flooded": { "cost": 3, "speedDivisor": 3, "depart": ["jump"], "arrive": ["jump"] },
+        "burning": { "cost": 6, "speedDivisor": 6, "depart": ["jump"], "arrive": ["jump"] }
+      }
+    }
+  }
+}

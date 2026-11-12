@@ -632,6 +632,13 @@ namespace Ludots.Core.Modding
                 _loadedMods.Clear();
                 UnregisterModComponentAuthoring(LoadedModIds);
 
+                _systems = UnavailableSystemRegistrar.Instance;
+                _registries = UnavailableRegistrySetView.Instance;
+                foreach (var ctx in _loadContexts)
+                {
+                    ctx.ReleaseUnloadReferences();
+                }
+
                 foreach (var ctx in _loadContexts)
                 {
                     try

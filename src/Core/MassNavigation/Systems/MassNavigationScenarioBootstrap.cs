@@ -25,7 +25,7 @@ internal static class MassNavigationScenarioBootstrap
 
         simulation.AgentState.Reset();
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
-        MapSession session = RequireCurrentMapSession(engine, simulation.Config.MapId);
+        MapSession session = RequireCurrentMapSession(engine);
         PlayerEntityLookup playerLookup = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
             ?? throw new InvalidOperationException("MassNavigation scenario requires PlayerEntityLookup.");
         simulation.ConfigureScenarioTeams(teamIds);
@@ -253,17 +253,10 @@ internal static class MassNavigationScenarioBootstrap
         }
     }
 
-    private static MapSession RequireCurrentMapSession(GameEngine engine, string configuredMapId)
+    private static MapSession RequireCurrentMapSession(GameEngine engine)
     {
-        MapSession session = engine.CurrentMapSession
+        return engine.CurrentMapSession
             ?? throw new InvalidOperationException("MassNavigation runtime requires an active map session before scenario bootstrap.");
-        if (!string.Equals(session.MapId.Value, configuredMapId, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation runtime scenario bootstrap requires active map '{configuredMapId}', got '{session.MapId.Value}'.");
-        }
-
-        return session;
     }
 
 }

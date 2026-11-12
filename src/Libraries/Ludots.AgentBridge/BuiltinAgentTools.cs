@@ -61,6 +61,9 @@ namespace Ludots.AgentBridge
             tools.Register(new SaveWriteTool());
             tools.Register(new SaveReadTool());
             tools.Register(new SaveRestoreTool());
+            tools.Register(new CrowdConfigApplyDebugTool());
+            tools.Register(new CrowdConfigApplyDebugViewTool());
+            tools.Register(new CrowdConfigRebuildWorldTool());
         }
 
         /// <summary>

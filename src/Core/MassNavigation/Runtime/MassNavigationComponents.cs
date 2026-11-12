@@ -6,6 +6,7 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public struct MassNavigationAgent
 {
     public int ProfileId;
+    public string AgentTypeId;
 }
 
 public struct MassNavigationAgentIndex

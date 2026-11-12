@@ -1,0 +1,17 @@
+{
+  "startupMapId": "crowd_simulation_s1337",
+  "windowTitle": "Ludots - CrowdSimulation S4 Deploy (seed 1337)",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "gasRuntimeCapacity": {
+    "orderQueueCapacity": 16384,
+    "orderAdmissionResultCapacity": 32768,
+    "orderAdmissionRejectionCapacity": 16384,
+    "orderTerminalResultCapacity": 16384,
+    "commandIntentScratchCapacity": 16384
+  }
+}

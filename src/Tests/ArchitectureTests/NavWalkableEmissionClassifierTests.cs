@@ -154,7 +154,7 @@ namespace Ludots.Tests.Architecture
                 }
             }
 
-            var agent = new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 };
+            var agent = new AgentProfileConfig { Id = "Small", NavProfileId = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 };
             var nav = new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 };
             var legacy = new NavBuildConfig(1.0f, 0.6f, cliffHeightThreshold: 1);
             bool okA = RecastNavTileBaker.TryBake(terrain, 1, 1, 1, legacy, agent, nav, 0, "ground", new NavObstacleSet(), out NavTile tri, out _, out NavBakeArtifact artA);

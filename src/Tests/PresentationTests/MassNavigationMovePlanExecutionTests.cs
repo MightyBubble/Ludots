@@ -67,8 +67,8 @@ public sealed class MassNavigationMovePlanExecutionTests
             Mode = MovePlanExecutionMode.CommandGroup,
         });
 
-        var mapId = new MapId(config.MapId);
-        engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
+        var mapId = new MapId(MassNavigationOrderChainTests.TestMapId);
+        engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = MassNavigationOrderChainTests.TestMapId }));
         var binding = new MassNavigationRuntimeBinding();
         binding.Activate(mapId, simulation);
         binding.MarkPrepared(mapId, simulation);

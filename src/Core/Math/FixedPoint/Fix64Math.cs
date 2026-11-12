@@ -24,6 +24,26 @@ namespace Ludots.Core.Mathematics.FixedPoint
         }
 
         /// <summary>
+        /// 精确平方根:整数位法对 raw 逐位求 floor(sqrt),与 Sqrt 的多项式近似不同,
+        /// 结果可被任意整数域实现(含 BigInt)逐位复现——跨引擎逐位合同选这一支。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Fix64 SqrtPrecise(Fix64 value)
+        {
+            return Fix64.FromRaw(Fixed64.SqrtPrecise(value.RawValue));
+        }
+
+        /// <summary>
+        /// 精确积:负数向零截断。operator* 对负数向下取整,负结果且低 32 位余量非 0 时两者差 1 个最小单位,
+        /// 其余情况相同。结果超出 Fix64 表示域或操作数 raw 为 long.MinValue 时,结果无意义。热路径继续用 operator*。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Fix64 MulExact(Fix64 a, Fix64 b)
+        {
+            return Fix64.FromRaw(Fixed64.MulExact(a.RawValue, b.RawValue));
+        }
+
+        /// <summary>
         /// 快速平方根（精度略低但更快）
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

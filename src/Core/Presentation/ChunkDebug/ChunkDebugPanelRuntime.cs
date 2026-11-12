@@ -63,6 +63,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
         private static void RenderMissingBounds(ScreenOverlayBuffer overlay)
         {
             overlay.AddRect(
+                PresentationOverlayLayer.TopMost,
                 PanelX,
                 PanelY,
                 PanelWidth,
@@ -72,6 +73,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase,
                 1);
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 18,
                 "Chunk Debug",
@@ -80,6 +82,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase + 1,
                 1);
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 48,
                 "ERR bounds missing",
@@ -103,6 +106,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
             CameraCullingDebugState? cull)
         {
             overlay.AddRect(
+                PresentationOverlayLayer.TopMost,
                 PanelX,
                 PanelY,
                 PanelWidth,
@@ -111,8 +115,9 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 new Vector4(0.34f, 0.54f, 0.62f, 0.95f),
                 StableBase,
                 1);
-            overlay.AddText(PanelX + 16, PanelY + 14, "Chunk Debug", 18, new Vector4(0.96f, 0.98f, 1f, 1f), StableBase + 1, 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, PanelX + 16, PanelY + 14, "Chunk Debug", 18, new Vector4(0.96f, 0.98f, 1f, 1f), StableBase + 1, 1);
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 44,
                 $"Board {board?.Name ?? "<none>"} | {boardConfig?.SpatialType ?? board?.GetType().Name ?? "<none>"}",
@@ -121,6 +126,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase + 2,
                 Hash(board?.Name, boardConfig?.SpatialType));
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 68,
                 $"World {bounds.Width / 100f:0}m x {bounds.Height / 100f:0}m",
@@ -129,6 +135,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase + 3,
                 bounds.GetHashCode());
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 92,
                 hasLoadedChunks
@@ -139,6 +146,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase + 4,
                 Hash(chunkSizeCm, activeChunkCount));
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 116,
                 $"Camera ({cameraTarget.X:0},{cameraTarget.Y:0}) cm",
@@ -147,6 +155,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
                 StableBase + 5,
                 Hash(cameraTarget.X, cameraTarget.Y));
             overlay.AddText(
+                PresentationOverlayLayer.TopMost,
                 PanelX + 16,
                 PanelY + 140,
                 $"Camera chunk ({cameraChunkX},{cameraChunkY})",
@@ -158,6 +167,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
             if (cull != null)
             {
                 overlay.AddText(
+                    PresentationOverlayLayer.TopMost,
                     PanelX + 16,
                     PanelY + 164,
                     $"Cull vis {cull.VisibleEntityCount} | rev {cull.VisibilityRevision}",
@@ -183,6 +193,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
             int mapX = PanelX + PanelWidth - MapInset - MapSize;
             int mapY = PanelY + 64;
             overlay.AddRect(
+                PresentationOverlayLayer.TopMost,
                 mapX,
                 mapY,
                 MapSize,
@@ -199,13 +210,13 @@ namespace Ludots.Core.Presentation.ChunkDebug
             for (int cx = minChunkX + strideX; cx < maxChunkX; cx += strideX)
             {
                 int x = mapX + (int)MathF.Round(((cx - minChunkX) / (float)chunkCountX) * (MapSize - 1));
-                overlay.AddRect(x, mapY, 1, MapSize, Vector4.Zero, new Vector4(0.18f, 0.31f, 0.37f, 0.72f), StableBase + 21 + cx - minChunkX, 1);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, x, mapY, 1, MapSize, Vector4.Zero, new Vector4(0.18f, 0.31f, 0.37f, 0.72f), StableBase + 21 + cx - minChunkX, 1);
             }
 
             for (int cy = minChunkY + strideY; cy < maxChunkY; cy += strideY)
             {
                 int y = mapY + (int)MathF.Round(((cy - minChunkY) / (float)chunkCountY) * (MapSize - 1));
-                overlay.AddRect(mapX, y, MapSize, 1, Vector4.Zero, new Vector4(0.18f, 0.31f, 0.37f, 0.72f), StableBase + 80 + cy - minChunkY, 1);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, mapX, y, MapSize, 1, Vector4.Zero, new Vector4(0.18f, 0.31f, 0.37f, 0.72f), StableBase + 80 + cy - minChunkY, 1);
             }
 
             if (loadedChunks != null)
@@ -226,7 +237,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
 
                     int x = mapX + (int)MathF.Round(((chunkX - minChunkX) / (float)chunkCountX) * (MapSize - 1));
                     int y = mapY + (int)MathF.Round(((chunkY - minChunkY) / (float)chunkCountY) * (MapSize - 1));
-                    overlay.AddRect(x - 2, y - 2, 4, 4, new Vector4(0.26f, 0.62f, 0.82f, 0.78f), Vector4.Zero, StableBase + 200 + drawn, Hash(chunkX, chunkY));
+                    overlay.AddRect(PresentationOverlayLayer.TopMost, x - 2, y - 2, 4, 4, new Vector4(0.26f, 0.62f, 0.82f, 0.78f), Vector4.Zero, StableBase + 200 + drawn, Hash(chunkX, chunkY));
                     drawn++;
                 }
             }
@@ -239,8 +250,8 @@ namespace Ludots.Core.Presentation.ChunkDebug
             if (TryWorldToMap(bounds, mapX, mapY, cameraTarget.X, cameraTarget.Y, out int cameraX, out int cameraY))
             {
                 Vector4 camera = new(1f, 0.95f, 0.54f, 1f);
-                overlay.AddRect(cameraX - 5, cameraY - 1, 10, 2, Vector4.Zero, camera, StableBase + 760, Hash(cameraTarget.X, cameraTarget.Y));
-                overlay.AddRect(cameraX - 1, cameraY - 5, 2, 10, Vector4.Zero, camera, StableBase + 761, Hash(cameraTarget.Y, cameraTarget.X));
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cameraX - 5, cameraY - 1, 10, 2, Vector4.Zero, camera, StableBase + 760, Hash(cameraTarget.X, cameraTarget.Y));
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cameraX - 1, cameraY - 5, 2, 10, Vector4.Zero, camera, StableBase + 761, Hash(cameraTarget.Y, cameraTarget.X));
             }
         }
 
@@ -268,10 +279,10 @@ namespace Ludots.Core.Presentation.ChunkDebug
             int bottom = Math.Clamp(Math.Max(y0, y1), mapY, mapY + MapSize - 1);
             int width = Math.Max(4, right - left);
             int height = Math.Max(4, bottom - top);
-            overlay.AddRect(left, top, width, 2, Vector4.Zero, color, stableId, Hash(left, top, width));
-            overlay.AddRect(left, bottom, width, 2, Vector4.Zero, color, stableId + 1, Hash(left, bottom, width));
-            overlay.AddRect(left, top, 2, height, Vector4.Zero, color, stableId + 2, Hash(left, top, height));
-            overlay.AddRect(right, top, 2, height, Vector4.Zero, color, stableId + 3, Hash(right, top, height));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, left, top, width, 2, Vector4.Zero, color, stableId, Hash(left, top, width));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, left, bottom, width, 2, Vector4.Zero, color, stableId + 1, Hash(left, bottom, width));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, left, top, 2, height, Vector4.Zero, color, stableId + 2, Hash(left, top, height));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, right, top, 2, height, Vector4.Zero, color, stableId + 3, Hash(right, top, height));
         }
 
         private static bool TryWorldToMap(in WorldAabbCm bounds, int mapX, int mapY, float worldXcm, float worldYcm, out int x, out int y)

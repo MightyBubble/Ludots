@@ -225,6 +225,48 @@ namespace Ludots.Core.Gameplay.Camera
             return new CameraRenderState3D(desiredPos, lookTarget, up, state.FovYDeg);
         }
 
+        /// <summary>
+        /// 指针射线与目标高度平面的交点，平面坐标厘米 (X, Z)。射线与平面平行或交点在相机后方时失败。
+        /// </summary>
+        public static bool TryGroundCmUnderPointer(
+            in CameraStateSnapshot state,
+            Vector2 pointerPx,
+            Vector2 resolution,
+            float aspectRatio,
+            out Vector2 groundCm)
+        {
+            groundCm = default;
+            if (resolution.X <= 0f || resolution.Y <= 0f || aspectRatio <= 0f ||
+                !float.IsFinite(pointerPx.X) || !float.IsFinite(pointerPx.Y))
+            {
+                return false;
+            }
+
+            CameraRenderState3D render = StateToRenderState(in state);
+            ScreenRay ray = ScreenToRay(pointerPx, in render, resolution, aspectRatio);
+            float planeY = WorldUnits.CmToM(state.TargetHeightCm);
+            float dy = ray.Direction.Y;
+            if (MathF.Abs(dy) < 1e-6f)
+            {
+                return false;
+            }
+
+            float t = (planeY - ray.Origin.Y) / dy;
+            if (t < 0f || !float.IsFinite(t))
+            {
+                return false;
+            }
+
+            Vector3 hit = ray.Origin + (ray.Direction * t);
+            if (!float.IsFinite(hit.X) || !float.IsFinite(hit.Z))
+            {
+                return false;
+            }
+
+            groundCm = new Vector2(hit.X * WorldUnits.CmPerMeter, hit.Z * WorldUnits.CmPerMeter);
+            return true;
+        }
+
         private static Vector3 ResolveCameraLocalOffsetMeters(Vector3 localOffsetCm, Vector3 viewForward)
         {
             if (localOffsetCm == Vector3.Zero)

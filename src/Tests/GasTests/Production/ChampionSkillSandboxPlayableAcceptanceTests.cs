@@ -45,6 +45,7 @@ using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -110,8 +111,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void ChampionSkillSandbox_PlayableFlow_WritesAcceptanceArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-sandbox");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/champion-skill-sandbox");
             Directory.CreateDirectory(artifactDir);
 
             var timeline = new List<string>();
@@ -578,8 +578,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void ChampionSkillPanelShowcase_WritesThemeArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-panel-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/champion-skill-panel-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(artifactDir);
             Directory.CreateDirectory(screensDir);
@@ -626,8 +625,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void ChampionSkillStress_PlayableFlow_WritesAcceptanceArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "champion-skill-stress");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/champion-skill-stress");
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(artifactDir);
             Directory.CreateDirectory(screensDir);

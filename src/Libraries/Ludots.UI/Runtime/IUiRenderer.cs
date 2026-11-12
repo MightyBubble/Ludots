@@ -7,5 +7,9 @@ namespace Ludots.UI.Runtime;
 /// </summary>
 public interface IUiRenderer
 {
+    /// <summary>
+    /// 把渲染器自己的目标画布更新成场景当前的样子，清屏也归它管：画布还留着上一帧时只清掉并重画
+    /// <see cref="UiScene.GetPaintDamage"/> 覆盖的区域，否则整张清掉重画；画完调 <see cref="UiScene.AcceptPaint"/>。
+    /// </summary>
     void Render(UiScene scene, float width, float height);
 }

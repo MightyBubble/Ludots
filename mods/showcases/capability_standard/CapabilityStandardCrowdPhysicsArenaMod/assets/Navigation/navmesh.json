@@ -1,0 +1,13 @@
+{
+  "maps": {
+    "crowd_physics_arena": {
+      "solver": "mass-navigation",
+      "navProfiles": [
+        "Small"
+      ],
+      "navAreas": [
+        "Default"
+      ]
+    }
+  }
+}

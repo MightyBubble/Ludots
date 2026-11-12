@@ -25,6 +25,18 @@ namespace Ludots.Core.Navigation.Pathing
             snappedZcm = worldZcm;
             return false;
         }
+
+        /// <summary>
+        /// 读这个移动类型当前网格查询所在的层、档和 <c>NavTileStore.Revision</c>。
+        /// 没有网格域时返回 false。
+        /// </summary>
+        bool TryReadNavPublication(string agentTypeId, out int layer, out int profile, out uint revision)
+        {
+            layer = 0;
+            profile = 0;
+            revision = 0;
+            return false;
+        }
     }
 }
 

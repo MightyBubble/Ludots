@@ -47,16 +47,36 @@ namespace Ludots.Tests.Gas
               "dependencies": { "LudotsCoreMod": "^1.0.0" }
             }
             """);
+            File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "pathing.json"), """
+            {
+              "agentTypes": {
+                "Humanoid": {
+                  "profileId": "Small",
+                  "navMesh": {
+                    "areaCosts": [
+                      { "areaId": 0, "cost": 1.0, "passable": true },
+                      { "areaId": 1, "cost": 1.0, "passable": true },
+                      { "areaId": 2, "cost": 1.0, "passable": true }
+                    ]
+                  }
+                }
+              }
+            }
+            """);
             File.WriteAllText(Path.Combine(_bakeConfigModRoot, "assets", "Navigation", "navmesh.json"), """
             {
               "mode": "runtime-incremental",
               "algorithm": "recast",
-              "profiles": [{ "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }],
+              "profiles": {
+                "Small": { "maxClimbCm": 40, "maxSlopeDeg": 45, "agentProfileId": "Small" },
+                "Medium": { "maxClimbCm": 45, "maxSlopeDeg": 45, "agentProfileId": "Medium" },
+                "Large": { "maxClimbCm": 50, "maxSlopeDeg": 40, "agentProfileId": "Large" }
+              },
               "layers": [{ "id": "ground", "layer": 0 }],
-              "areas": [
-                { "id": "mud", "areaId": 1, "cost": 2.0 },
-                { "id": "road", "areaId": 2, "cost": 0.7 }
-              ],
+              "areas": {
+                "mud": { "areaId": 1, "slopeFree": false },
+                "road": { "areaId": 2, "slopeFree": false }
+              },
               "runtimeIncremental": {
                 "tileBudgetPerFixedTick": 4,
                 "includeNeighborTiles": true,
@@ -142,6 +162,8 @@ namespace Ludots.Tests.Gas
                 engine.Tick(1f / 60f);
             }
 
+            TickUntilRebakeDrained(engine);
+
             NavTile after = store.GetOrLoad(new NavTileId(0, 0));
             NavTile farAfter = store.GetOrLoad(new NavTileId(3, 3));
 
@@ -183,6 +205,23 @@ namespace Ludots.Tests.Gas
             Assert.That(max, Is.GreaterThanOrEqualTo(5),
                 $"navmesh_debug_vhtm 的 LogicTerrain 高度层必须覆盖 vhtm 起伏全幅（vhtm 50..650cm/step100 → 期望 max>=5，实际 min={min} max={max}）；" +
                 "max 偏小意味着投影只采样了部分起伏或步长错位");
+        }
+
+        /// <summary>
+        /// 重烤在后台线程完成，结果要等游戏线程下一次泵才发布；只按帧数推进会在后台烤完前就断言。
+        /// </summary>
+        private static void TickUntilRebakeDrained(GameEngine engine)
+        {
+            var queue = engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue)
+                ?? throw new InvalidOperationException("navmesh_debug_vhtm 装载后必须注册 RuntimeNavMeshRebuildQueue。");
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            while (queue.PendingTileCount > 0 && stopwatch.ElapsedMilliseconds < 10000)
+            {
+                System.Threading.Thread.Sleep(1);
+                engine.Tick(1f / 60f);
+            }
+
+            Assert.That(queue.PendingTileCount, Is.Zero, "运行时重烤 10 秒内没有发布完全部脏瓦片。");
         }
 
         private static NavQueryServiceRegistry GetNavRegistry(GameEngine engine)

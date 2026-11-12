@@ -1,0 +1,10 @@
+{
+  "startupMapId": "crowd_simulation_s2024",
+  "windowTitle": "Ludots - CrowdSimulation S1 Terrain (seed 2024)",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
+}

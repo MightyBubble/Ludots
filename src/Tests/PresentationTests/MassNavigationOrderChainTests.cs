@@ -19,6 +19,7 @@ public sealed class MassNavigationOrderChainTests
 {
     internal const int LocalTeamId = 1;
     internal const int EnemyTeamId = 2;
+    internal const string TestMapId = "mass_navigation";
 
     internal static Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks CreateLoadedChunksForTests(
         MassNavigationSimulationRuntime simulation)
@@ -166,7 +167,6 @@ public sealed class MassNavigationOrderChainTests
         MassNavigationFlowSolverConfig solver = CreateTestSolverConfig();
         var config = new MassNavigationConfig
         {
-            MapId = "mass_navigation",
             Solver = solver,
             World = new MassNavigationWorldConfig
             {
@@ -310,6 +310,7 @@ public sealed class MassNavigationOrderChainTests
             new AgentProfileConfig
             {
                 Id = "light",
+                NavProfileId = "light",
                 RadiusCm = 20,
                 HeightCm = 180,
                 ClearanceCm = 40,

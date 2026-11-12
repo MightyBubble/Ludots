@@ -783,13 +783,13 @@ namespace GasTests
                 Algorithm = NavBakeNames.AlgorithmCdt,
                 Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
+                    new NavMeshAgentProfileConfig { Id = "Small", AgentProfileId = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 },
                 Layers = new List<NavLayerConfig>
                 {
                     new NavLayerConfig { Id = GroundNavLayerId, Layer = 0 }
                 },
-                Areas = new List<NavAreaCostConfig>(),
+                Areas = new List<NavMeshAreaConfig>(),
                 RuntimeIncremental = new NavRuntimeIncrementalConfig
                 {
                     TileBudgetPerFixedTick = 1,
@@ -808,6 +808,7 @@ namespace GasTests
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

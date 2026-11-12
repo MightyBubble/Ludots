@@ -116,6 +116,8 @@ Feature: 查询缓存服从瓦片版本
 
 当前 main 没有完整 `DetourQueryMeshCache`。PR #1164 的 `codex/nav-perf-query-cache-rebake-workers` 分支已实现缓存、LoadedVersion、单飞和 worker，但仍是 open draft，需按当前 `NavTileStore` 合同重整后再合入，并补零分配回归。
 
+主线查询按每个 `NavTileStore`（一层一档一份）常驻一份 `DtNavMesh` 和一份 `DtNavMeshQuery`。`Revision` 和已加载瓦片数都没变时，`FindPath` 和 `TrySnapToSurface` 复用这份网格，不再按次组网。`Replace`、`Unload`、`Reload` 推进 `Revision` 之后，下一次查询按瓦片引用差量 `AddTile` / `RemoveTile`；槽位不够或原点变了，才整网重建一次。发布和查询都在游戏线程。代价表留在查询服务上。单飞、worker 和指标面板不在这里。
+
 分支接收判断：origin/codex/nav-perf-query-cache-rebake-workers (0cecb99c01)，PR #1164 仍 open draft；分支已实现，主线未收口。
 
 | 责任层 | 本页剩余功能点 | 完成判据 |

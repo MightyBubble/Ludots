@@ -1,0 +1,392 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.Mathematics.FixedPoint;
+
+namespace Ludots.Core.CrowdSimulation.Units;
+
+/// <summary>指令种类(Exec 分发全集;名字与 JSON type 字段一一对应,报错文案用 KindName)。</summary>
+public enum CrowdSimCommandKind : byte
+{
+    Spawn,
+    SpawnAt,
+    Order,
+    FogSight,
+    Reveal,
+    Obscure,
+    Forget,
+    FogShare,
+    PlaceStructure,
+    RemoveStructureAt,
+    Kill,
+    Scatter,
+    Rates,
+    RebakeSlices,
+    ClearCaches,
+}
+
+/// <summary>
+/// 指令载荷(数据):类型/玩家/坐标/形状/选项在入队边界一次成形,JsonNode 只在边界出现
+/// (脚本配置/测试载荷 → Parse;演示现场指令直接构造 struct)。日志/队列/回放/执行共用
+/// 同一份 struct,不再持有 JSON 树;内嵌形状与模板/阵型串解析后只读,拷贝 struct 即安全。
+/// 坐标存厘米整数,Fix64 换算沿用原执行点口径(FromInt);face 在边界 FromDouble 一次成形。
+/// 会话域校验(玩家号表外/迷雾启用)在入队 Validate,不在这里。
+/// </summary>
+public readonly record struct CrowdSimCommand
+{
+    public CrowdSimCommandKind Kind { get; init; }
+    /// <summary>spawnAt/order/reveal/obscure/forget/fogShare。</summary>
+    public int Player { get; init; }
+    /// <summary>fogShare 的并组对象。</summary>
+    public int With { get; init; }
+    /// <summary>spawn/spawnAt 的数量。</summary>
+    public int Count { get; init; }
+    /// <summary>spawnAt 入队时由单位模板 id 解析出的单位行与半径级。执行按下标取表。</summary>
+    public int UnitType { get; init; }
+    public int RIdx { get; init; }
+    /// <summary>spawnAt/order/placeStructure/removeStructureAt 的目标点。</summary>
+    public int XCm { get; init; }
+    public int YCm { get; init; }
+    /// <summary>order 的阵型宽(缺省 0)。</summary>
+    public int WidthCm { get; init; }
+    /// <summary>obscure 的持续 tick(Parse 保证 ≥1)。</summary>
+    public int Ticks { get; init; }
+    /// <summary>placeStructure 的尺寸。</summary>
+    public int SizeCm { get; init; }
+    /// <summary>placeStructure 的终点(0 = 无终点,条带足迹用)。</summary>
+    public int ToXCm { get; init; }
+    public int ToYCm { get; init; }
+    /// <summary>kill 的半径(厘米)。</summary>
+    public int RadiusCm { get; init; }
+    /// <summary>kill 的外圈倍数与冲量倍数。边界 FromDouble 一次成形。</summary>
+    public Fix64 RingScale { get; init; }
+    public Fix64 Impulse { get; init; }
+    /// <summary>rates 的 tick 频率与避让频率。避让频率在边界 FromDouble。</summary>
+    public int TickHz { get; init; }
+    public Fix64 AvoidHz { get; init; }
+    /// <summary>rebakeSlices 的切片数。</summary>
+    public int Slices { get; init; }
+    /// <summary>fogSight 的 LOS 开关/fogShare 的并组方向(Parse:未给 on 视为 true;
+    /// fogShare 的 on=false 拆组在边界拒收,Exec 只见 true)。</summary>
+    public bool On { get; init; }
+    /// <summary>order 的 auto 三态(未给 = null)。</summary>
+    public bool HasAuto { get; init; }
+    public bool Auto { get; init; }
+    /// <summary>order 的朝向(未给 = 无)。</summary>
+    public bool HasFace { get; init; }
+    public Fix64 FaceX { get; init; }
+    public Fix64 FaceY { get; init; }
+    /// <summary>order 的乐观迷雾开关(未给 = 不切)。</summary>
+    public bool HasFogTerrain { get; init; }
+    public bool FogTerrain { get; init; }
+    /// <summary>order 的阵型 id(开放词表,聚合键原样透传;缺省 "box")。</summary>
+    public string? ShapeId { get; init; }
+    /// <summary>order 的成员句柄(稳定单位 id)。入队后数组只读,拷贝 struct 共享同一份;非 order 与 <see cref="AllOwnMembers"/> 为 null。</summary>
+    public uint[]? Members { get; init; }
+    /// <summary>
+    /// order 的成员选择:执行那一刻该玩家的全部单位。日志和队列存选择本身，不存句柄，
+    /// 中途重新部署换掉的单位不会留在未执行的指令里。只有脚本行能这样写。
+    /// </summary>
+    public bool AllOwnMembers { get; init; }
+    /// <summary>spawnAt 的单位模板 id，或 placeStructure 的结构模板 id。</summary>
+    public string? TemplateId { get; init; }
+    /// <summary>reveal/obscure/forget 的区域形状(Parse 经 CrowdFogShape 恰一校验)。</summary>
+    public CrowdFogShape? Area { get; init; }
+
+    /// <summary>成员与区域数组各拷一份的副本:脚本入队后调用方再改自己的数组，不影响队列。</summary>
+    public CrowdSimCommand Detached()
+    {
+        if (Members == null && Area == null) return this;
+        CrowdFogShape? area = null;
+        if (Area != null)
+        {
+            double[][]? poly = null;
+            if (Area.Poly != null)
+            {
+                poly = new double[Area.Poly.Length][];
+                for (int i = 0; i < poly.Length; i++) poly[i] = (double[])Area.Poly[i].Clone();
+            }
+
+            area = new CrowdFogShape
+            {
+                Rect = (double[]?)Area.Rect?.Clone(),
+                Circle = (double[]?)Area.Circle?.Clone(),
+                Poly = poly,
+            };
+        }
+
+        return this with { Members = (uint[]?)Members?.Clone(), Area = area };
+    }
+
+    /// <summary>报错文案用的 type 名(与 JSON type 字段一致)。</summary>
+    public static string KindName(CrowdSimCommandKind kind) => kind switch
+    {
+        CrowdSimCommandKind.Spawn => "spawn",
+        CrowdSimCommandKind.SpawnAt => "spawnAt",
+        CrowdSimCommandKind.Order => "order",
+        CrowdSimCommandKind.FogSight => "fogSight",
+        CrowdSimCommandKind.Reveal => "reveal",
+        CrowdSimCommandKind.Obscure => "obscure",
+        CrowdSimCommandKind.Forget => "forget",
+        CrowdSimCommandKind.FogShare => "fogShare",
+        CrowdSimCommandKind.PlaceStructure => "placeStructure",
+        CrowdSimCommandKind.RemoveStructureAt => "removeStructureAt",
+        CrowdSimCommandKind.Kill => "kill",
+        CrowdSimCommandKind.Scatter => "scatter",
+        CrowdSimCommandKind.Rates => "rates",
+        CrowdSimCommandKind.RebakeSlices => "rebakeSlices",
+        CrowdSimCommandKind.ClearCaches => "clearCaches",
+        _ => throw new InvalidOperationException($"未知指令 {kind}。"),
+    };
+
+    /// <summary>
+    /// 边界解析:JSON 指令 → struct 一次成形(结构域坏指令在此以合同异常拒收——字段缺失/
+    /// 类型错/area 恰一/obscure ticks 值/fogShare 拆组,坏指令进不了日志与队列)。
+    /// 会话域校验(玩家号表外/迷雾启用)留在入队 Validate。
+    /// </summary>
+    public static CrowdSimCommand Parse(JsonNode cmd) => Parse(cmd, requireOrderMembers: true);
+
+    /// <summary>脚本的 order 可以不带 members，解析成 <see cref="CrowdSimCommand.AllOwnMembers"/>。显式空数组仍拒收。</summary>
+    internal static CrowdSimCommand Parse(JsonNode cmd, bool requireOrderMembers)
+    {
+        string type = cmd["type"]?.GetValue<string>() ?? throw new InvalidOperationException("指令缺少 type 字段。");
+        switch (type)
+        {
+            case "spawn":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.Spawn, Count = RequireInt(cmd, type, "count") };
+            case "spawnAt":
+                RequireExact(cmd, type, "type", "player", "xCm", "yCm", "count", "template");
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.SpawnAt,
+                    Player = RequireInt(cmd, type, "player"),
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                    Count = RequireInt(cmd, type, "count"),
+                    TemplateId = RequireText(cmd, type, "template"),
+                };
+            case "order":
+            {
+                var face = OptionalFace(cmd, type);
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.Order,
+                    Player = RequireInt(cmd, type, "player"),
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                    // 没写 shape 时缺省用 box。表里没有这个 id 时入队校验即拒收。
+                    ShapeId = cmd["shape"]?.GetValue<string>() ?? "box",
+                    HasAuto = cmd["auto"] is { },
+                    Auto = OptionalBool(cmd, type, "auto", false),
+                    HasFace = face.HasValue,
+                    FaceX = face?.X ?? Fix64.Zero,
+                    FaceY = face?.Y ?? Fix64.Zero,
+                    WidthCm = OptionalInt(cmd, type, "widthCm", 0),
+                    HasFogTerrain = cmd["fogTerrain"] is { },
+                    FogTerrain = OptionalBool(cmd, type, "fogTerrain", false),
+                    Members = ParseMembers(cmd, requireOrderMembers),
+                    AllOwnMembers = cmd["members"] is null,
+                };
+            }
+
+            case "fogSight":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.FogSight, On = OptionalBool(cmd, type, "on", true) };
+            case "fogShare":
+                if (OptionalBool(cmd, type, "on", true) == false)
+                {
+                    throw new InvalidOperationException("fogShare: 拆分视野组尚未支持(需显式重组命令)。");
+                }
+
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.FogShare,
+                    Player = RequireInt(cmd, type, "player"),
+                    With = RequireInt(cmd, type, "with"),
+                    On = true,
+                };
+            case "reveal":
+            case "obscure":
+            case "forget":
+            {
+                int ticks = 0;
+                if (type == "obscure")
+                {
+                    ticks = cmd["ticks"] is { }
+                        ? RequireInt(cmd, type, "ticks")
+                        : throw new InvalidOperationException("obscure: 缺少 ticks(需为 ≥1 的整数)。");
+                    if (ticks < 1) throw new InvalidOperationException("obscure: ticks 需为 ≥1 的整数。");
+                }
+
+                return new CrowdSimCommand
+                {
+                    Kind = type == "reveal" ? CrowdSimCommandKind.Reveal
+                        : type == "obscure" ? CrowdSimCommandKind.Obscure
+                        : CrowdSimCommandKind.Forget,
+                    Player = RequireInt(cmd, type, "player"),
+                    Ticks = ticks,
+                    Area = Fog.CrowdFogShape.Parse(type, cmd),
+                };
+            }
+
+            case "placeStructure":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.PlaceStructure,
+                    TemplateId = cmd["template"]?.GetValue<string>()
+                        ?? throw new InvalidOperationException("placeStructure: 缺少 template 字段。"),
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                    SizeCm = RequireInt(cmd, type, "sizeCm"),
+                    ToXCm = OptionalInt(cmd, type, "toXCm", 0),
+                    ToYCm = OptionalInt(cmd, type, "toYCm", 0),
+                };
+            case "removeStructureAt":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.RemoveStructureAt,
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                };
+            case "kill":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.Kill,
+                    XCm = RequireInt(cmd, type, "xCm"),
+                    YCm = RequireInt(cmd, type, "yCm"),
+                    RadiusCm = RequireInt(cmd, type, "radiusCm"),
+                    RingScale = RequireFix(cmd, type, "ringScale"),
+                    Impulse = RequireFix(cmd, type, "impulse"),
+                };
+            case "scatter":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.Scatter };
+            case "rates":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.Rates,
+                    TickHz = RequireInt(cmd, type, "tickHz"),
+                    AvoidHz = RequireFix(cmd, type, "avoidHz"),
+                };
+            case "rebakeSlices":
+                return new CrowdSimCommand
+                {
+                    Kind = CrowdSimCommandKind.RebakeSlices,
+                    Slices = RequireInt(cmd, type, "slices"),
+                };
+            case "clearCaches":
+                return new CrowdSimCommand { Kind = CrowdSimCommandKind.ClearCaches };
+            default:
+                throw new InvalidOperationException($"未知指令 {type}。");
+        }
+    }
+
+    /// <summary>句柄可以超过 int 上限(代 &lt;&lt; 18),按 long 读再收进 uint。</summary>
+    private static uint[]? ParseMembers(JsonNode cmd, bool required)
+    {
+        if (cmd["members"] is null)
+        {
+            return required
+                ? throw new InvalidOperationException("order: 成员集为空。")
+                : null;
+        }
+
+        if (cmd["members"] is not JsonArray arr || arr.Count == 0)
+        {
+            throw new InvalidOperationException("order: 成员集为空。");
+        }
+
+        var members = new uint[arr.Count];
+        for (int i = 0; i < arr.Count; i++)
+        {
+            if (arr[i] is not JsonValue value || value.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException("order: 成员字段需为整数。");
+            }
+
+            if (value.TryGetValue<int>(out int narrow))
+            {
+                if (narrow < 0) throw new InvalidOperationException("order: 成员句柄无效。");
+                members[i] = (uint)narrow;
+                continue;
+            }
+
+            if (!value.TryGetValue<long>(out long wide) || wide < 0 || wide > uint.MaxValue)
+            {
+                throw new InvalidOperationException("order: 成员字段需为整数。");
+            }
+
+            members[i] = (uint)wide;
+        }
+
+        return members;
+    }
+
+    private static void RequireExact(JsonNode cmd, string type, params string[] keys)
+    {
+        if (cmd is not JsonObject obj)
+        {
+            throw new InvalidOperationException($"指令 {type} 需为对象。");
+        }
+
+        var allowed = new HashSet<string>(keys, StringComparer.Ordinal);
+        foreach (var entry in obj)
+        {
+            if (!allowed.Contains(entry.Key))
+            {
+                throw new InvalidOperationException($"指令 {type} 的字段 {entry.Key} 未知。");
+            }
+        }
+    }
+
+    private static string RequireText(JsonNode cmd, string type, string field)
+    {
+        return cmd[field] is JsonValue value && value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text)
+            ? text
+            : throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为非空字符串。");
+    }
+
+    /// <summary>必给整数字段:缺失或 JSON 值不是整数 token 即拒(GetValue 的转换异常不是合同)。</summary>
+    private static int RequireInt(JsonNode cmd, string type, string field)
+    {
+        return cmd[field] is JsonValue v && v.TryGetValue<int>(out int value) && v.GetValueKind() == JsonValueKind.Number
+            ? value
+            : throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为整数。");
+    }
+
+    private static Fix64 RequireFix(JsonNode cmd, string type, string field)
+    {
+        if (cmd[field] is JsonValue value && value.GetValueKind() == JsonValueKind.Number)
+        {
+            if (value.TryGetValue<int>(out int whole)) return Fix64.FromInt(whole);
+            if (value.TryGetValue<double>(out double number)) return Fix64.FromDouble(number);
+        }
+
+        throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为数字。");
+    }
+
+    private static int OptionalInt(JsonNode cmd, string type, string field, int fallback) =>
+        cmd[field] is { } ? RequireInt(cmd, type, field) : fallback;
+
+    private static bool OptionalBool(JsonNode cmd, string type, string field, bool fallback)
+    {
+        if (cmd[field] is not { } node) return fallback;
+        return node is JsonValue v && v.TryGetValue<bool>(out bool value)
+            ? value
+            : throw new InvalidOperationException($"指令 {type} 的 {field} 字段需为布尔。");
+    }
+
+    /// <summary>order 的 face [x, y](双精度,边界 FromDouble 一次成形;未给 = 无)。</summary>
+    private static (Fix64 X, Fix64 Y)? OptionalFace(JsonNode cmd, string type)
+    {
+        if (cmd["face"] is not { } f) return null;
+        if (f is not JsonArray fa || fa.Count != 2 ||
+            fa[0] is not JsonValue x || fa[1] is not JsonValue y ||
+            !x.TryGetValue<double>(out double fx) || !y.TryGetValue<double>(out double fy))
+        {
+            throw new InvalidOperationException($"指令 {type} 的 face 字段需为 [x, y]。");
+        }
+
+        return (Fix64.FromDouble(fx), Fix64.FromDouble(fy));
+    }
+}

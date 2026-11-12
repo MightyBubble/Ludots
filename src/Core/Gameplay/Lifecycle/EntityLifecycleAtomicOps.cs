@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Systems;
 
 namespace Ludots.Core.Gameplay.Lifecycle
 {
@@ -202,6 +203,10 @@ namespace Ludots.Core.Gameplay.Lifecycle
         public static void ConsumeEntity(World world, Entity source, string reason)
         {
             PresentationEntityLifecycle.RequestDestroy(world, source, reason);
+            if (PresentationLifecycleConsumption.HasNoConsumer(world))
+            {
+                PresentationEntityFinalizeDestroySystem.FinalizeWithoutConsumer(world, source);
+            }
         }
 
         public static void RollbackMaterializedTarget(World world, Entity target)

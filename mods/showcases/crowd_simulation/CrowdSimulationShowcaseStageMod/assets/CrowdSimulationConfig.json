@@ -1,0 +1,8 @@
+{
+  "fog": {
+    "optimisticTerrain": true
+  },
+  "deploy": {
+    "initialUnits": 0
+  }
+}

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "CrowdSimulation.Camera.S4Deploy",
+    "displayName": "CrowdSimulation S4/S5 Deploy Orbit",
+    "priority": 10,
+    "facingMode": "none",
+    "targetSource": "Fixed",
+    "fixedTargetCm": { "x": 505000, "y": 570000 },
+    "distanceCm": 40000,
+    "pitch": 55,
+    "fovYDeg": 50,
+    "yaw": 45,
+    "targetHeightMode": "ContinuousHeightmap",
+    "targetHeightLayerIndex": 0,
+    "targetHeightOffsetCm": 0,
+    "minDistanceCm": 20000,
+    "maxDistanceCm": 4800000,
+    "minPitchDeg": 20,
+    "maxPitchDeg": 80,
+    "panMode": "Keyboard",
+    "edgePanMarginPx": 0,
+    "edgePanSpeedCmPerSec": 400000,
+    "panCmPerSecond": 400000,
+    "enableGrabDrag": true,
+    "rotateMode": "None",
+    "zoomTowardsPointer": true,
+    "enableZoom": true,
+    "zoomCmPerWheel": 160000,
+    "followMode": "None",
+    "allowUserInput": true
+  },
+  {
+    "id": "CrowdSimulation.Camera.Terrain",
+    "edgePanMarginPx": 0
+  }
+]

@@ -139,6 +139,19 @@ export function getMapWorldSizeM(widthChunks: number, heightChunks: number, metr
     };
 }
 
+export function orbitFrameLimits(worldWidthM: number, worldHeightM: number, authoredDistanceM = 0) {
+    const width = Number.isFinite(worldWidthM) ? Math.max(0, worldWidthM) : 0;
+    const height = Number.isFinite(worldHeightM) ? Math.max(0, worldHeightM) : 0;
+    const distance = Number.isFinite(authoredDistanceM) ? Math.max(0, authoredDistanceM) : 0;
+    const span = Math.hypot(width, height);
+    const far = Math.max(span * 3, distance * 4, 10000);
+    return {
+        maxDistance: Math.max(800, distance * 1.5, span * 2),
+        far,
+        near: Math.max(0.05, far / 200000),
+    };
+}
+
 export function getBrushVisualRadius(metrics: BoardMetrics, brushSize: number): number {
     const radiusCells = Math.max(1, brushSize);
     if (metrics.topology === 'Grid') {

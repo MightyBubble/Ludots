@@ -187,7 +187,7 @@ public sealed class CaseESelectionShowcaseAcceptanceTests
 
     private static void WriteFastGestureEvidence(string name, IEnumerable<string> rows)
     {
-        string directory = Path.Combine(FindRepoRoot(), "artifacts", "acceptance", "case-e-fast-release");
+        string directory = CommittedTestArtifacts.Resolve("artifacts/acceptance/case-e-fast-release");
         Directory.CreateDirectory(directory);
         File.WriteAllLines(Path.Combine(directory, $"{name}.jsonl"), rows);
     }

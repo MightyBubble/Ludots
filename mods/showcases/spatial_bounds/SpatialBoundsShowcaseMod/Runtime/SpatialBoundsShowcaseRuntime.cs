@@ -115,26 +115,26 @@ namespace SpatialBoundsShowcaseMod.Runtime
             int x = 18;
             int y = 18;
             DrawSelectionFeedback(engine, overlay);
-            overlay.AddRect(x, y, 760, 344, PanelFill, PanelBorder, stableId: 53100, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 18, "Spatial Bounds Showcase", 22, TitleColor, stableId: 53101, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 48, "Bounds are Core-owned reusable semantics. VisualTransform drives projection only.", 14, HintColor, stableId: 53102, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 70, "LMB click | drag marquee | Shift additive (QueueModifier) | Ctrl toggle (PrecisionModifier)", 14, AccentColor, stableId: 53103, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 92, "Orange outlines show footprint polygons directly, including disjoint multi-polygon shapes.", 14, HintColor, stableId: 53104, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 110, "No physics truth is implied here; downstream physics can sink these profiles when needed.", 14, HintColor, stableId: 53108, dirtySerial: 1);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, 760, 344, PanelFill, PanelBorder, stableId: 53100, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 18, "Spatial Bounds Showcase", 22, TitleColor, stableId: 53101, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 48, "Bounds are Core-owned reusable semantics. VisualTransform drives projection only.", 14, HintColor, stableId: 53102, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 70, "LMB click | drag marquee | Shift additive (QueueModifier) | Ctrl toggle (PrecisionModifier)", 14, AccentColor, stableId: 53103, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 92, "Orange outlines show footprint polygons directly, including disjoint multi-polygon shapes.", 14, HintColor, stableId: 53104, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 110, "No physics truth is implied here; downstream physics can sink these profiles when needed.", 14, HintColor, stableId: 53108, dirtySerial: 1);
 
             string hovered = ResolveEntityLabel(engine.World, ResolveHoveredEntity(engine)) ?? "(none)";
             string primary = ResolveEntityLabel(engine.World, ResolvePrimary(engine)) ?? "(none)";
             string selected = BuildSelectionPreview(engine);
-            overlay.AddText(x + 16, y + 142, $"Hovered {hovered}", 15, TextColor, stableId: 53105, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 164, $"Primary {primary}", 15, TextColor, stableId: 53106, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 186, $"Selected {selected}", 14, TextColor, stableId: 53107, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 142, $"Hovered {hovered}", 15, TextColor, stableId: 53105, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 164, $"Primary {primary}", 15, TextColor, stableId: 53106, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, y + 186, $"Selected {selected}", 14, TextColor, stableId: 53107, dirtySerial: 1);
 
             int lineY = y + 222;
             for (int i = 0; i < SpatialBoundsShowcaseIds.Descriptors.Length; i++)
             {
                 ShowcaseEntityDescriptor descriptor = SpatialBoundsShowcaseIds.Descriptors[i];
                 string entry = $"{descriptor.Name} [{descriptor.Kind}] {descriptor.Hint}";
-                overlay.AddText(x + 16, lineY + (i * 18), entry, 13, TextColor, stableId: 53120 + i, dirtySerial: 1);
+                overlay.AddText(PresentationOverlayLayer.TopMost, x + 16, lineY + (i * 18), entry, 13, TextColor, stableId: 53120 + i, dirtySerial: 1);
             }
         }
 
@@ -241,7 +241,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
             int y = (int)MathF.Round(centerY - (renderHeight * 0.5f));
             int rectWidth = (int)MathF.Round(renderWidth);
             int rectHeight = (int)MathF.Round(renderHeight);
-            overlay.AddRect(x, y, rectWidth, rectHeight, fill, border, stableIdBase, dirtySerial: 1);
+            overlay.AddRect(PresentationOverlayLayer.UnderUi, x, y, rectWidth, rectHeight, fill, border, stableIdBase, dirtySerial: 1);
 
             if (!includeLabel)
             {
@@ -249,7 +249,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
             }
 
             string label = ResolveEntityLabel(engine.World, entity) ?? $"Entity#{entity.Id}";
-            overlay.AddText(x, Math.Max(4, y - 20), label, 14, border, stableIdBase + 1000, dirtySerial: 1);
+            overlay.AddText(PresentationOverlayLayer.UnderUi, x, Math.Max(4, y - 20), label, 14, border, stableIdBase + 1000, dirtySerial: 1);
         }
 
         private static void DrawSegment(ScreenOverlayBuffer overlay, Vector2 from, Vector2 to, Vector4 color, int stableIdBase)
@@ -278,7 +278,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
         {
             int x = (int)MathF.Round(point.X) - 2;
             int y = (int)MathF.Round(point.Y) - 2;
-            overlay.AddRect(x, y, 4, 4, color, color, stableId, dirtySerial: 1);
+            overlay.AddRect(PresentationOverlayLayer.UnderUi, x, y, 4, 4, color, color, stableId, dirtySerial: 1);
         }
 
         public bool TryResetCamera(GameEngine engine)

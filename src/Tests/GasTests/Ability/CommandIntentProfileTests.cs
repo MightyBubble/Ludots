@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Engine;
@@ -28,6 +29,24 @@ namespace Ludots.Tests.GAS
     public sealed class CommandIntentProfileTests
     {
         internal const string GarrisonAbilityTag = "ability.catalog.garrison_enter";
+
+        [Test]
+        public void ProfilesArray_IsRejectedWithObjectShapeMessage()
+        {
+            const string path = "Input/command_intent_profiles.json";
+            var array = JsonNode.Parse("""{"profiles":[]}""")!["profiles"];
+            InvalidOperationException? arrayError = Assert.Throws<InvalidOperationException>(
+                () => CommandIntentProfileConfigLoader.RequireProfilesObject(array, path));
+            Assert.That(
+                arrayError!.Message,
+                Is.EqualTo($"'{path}' profiles must be an object keyed by profile id, not an array."));
+
+            InvalidOperationException? missing = Assert.Throws<InvalidOperationException>(
+                () => CommandIntentProfileConfigLoader.RequireProfilesObject(null, path));
+            Assert.That(
+                missing!.Message,
+                Is.EqualTo($"'{path}' profiles must be an object keyed by profile id."));
+        }
         internal const string WeaponAbilityTag = "ability.catalog.weapon";
         private const string GarrisonableTag = "structure.garrisonable";
         internal const string DestructibleTag = "destructible";
@@ -662,7 +681,13 @@ namespace Ludots.Tests.GAS
 
             public static CommandIntentProfilesConfig Config(params CommandIntentProfileDefinition[] profiles)
             {
-                return new CommandIntentProfilesConfig { Profiles = new List<CommandIntentProfileDefinition>(profiles) };
+                var map = new Dictionary<string, CommandIntentProfileDefinition>(StringComparer.Ordinal);
+                for (int i = 0; i < profiles.Length; i++)
+                {
+                    map.Add(profiles[i].Id, profiles[i]);
+                }
+
+                return new CommandIntentProfilesConfig { Profiles = map };
             }
 
             internal static void RegisterAbility(AbilityDefinitionRegistry registry, int abilityId, string catalogTag)

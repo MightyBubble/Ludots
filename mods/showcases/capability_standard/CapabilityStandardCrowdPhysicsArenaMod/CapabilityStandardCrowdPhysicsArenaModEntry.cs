@@ -18,7 +18,7 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
     private const string PressurePlateDoorSystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystemInstalled";
 
-    /// <summary>Queryable plate/door state for tests and HUD (installed once per engine).</summary>
+    /// <summary>Plate and door counts tests can read. This mod does not draw them.</summary>
     public static readonly ServiceKey<CrowdPhysicsArenaPressurePlateDoorSystem> PressurePlateDoorSystemKey =
         new("CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystem");
 

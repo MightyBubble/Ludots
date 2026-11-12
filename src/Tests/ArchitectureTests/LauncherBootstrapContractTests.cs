@@ -1129,6 +1129,103 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Sanitize_ReplacesPosixTempHome_AndFillsPathExt()
+        {
+            var env = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["TEMP"] = "/tmp",
+                ["TMP"] = "/tmp",
+                ["HOME"] = "/home/dev",
+                ["PATHEXT"] = "",
+                ["PATH"] = @"C:\Windows",
+            };
+
+            LauncherProcessEnvironment.Sanitize(env, true, @"C:\Users\dev", @"C:\Users\dev\AppData\Local\Temp");
+
+            Assert.That(env["TEMP"], Is.EqualTo(@"C:\Users\dev\AppData\Local\Temp"));
+            Assert.That(env["TMP"], Is.EqualTo(@"C:\Users\dev\AppData\Local\Temp"));
+            Assert.That(env["HOME"], Is.EqualTo(@"C:\Users\dev"));
+            Assert.That(env["PATHEXT"], Is.EqualTo(LauncherProcessEnvironment.WindowsPathExt));
+            Assert.That(env["PATH"], Is.EqualTo(@"C:\Windows"));
+        }
+
+        [Test]
+        public void Sanitize_LeavesNonWindowsAndHealthyWindowsAlone()
+        {
+            var posix = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["TEMP"] = "/tmp",
+                ["HOME"] = "/home/dev",
+            };
+            LauncherProcessEnvironment.Sanitize(posix, false, @"C:\Users\dev", @"C:\Temp");
+            Assert.That(posix["TEMP"], Is.EqualTo("/tmp"));
+            Assert.That(posix["HOME"], Is.EqualTo("/home/dev"));
+
+            var healthy = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["TEMP"] = @"C:\Temp",
+                ["TMP"] = @"C:\Temp",
+                ["HOME"] = @"C:\Users\dev",
+                ["PATHEXT"] = ".EXE",
+            };
+            LauncherProcessEnvironment.Sanitize(healthy, true, @"C:\Users\other", @"C:\Other");
+            Assert.That(healthy["TEMP"], Is.EqualTo(@"C:\Temp"));
+            Assert.That(healthy["HOME"], Is.EqualTo(@"C:\Users\dev"));
+            Assert.That(healthy["PATHEXT"], Is.EqualTo(".EXE"));
+        }
+
+        [Test]
+        public void Resolve_RewritesRuntimeBootstrap_SoFingerprintMatchesGraph()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-resolve-rewrite-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Apps",
+                "Raylib",
+                "Ludots.App.Raylib",
+                "bin",
+                "Release",
+                "net9.0",
+                "launcher.runtime.json");
+            var originalGraph = CaptureFile(graphPath);
+            var originalBootstrap = CaptureFile(bootstrapPath);
+
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(bootstrapPath)!);
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "PlanFingerprint": "stale"
+                    }
+                    """);
+
+                var launcher = CreateLauncher(repoRoot, tempDirectory);
+                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
+                var bootstrapJson = File.ReadAllText(bootstrapPath);
+
+                Assert.That(bootstrapJson, Does.Contain(resolve.Plan.PlanFingerprint),
+                    "Resolve 必须把 launcher.runtime.json 写成与图同一份指纹,否则启动器强校验会拒绝这次解析。");
+                Assert.That(bootstrapJson, Does.Not.Contain("\"stale\""));
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                RestoreFile(bootstrapPath, originalBootstrap);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_RejectsStaleGraph_WhenBootstrapPlanDiffers()
         {
             var repoRoot = FindRepoRoot();

@@ -91,17 +91,6 @@ namespace Ludots.Core.Navigation.Pathing
         public readonly PathEndpoint Goal;
         public readonly PathBudget Budget;
 
-        public PathRequest(int requestId, Entity actor, PathDomain domain, PathEndpoint start, PathEndpoint goal, PathBudget budget)
-        {
-            RequestId = requestId;
-            Actor = actor;
-            Domain = domain;
-            AgentTypeId = string.Empty;
-            Start = start;
-            Goal = goal;
-            Budget = budget;
-        }
-
         public PathRequest(int requestId, Entity actor, PathDomain domain, string agentTypeId, PathEndpoint start, PathEndpoint goal, PathBudget budget)
         {
             RequestId = requestId;

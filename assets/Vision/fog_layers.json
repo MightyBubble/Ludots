@@ -1,5 +1,5 @@
 [
-  { "id": "ground", "cellSizeCm": 100, "updateHz": 10 },
-  { "id": "air", "cellSizeCm": 250, "updateHz": 5 },
-  { "id": "detection", "cellSizeCm": 100, "updateHz": 10 }
+  { "id": "ground", "cellSizeCm": 100, "updateHz": 20 },
+  { "id": "air", "cellSizeCm": 250, "updateHz": 20 },
+  { "id": "detection", "cellSizeCm": 100, "updateHz": 20 }
 ]

@@ -507,6 +507,7 @@ namespace Ludots.Tests.GAS
             return new AgentProfileRegistry(profiles.Select(profile => new AgentProfileConfig
             {
                 Id = profile.id,
+                NavProfileId = profile.id,
                 RadiusCm = 30,
                 HeightCm = 180,
                 ClearanceCm = 40,

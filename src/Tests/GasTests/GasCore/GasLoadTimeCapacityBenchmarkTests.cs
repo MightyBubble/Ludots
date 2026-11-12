@@ -8,6 +8,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Tests;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -16,7 +17,8 @@ namespace GasTests.GasCore
     /// <summary>
     /// RFC-0067 §3.4 基准对比床：七个固定 MetricId，场景参数固定（ENTITY_COUNT/ITERATIONS），
     /// 禁止漂移。before/after 必须同机同参复跑。
-    /// - LUDOTS_EMIT_CAPACITY_BASELINE=1：把本次结果写入 docs/rfcs/gas-loadtime-capacity/benchmark-baseline.json（P0 入库口径）。
+    /// - LUDOTS_EMIT_CAPACITY_BASELINE=1：写出 docs/rfcs/gas-loadtime-capacity/benchmark-&lt;phase&gt;.json。
+    ///   文件进仓库还要 LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1，否则写到测试工作目录。
     /// - LUDOTS_COMPARE_CAPACITY_BASELINE=1：重跑并对已入库 baseline 逐 MetricId 断言——耗时回归 &gt;10% 或热路径新增托管分配即失败关闭（迁移 Phase 的合入硬门槛）。
     /// 不设环境变量时：只跑场景保活 + 机器无关断言（热路径零分配），不产出/对比 JSON。
     /// </summary>
@@ -359,9 +361,8 @@ namespace GasTests.GasCore
             if (!string.IsNullOrEmpty(EmitEnv))
             {
                 string phase = string.IsNullOrWhiteSpace(PhaseEnv) ? "baseline" : PhaseEnv.Trim();
-                string emitPath = Path.Combine(
-                    FindRepoRoot(),
-                    BaselineRelativePath.Replace('/', Path.DirectorySeparatorChar).Replace("benchmark-baseline.json", $"benchmark-{phase}.json"));
+                string emitPath = CommittedTestArtifacts.Resolve(
+                    BaselineRelativePath.Replace("benchmark-baseline.json", $"benchmark-{phase}.json"));
                 Directory.CreateDirectory(Path.GetDirectoryName(emitPath)!);
                 var baseline = new BaselineDocument(
                     GeneratedAtUtc: DateTime.UtcNow,

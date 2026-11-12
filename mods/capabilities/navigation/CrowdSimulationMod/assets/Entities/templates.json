@@ -1,0 +1,10 @@
+[
+  {
+    "id": "crowd_simulation.session",
+    "components": {
+      "Name": {
+        "Value": "CrowdSimulation.Session"
+      }
+    }
+  }
+]

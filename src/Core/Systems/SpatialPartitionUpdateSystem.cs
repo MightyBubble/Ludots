@@ -17,12 +17,9 @@ namespace Ludots.Core.Systems
 
         private ISpatialPartitionWorld _partition;
         private WorldSizeSpec _spec;
-        private readonly QueryDescription _trackedWithPreviousQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, PreviousWorldPositionCm, SpatialCellRef>()
-            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
-        private readonly QueryDescription _trackedWithoutPreviousQuery = new QueryDescription()
+        private readonly QueryDescription _trackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm, SpatialCellRef>()
-            .WithNone<PreviousWorldPositionCm, PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending, SuspendedTag>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
             // Static presentation entities are indexed once (they never move, so the tracked
@@ -82,8 +79,7 @@ namespace Ludots.Core.Systems
             ResetSuspendedMemberships();
             AddMissingSpatialRefs();
 
-            MoveTracked(in _trackedWithoutPreviousQuery, gateOnPreviousPosition: false);
-            MoveTracked(in _trackedWithPreviousQuery, gateOnPreviousPosition: true);
+            MoveTracked();
         }
 
         public SpatialMembershipValidationResult ValidateSynchronize(Entity entity)
@@ -418,28 +414,21 @@ namespace Ludots.Core.Systems
             }
         }
 
-        private void MoveTracked(in QueryDescription queryDescription, bool gateOnPreviousPosition)
+        // Membership follows the stored cell, never PreviousWorldPositionCm: position
+        // writers run after this system, so a previous/current snapshot taken here
+        // reads as unmoved for every entity. SynchronizeTracked returns early while
+        // the position stays inside the stored cell.
+        private void MoveTracked()
         {
-            foreach (ref var chunk in World.Query(in queryDescription))
+            foreach (ref var chunk in World.Query(in _trackedQuery))
             {
                 ref var entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var cellRefs = chunk.GetSpan<SpatialCellRef>();
-                var previouses = gateOnPreviousPosition ? chunk.GetSpan<PreviousWorldPositionCm>() : default;
 
                 foreach (var index in chunk)
                 {
                     ref SpatialCellRef cellRef = ref cellRefs[index];
-                    // Previous == Current marks an unmoved tick for Active memberships only:
-                    // Uninitialized memberships (e.g. resumed suspended entities) must still be
-                    // (re)added even when the position did not change.
-                    if (gateOnPreviousPosition &&
-                        cellRef.State == SpatialMembershipState.Active &&
-                        positions[index].Value == previouses[index].Value)
-                    {
-                        continue;
-                    }
-
                     var entity = Unsafe.Add(ref entityFirst, index);
                     switch (cellRef.State)
                     {

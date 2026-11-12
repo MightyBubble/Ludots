@@ -1,0 +1,28 @@
+{
+  "tools": null,
+  "rates": null,
+  "fuzz": null,
+  "presentation": {
+    "title": "CrowdSimulation S3 · 两点路径与固定生效帧",
+    "viewLabels": {
+      "route": "路线",
+      "walkable": "可走区域",
+      "navmesh": "NavMesh+HPA"
+    },
+    "hud": {
+      "keys": "左键 起点 · 右键 终点 · Q 体型 · T 线程 1/2/4 · G 后台变慢 · V 视图 {view}"
+    },
+    "path": {
+      "truthAsset": "assets/CrowdSimulation/parity/s3c-query-truth.json",
+      "actions": {
+        "setStart": "CrowdSimulation.S3.SetStart",
+        "setGoal": "CrowdSimulation.S3.SetGoal",
+        "cycleContext": "CrowdSimulation.S3.CycleContext",
+        "toggleThreads": "CrowdSimulation.S3.ToggleThreads",
+        "toggleSlow": "CrowdSimulation.S3.ToggleSlow",
+        "cycleView": "CrowdSimulation.S3.CycleView"
+      }
+    },
+    "deploy": null
+  }
+}

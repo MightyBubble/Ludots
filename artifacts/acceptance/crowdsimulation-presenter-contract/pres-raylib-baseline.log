@@ -1,0 +1,460 @@
+adapter=raylib
+pid=1479809
+bootstrap=/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/launcher.runtime.json
+process=primary role= pid=1479809 bootstrap=/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/launcher.runtime.json
+rootMods=CrowdSimulationMinimalMod
+orderedMods=LudotsCoreMod, CrowdSimulationMod, CrowdSimulationStandardMod, CrowdSimulationMinimalMod
+startup:
+  defaultCoreMod=LudotsCoreMod @ assets/game.json
+  startupMapId=crowd_minimal @ mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json
+    - mods/LudotsCoreMod/assets/game.json -> entry
+    * mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/game.json -> crowd_minimal
+  startupInputContexts=[Default_Gameplay] @ mods/LudotsCoreMod/assets/game.json
+  browserRuntime=(unset) @ (unset)
+[INF][Engine] Initializing with ConfigPipeline...
+[INF][Engine] Applying launcher-resolved mod plan: fingerprint=e5217825b679d347ecfb50d8630cd65baecb2b608d8653e546d2ab781d328ce8, schema=1, mods=4
+[INF][ModLoader] Resolved Mod Load Order (launcher graph):
+[INF][ModLoader] - LudotsCoreMod (P:-1000)
+[INF][ModLoader] - CrowdSimulationMod (P:0)
+[INF][ModLoader] - CrowdSimulationStandardMod (P:0)
+[INF][ModLoader] - CrowdSimulationMinimalMod (P:0)
+[INF][ModLoader] Loading DLL for LudotsCoreMod at /tmp/wt/presenter/mods/LudotsCoreMod/bin/net9.0/LudotsCoreMod.dll
+[INF][ModLoader] Scanning 2 types in assembly...
+[INF][ModLoader] Instantiated entry for LudotsCoreMod. Calling OnLoad...
+[INF][Mod.LudotsCoreMod] [LudotsCoreMod] Loaded - Core game framework initialized
+[INF][ModLoader] LudotsCoreMod OnLoad completed.
+[INF][ModLoader] Loaded LudotsCoreMod
+[INF][ModLoader] Skip code load for CrowdSimulationMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationStandardMod: manifest has no 'main' (asset-only mod).
+[INF][ModLoader] Skip code load for CrowdSimulationMinimalMod: manifest has no 'main' (asset-only mod).
+[INF][Config] Merged fragment from: Core:game.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/game.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/game.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/agent_profiles.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/agent_profiles.json
+[INF][Engine] Merged GameConfig: StartupMapId=crowd_minimal, DefaultCoreMod=LudotsCoreMod
+[INF][Engine] Constants loaded: OrderTypeIds=4, ResponseChainOrderTypeIds=3
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Engine] Initializing JobScheduler...
+[INF][Config] Loading DataRegistry<EntityTemplate> from Entities/templates.json...
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Entities/templates.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Entities/templates.json
+[INF][Config] Loaded 9 DataRegistry<EntityTemplate> items.
+[INF][Engine] Initializing Core GAS Systems...
+[INF][Config] Merged fragment from: Core:Engine/clock.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Engine/clock.json
+[INF][Config] Merged fragment from: Core:Input/collection_keys.json
+[INF][Config] Merged fragment from: Core:Relationships/catalog.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Relationships/catalog.json
+[INF][Config] Merged fragment from: Core:Relationships/control_profiles.json
+[INF][Config] Merged fragment from: Core:GAS/target_dispatch_presets.json
+[INF][Config] Merged fragment from: Core:GAS/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/clock.json
+[INF][Config] Merged fragment from: Core:Physics2D/solver.json
+[INF][Config] Merged fragment from: Core:Physics2D/kinematic.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_constraints.json
+[INF][Config] Merged fragment from: Core:Enums/enums.json
+[INF][Config] Merged fragment from: Core:Vision/fog_layers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_tokens.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/text_locales.json
+[INF][Config] Merged fragment from: Core:GraphTables/lookup_tables.json
+[INF][Config] Merged fragment from: Core:GAS/graphs.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.hover_tick.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_begin.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_commit.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/graphs/graph.core.select_hit.json
+[INF][Config] Merged fragment from: Core:GAS/preset_types.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Progression/scopes.json
+[INF][Config] Merged fragment from: Core:Progression/progressions.json
+[INF][Config] Merged fragment from: Core:Progression/requirements.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/order_types.json
+[INF][Config] Merged fragment from: Core:GAS/effects.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/GAS/tag_rules.json
+[INF][Config] Merged fragment from: Core:GAS/func_lib.json
+[INF][Config] Merged fragment from: Core:GAS/action_lib.json
+[INF][Config] Merged fragment from: Core:Items/shapes.json
+[INF][Config] Merged fragment from: Core:Items/layouts.json
+[INF][Config] Merged fragment from: Core:Items/definitions.json
+[INF][Config] Merged fragment from: Core:Exchange/operations.json
+[INF][Config] Merged fragment from: Core:Panels/panel_templates.json
+[INF][Config] Merged fragment from: Core:Input/filter_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/lod_profiles.json
+[INF][Config] Merged fragment from: Core:Presentation/particle_vfx.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/mesh_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/material_assets.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animator_controllers.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_clips.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/animation_profiles.json
+[INF][Config] Merged fragment from: Core:Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/interaction_context_profiles.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+[INF][Config] Merged fragment from: Core:GAS/attribute_bindings.json
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: Core:Input/action_attribute_bindings.json
+[INF][Config] Merged fragment from: Core:Calendar/calendars.json
+[INF][Config] Merged fragment from: Core:Input/command_intent_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_profiles.json
+[INF][Config] Merged fragment from: Core:Input/cast_commit_locks.json
+[INF][Config] Merged fragment from: Core:Input/cast_dispatch_profiles.json
+[INF][Config] Merged fragment from: Core:Input/control_schemes.json
+[INF][Config] Merged fragment from: Core:Input/interaction_prefs.json
+[INF][Config] Merged fragment from: Core:Input/interaction_modes.json
+[INF][Config] Merged fragment from: Core:UI/ability_aggregation_profiles.json
+[INF][Config] Merged fragment from: Core:UI/command_deck_profiles.json
+[INF][Config] Merged fragment from: Core:UI/production_overview_profiles.json
+[INF][Config] Merged fragment from: Core:AI/behavior_trees.json
+[INF][Config] Merged fragment from: Core:AI/hfsm.json
+[INF][Config] Merged fragment from: Core:Presentation/semantic_maps.json
+[INF][Config] Merged fragment from: Core:Presentation/image_assets.json
+[INF][Config] Merged fragment from: Core:Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Camera/virtual_cameras.json
+[INF][Config] Merged fragment from: Core:Story/lines.json
+[INF][Config] Merged fragment from: Core:Story/presentation_profiles.json
+[INF][Config] Merged fragment from: Core:Story/speakers.json
+[INF][Config] Merged fragment from: Core:Dialogue/dialogues.json
+[INF][Config] Merged fragment from: Core:Sequencer/sequences.json
+[INF][ModLoader] No registration conflicts detected.
+[INF][Config] Merged fragment from: Core:config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/config_catalog.json
+[INF][Config] Merged fragment from: Core:Input/default_input.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Input/default_input.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Input/default_input.json
+INFO: Initializing raylib 5.5
+INFO: Platform backend: DESKTOP (GLFW)
+INFO: Supported raylib modules:
+INFO:     > rcore:..... loaded (mandatory)
+INFO:     > rlgl:...... loaded (mandatory)
+INFO:     > rshapes:... loaded (optional)
+INFO:     > rtextures:. loaded (optional)
+INFO:     > rtext:..... loaded (optional)
+INFO:     > rmodels:... loaded (optional)
+INFO:     > raudio:.... loaded (optional)
+INFO: DISPLAY: Device initialized successfully
+INFO:     > Display size: 1920 x 1200
+INFO:     > Screen size:  1280 x 720
+INFO:     > Render size:  1280 x 720
+INFO:     > Viewport offsets: 0, 0
+INFO: GLAD: OpenGL extensions loaded successfully
+INFO: GL: Supported extensions count: 229
+INFO: GL: OpenGL device information:
+INFO:     > Vendor:   Mesa
+INFO:     > Renderer: llvmpipe (LLVM 20.1.2, 256 bits)
+INFO:     > Version:  4.5 (Core Profile) Mesa 25.2.8-0ubuntu0.24.04.1
+INFO:     > GLSL:     4.50
+INFO: GL: VAO extension detected, VAO functions loaded successfully
+INFO: GL: NPOT textures extension detected, full NPOT textures supported
+INFO: GL: DXT compressed textures supported
+INFO: GL: ETC2/EAC compressed textures supported
+INFO: PLATFORM: DESKTOP (GLFW - X11): Initialized successfully
+INFO: TEXTURE: [ID 1] Texture loaded successfully (1x1 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Default texture loaded successfully
+INFO: SHADER: [ID 1] Vertex shader compiled successfully
+INFO: SHADER: [ID 2] Fragment shader compiled successfully
+INFO: SHADER: [ID 3] Program shader loaded successfully
+INFO: SHADER: [ID 3] Default shader loaded successfully
+INFO: RLGL: Render batch vertex buffers loaded successfully in RAM (CPU)
+INFO: RLGL: Render batch vertex buffers loaded successfully in VRAM (GPU)
+INFO: RLGL: Default OpenGL state initialized successfully
+INFO: TEXTURE: [ID 2] Texture loaded successfully (128x128 | GRAY_ALPHA | 1 mipmaps)
+INFO: FONT: Default font loaded successfully (224 glyphs)
+INFO: SYSTEM: Working Directory: /tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0
+INFO: TIMER: Target time per frame: 0.000 milliseconds
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM default
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_id returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM dmix
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_id returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM dmix:0
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_card_id returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1342:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5204:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5727:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib pcm.c:2721:(snd_pcm_open_noupdate) Unknown PCM dmix:0,0
+ALSA lib confmisc.c:165:(snd_config_get_card) Cannot get card index for 0
+ALSA lib confmisc.c:165:(snd_config_get_card) Cannot get card index for 0
+ALSA lib confmisc.c:165:(snd_config_get_card) Cannot get card index for 0
+WARNING: AUDIO: Failed to initialize playback device
+[WRN][Presentation] RaylibSoundConsumer: audio device initialization failed; sound requests will be skipped this session.
+[INF][Presentation] GPU Accelerated: False (raster UI compositor)
+INFO: TEXTURE: [ID 3] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+[INF][Presentation] Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay
+[WRN][Presentation] Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host. renderer='llvmpipe (LLVM 20.1.2, 256 bits)'.
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 8] Program shader loaded successfully
+[INF][Config] Merged fragment from: Core:Presentation/raylib_scenes.json
+INFO: TEXTURE: [ID 4] Texture loaded successfully (2048x2048 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 1] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 1] Framebuffer object created successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth.vs] Text file loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 9] Program shader loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth_instanced.vs] Text file loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 10] Program shader loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth_skinning_ssbo.vs] Text file loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 11] Program shader loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth_cutout.vs] Text file loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/shadow_depth_cutout.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 12] Program shader loaded successfully
+[INF][Engine] Firing GameStart event...
+[LudotsCoreMod] Core systems installed
+[INF][Engine] Loading Map: crowd_minimal
+[INF][Map] Loading Map: crowd_minimal
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Maps/crowd_minimal.json
+[INF][Map] Map 'crowd_minimal' loaded.
+[INF][Map] Creating GridBoard 'default' (16000x16000 cells, cell=100cm)
+[INF][Engine] Created Board 'default' (type=Grid) for map 'crowd_minimal'
+[INF][Map] Map 'crowd_minimal' pushed to focus (stack depth=1).
+[INF][Engine] ContinuousHeightmap projection for board 'default' needs 256,000,000 logic cells (budget 100,000,000); keeping flat grid terrain.
+[INF][Engine] Created flat grid LogicTerrainField 16000x16000 cells for board 'default'
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: Core:Navigation/navmesh.json
+[INF][Config] Merged fragment from: LudotsCoreMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/navmesh.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Navigation/navmesh.json
+[INF][Engine] Pathing bootstrap skipped for map 'crowd_minimal': no node-graph board or navmesh query service is loaded.
+[INF][Engine] Creating Entities from MapConfig...
+[INF][Engine] Applied DefaultCamera: yaw=0 pitch=60 dist=400000cm fov=50
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationConfig.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/CrowdSimulationDebug.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/crowd_fog_decal.json
+[INF][Config] Merged fragment from: Core:Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Navigation/pathing.json
+[INF][Config] Merged fragment from: CrowdSimulationStandardMod:assets/Presentation/terrain_type_colors.json
+[INF][Config] Merged fragment from: CrowdSimulationMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Config] Merged fragment from: CrowdSimulationMinimalMod:assets/Presentation/crowd_terrain_type_overlay.json
+[INF][Engine] CrowdSimulation avoidance: configured 15 Hz, stride 2 substeps, actual 15 Hz.
+[INF][Engine] CrowdSimulation fog: configured 4 Hz, period 8 ticks, actual 3.75 Hz.
+[INF][Engine] CrowdSimulation session activated for map 'crowd_minimal': navs=1, script=4, autoReplayAt=-1.
+[INF][Engine] Firing MapLoaded event for crowd_minimal...
+INFO: TEXTURE: [ID 5] Texture loaded successfully (256x256 | R8G8B8A8 | 1 mipmaps)
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 13] Program shader loaded successfully
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 8] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 9] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 10] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 11] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 12] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 13] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 14] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 15] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 16] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 17] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 18] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 19] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 20] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 21] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 22] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 22] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 23] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 23] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 24] Mesh uploaded successfully to VRAM (GPU)
+WARNING: VAO: [ID 24] Trying to re-load an already loaded mesh
+INFO: VAO: [ID 25] Mesh uploaded successfully to VRAM (GPU)
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/vfx_unlit_tint.vs] Text file loaded successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/vfx_unlit_tint.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 14] Program shader loaded successfully
+INFO: SHADER: [ID 6] Vertex shader compiled successfully
+INFO: SHADER: [ID 7] Fragment shader compiled successfully
+INFO: SHADER: [ID 15] Program shader loaded successfully
+INFO: TEXTURE: [ID 6] Texture loaded successfully (512x512 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 7] Cubemap texture loaded successfully (64x64)
+INFO: TEXTURE: [ID 8] Texture loaded successfully (1280x720 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 2] Depth renderbuffer loaded successfully (32 bits)
+INFO: FBO: [ID 2] Framebuffer object created successfully
+INFO: FILEIO: [/tmp/wt/presenter/src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net9.0/postprocess.fs] Text file loaded successfully
+INFO: SHADER: [ID 6] Fragment shader compiled successfully
+INFO: SHADER: [ID 7] Program shader loaded successfully
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 6] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 7] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 8] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 9] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 10] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 11] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 12] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 13] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 14] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 15] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 16] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 17] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 18] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 19] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 20] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 21] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 6] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 7] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 8] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 9] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 10] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 11] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 12] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 13] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 14] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 15] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 16] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 17] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 18] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 19] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 20] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 21] Mesh uploaded successfully to VRAM (GPU)
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).
+INFO: VAO: [ID 26] Mesh uploaded successfully to VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (9x9 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (9x9 | R8G8B8A8 | 1 mipmaps)
+[INF][Engine] CrowdSimulation first plan applied at tick 3.
+[WRN][Engine] Pacemaker accumulator exceeded 0.1s; dropped the backlog (slow motion instead of a positional teleport).
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (9x10 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (10x9 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (10x10 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (10x10 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (10x11 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (11x10 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (11x11 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (11x12 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (11x11 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (12x11 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (11x13 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (13x11 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (13x12 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (12x13 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (12x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (14x12 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (13x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (15x12 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (14x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (16x12 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (16x13 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (15x14 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (16x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (16x15 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (16x14 | R8G8B8A8 | 1 mipmaps)
+INFO: TEXTURE: [ID 9] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 9] Texture loaded successfully (16x16 | R8G8B8A8 | 1 mipmaps)
+INFO: VAO: [ID 5] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 4] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 3] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Unloaded vertex array data from VRAM (GPU)
+INFO: VAO: [ID 2] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 3] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 4] Mesh uploaded successfully to VRAM (GPU)
+INFO: VAO: [ID 5] Mesh uploaded successfully to VRAM (GPU)
+INFO: TEXTURE: [ID 10] Unloaded texture data from VRAM (GPU)
+INFO: TEXTURE: [ID 10] Texture loaded successfully (16x15 | R8G8B8A8 | 1 mipmaps)

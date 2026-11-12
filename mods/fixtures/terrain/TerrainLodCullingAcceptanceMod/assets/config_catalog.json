@@ -1,0 +1,6 @@
+[
+  {
+    "Path": "Camera/pose_script.json",
+    "Policy": "DeepObject"
+  }
+]

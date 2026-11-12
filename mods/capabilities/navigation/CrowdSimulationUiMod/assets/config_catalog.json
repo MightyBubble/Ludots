@@ -1,0 +1,18 @@
+[
+  {
+    "Path": "CrowdSimulationPresentationPalette.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "CrowdSimulationDebug.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "CrowdSimulationDebugView.json",
+    "Policy": "DeepObject"
+  },
+  {
+    "Path": "CrowdSimulationPlayerView.json",
+    "Policy": "DeepObject"
+  }
+]

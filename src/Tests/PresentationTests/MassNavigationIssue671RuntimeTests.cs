@@ -239,7 +239,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
-        var session = new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId });
+        var session = new MapSession(new MapId(MassNavigationOrderChainTests.TestMapId), new MapConfig { Id = MassNavigationOrderChainTests.TestMapId });
         engine.SetCurrentMapSessionForTests(session);
         var binding = new MassNavigationRuntimeBinding();
         binding.Activate(session.MapId, simulation);

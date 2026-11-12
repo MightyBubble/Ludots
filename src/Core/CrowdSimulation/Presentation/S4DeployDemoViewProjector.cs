@@ -1,0 +1,94 @@
+using System;
+using Ludots.Core.CrowdSimulation.Fog;
+using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.Presentation.Fields;
+using Ludots.Core.Presentation.Rendering;
+
+namespace Ludots.Core.CrowdSimulation.Presentation;
+
+/// <summary>S4 演示视图投影器:按视图模式分发(与 S3 的 DemoViewProjector 同形)——
+/// 路线 = 主力组(成员最多的带流场组)的流场方向图,可走区域 = 该组导航上下文的遮罩层,
+/// NavMesh 模式不写场(线框走路线通道,由呈现系统画)。会话未激活时不写场。
+/// 流场源逐帧重绑:结构重烘与重规划都会换组、换流场,不能在注册时固化。</summary>
+internal sealed class S4DeployDemoViewProjector : IGlobalFieldVisualProjector
+{
+    private readonly S4DeployDemoRuntime _demo;
+    private readonly Func<CrowdSimSession?> _sessionSource;
+    private readonly CrowdFlowFieldVisualSource _flowSource = new();
+    private readonly CrowdFlowFieldVisualProjector _flow;
+    private readonly CrowdWalkableVisualProjector _walkable;
+    private readonly Func<NavContext?> _navSource;
+    private readonly CrowdTerrainPaletteProjector? _terrain;
+    private readonly Func<bool>? _fogOwnsDecal;
+
+    /// <summary>可走视图本帧的认知变体尚未物化(仿真还没 Build)。场不提交。</summary>
+    internal bool WalkableNavPending { get; private set; }
+
+    /// <param name="fogOwnsDecal">为真时路线和 NavMesh 视图不写地形调色板。贴花槽只有一个，调色板和可走遮罩同属 Walkable，
+    /// 会先于迷雾被选中；让出后本机座位的迷雾才贴得上地形。</param>
+    public S4DeployDemoViewProjector(
+        S4DeployDemoRuntime demo,
+        Func<CrowdSimSession?> sessionSource,
+        CrowdTerrainPaletteProjector? terrain = null,
+        Func<bool>? fogOwnsDecal = null)
+    {
+        _demo = demo;
+        _sessionSource = sessionSource;
+        _terrain = terrain;
+        _fogOwnsDecal = fogOwnsDecal;
+        _flow = new CrowdFlowFieldVisualProjector(_flowSource);
+        _navSource = () =>
+        {
+            var s = _sessionSource();
+            var group = DominantGroup(s);
+            if (s == null || group == null) return null;
+            // 认知号只读已物化变体。未物化不写场(构建归仿真,呈现不进 Build)。
+            if (s.TryGetMaterializedNav(group.NavId, out var nav)) return nav;
+            if (group.NavId >= CrowdBeliefNavs.BeliefStride) WalkableNavPending = true;
+            return null;
+        };
+        _walkable = new CrowdWalkableVisualProjector(_flowSource, _navSource);
+    }
+
+    public void Project(GlobalFieldVisualBuffer buffer)
+    {
+        WalkableNavPending = false;
+        var session = _sessionSource();
+        if (session == null) return;
+        var group = DominantGroup(session);
+        _flowSource.NavCellsPerSide = session.Config.NavCellsPerSide;
+        _flowSource.NavCellSizeCm = session.Config.NavCellSizeCm;
+        _flowSource.Flow = group?.Flow;
+        if (_terrain != null && (_demo.ViewMode == 0 || _demo.ViewMode == 2))
+        {
+            if (_fogOwnsDecal?.Invoke() != true)
+            {
+                _terrain.Project(buffer);
+            }
+
+            return;
+        }
+
+        switch (_demo.ViewMode)
+        {
+            case 0: _flow.Project(buffer); break;
+            case 1: _walkable.Project(buffer); break;
+        }
+    }
+
+    /// <summary>主力组:成员最多且带流场的组(演示口径——行军主力的路线就是当前值得看的路线)。</summary>
+    internal static CrowdNavGroupSet.Group? DominantGroup(CrowdSimSession? session)
+    {
+        if (session == null) return null;
+        CrowdNavGroupSet.Group? best = null;
+        foreach (var g in session.Groups.Groups)
+        {
+            if (g == null || g.Flow == null || g.Count == 0) continue;
+            if (best == null || g.Count > best.Count) best = g;
+        }
+
+        return best;
+    }
+}

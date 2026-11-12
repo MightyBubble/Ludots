@@ -16,7 +16,7 @@ namespace Ludots.Tests.Architecture
     {
         public static AgentProfileRegistry DefaultProfiles() => new(new[]
         {
-            new AgentProfileConfig { Id = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 }
+            new AgentProfileConfig { Id = "Small", NavProfileId = "Small", RadiusCm = 30, HeightCm = 180, ClearanceCm = 40, Mass = 1, Layer = 0 }
         });
 
         public static string CreateTempNavConfig(string navmeshJson)

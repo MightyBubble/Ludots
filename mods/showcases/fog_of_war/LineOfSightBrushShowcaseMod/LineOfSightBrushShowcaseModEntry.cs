@@ -10,9 +10,10 @@ public sealed class LineOfSightBrushShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
+        var runtime = FogShowcaseRuntime.Load(
+            context,
             FogShowcaseKind.LineOfSightBrush,
-            "LineOfSightBrushShowcaseMod"));
+            "LineOfSightBrushShowcaseMod");
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

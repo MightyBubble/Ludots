@@ -1,0 +1,93 @@
+{
+  "fixedHz": 30,
+  "mapId": "crowd_simulation_s7",
+  "seed": 7,
+  "note": "S5 轨迹=浮点派生量:位置按逐 tick 带宽比对(带值在校准后写进 C# 测试);状态机字段(state/mode/level/order)逐位一致。S5-b 起避让推挤为内核固有行为(屏蔽开关已摘除),两端同一内核序:哈希→分离→领队→意图→马达。每单位记录后附 u16 接触计数(L12-④ 硬门:每 tick 清零、求解行累加,跳过行为 0,两端同构逐位可比)。",
+  "ticks": 600,
+  "script": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 1,
+        "xCm": 480000,
+        "yCm": 560000,
+        "count": 120,
+        "template": "crowd_simulation.unit.infantry.r100"
+      }
+    },
+    {
+      "tick": 2,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 2,
+        "xCm": 1120000,
+        "yCm": 1040000,
+        "count": 60,
+        "template": "crowd_simulation.unit.navy.r100"
+      }
+    },
+    {
+      "tick": 4,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 3,
+        "xCm": 1120000,
+        "yCm": 480000,
+        "count": 60,
+        "template": "crowd_simulation.unit.mountaineer.r100"
+      }
+    },
+    {
+      "tick": 6,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 4,
+        "xCm": 480000,
+        "yCm": 1120000,
+        "count": 1,
+        "template": "crowd_simulation.unit.jumper.r100"
+      }
+    },
+    {
+      "tick": 10,
+      "cmd": {
+        "type": "order",
+        "player": 1,
+        "xCm": 1200000,
+        "yCm": 800000,
+        "shape": "box"
+      }
+    },
+    {
+      "tick": 14,
+      "cmd": {
+        "type": "order",
+        "player": 2,
+        "xCm": 400000,
+        "yCm": 900000,
+        "shape": "box"
+      }
+    },
+    {
+      "tick": 18,
+      "cmd": {
+        "type": "order",
+        "player": 3,
+        "xCm": 500000,
+        "yCm": 500000,
+        "shape": "box"
+      }
+    },
+    {
+      "tick": 22,
+      "cmd": {
+        "type": "order",
+        "player": 4,
+        "xCm": 900000,
+        "yCm": 700000,
+        "shape": "box"
+      }
+    }
+  ]
+}

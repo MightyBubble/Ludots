@@ -161,6 +161,31 @@ namespace GasTests
             Assert.That(PartitionContains(entity, 4, 2), Is.True);
         }
 
+        [Test]
+        public void MovingEntityWriterAfterPartition_RehomesAcrossCellsEveryTick()
+        {
+            Entity entity = _world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(150, 250) },
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(150, 250) });
+
+            // 引擎真实调度：SavePrevious → SpatialPartition → 位置写者（massnav / GAS 位移）。
+            // 门控若依赖 Previous==Current 快照，此序下判据恒真，格籍冻结在初始格。
+            _savePrevious.Update(0f);
+            _spatialUpdate.Update(0f);
+            _world.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(450, 250) });
+
+            _savePrevious.Update(0f);
+            _spatialUpdate.Update(0f);
+            _world.Set(entity, new WorldPositionCm { Value = Fix64Vec2.FromInt(750, 250) });
+
+            _savePrevious.Update(0f);
+            _spatialUpdate.Update(0f);
+
+            Assert.That(_world.Get<SpatialCellRef>(entity).CellX, Is.EqualTo(7),
+                "writer-after-partition schedule must still re-home: membership cell tracks the current position");
+            Assert.That(PartitionContains(entity, 7, 2), Is.True);
+        }
+
         private bool PartitionContains(Entity e, int cellX, int cellY)
         {
             Span<Entity> buffer = stackalloc Entity[16];

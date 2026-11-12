@@ -4,7 +4,8 @@
     "components": {
       "ContinuousHeightmapSampleState": {},
       "MassNavigationAgent": {
-        "profileId": "tw.agent"
+        "profileId": "tw.agent",
+        "agentTypeId": "tw.agent"
       },
       "EntityLayer": {
         "category": [

@@ -194,20 +194,20 @@ namespace Ludots.Adapter.Raylib.Services
                 ? "Raylib ISM Final Render Benchmark"
                 : scene.Label;
 
-            _screenOverlay.AddRect(panelLeft, panelTop, panelWidth, panelHeight,
+            _screenOverlay.AddRect(PresentationOverlayLayer.TopMost, panelLeft, panelTop, panelWidth, panelHeight,
                 new Vector4(0.05f, 0.07f, 0.1f, 0.88f),
                 new Vector4(0.28f, 0.34f, 0.42f, 0.95f),
                 stableId: 10,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddText(panelLeft + 16, panelTop + 14,
+            _screenOverlay.AddText(PresentationOverlayLayer.TopMost, panelLeft + 16, panelTop + 14,
                 title,
                 22,
                 new Vector4(0.95f, 0.98f, 1f, 1f),
                 stableId: 11,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddText(panelLeft + 16, panelTop + 44,
+            _screenOverlay.AddText(PresentationOverlayLayer.TopMost, panelLeft + 16, panelTop + 44,
                 $"instances={_targetInstanceCount:n0}  buckets={stats.BucketCount}  visible={stats.VisibleCount:n0}  fps={EstimateFps():000}",
                 18,
                 new Vector4(0.82f, 0.94f, 1f, 1f),
@@ -220,40 +220,40 @@ namespace Ludots.Adapter.Raylib.Services
             float overlayUpload = timing?.UiUploadMs ?? 0f;
             float overlayDraw = timing?.ScreenOverlayFinalDrawMs ?? 0f;
             float primitiveDraw = timing?.PrimitiveRenderMs ?? 0f;
-            _screenOverlay.AddText(panelLeft + 16, panelTop + 68,
+            _screenOverlay.AddText(PresentationOverlayLayer.TopMost, panelLeft + 16, panelTop + 68,
                 $"bucketRebuild={stats.CpuBuildMs:0.00}ms  ismDraw={stats.CpuDrawMs:0.00}ms  build={overlayBuild:0.00}ms  paint={overlayPaint:0.00}ms  primitive={primitiveDraw:0.00}ms",
                 16,
                 new Vector4(0.67f, 0.93f, 0.72f, 1f),
                 stableId: 13,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddText(panelLeft + 16, panelTop + 94,
+            _screenOverlay.AddText(PresentationOverlayLayer.TopMost, panelLeft + 16, panelTop + 94,
                 $"composite={overlayComposite:0.00}ms  upload={overlayUpload:0.00}ms  finalDraw={overlayDraw:0.00}ms  overlayTotal={(timing?.ScreenOverlayDrawMs ?? 0f):0.00}ms",
                 16,
                 new Vector4(0.93f, 0.8f, 0.56f, 1f),
                 stableId: 14,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddText(panelLeft + 16, panelTop + 118,
+            _screenOverlay.AddText(PresentationOverlayLayer.TopMost, panelLeft + 16, panelTop + 118,
                 "drag slider: 3k -> 300k instances | bars/text are Skia final overlay stress",
                 16,
                 new Vector4(0.93f, 0.8f, 0.56f, 1f),
                 stableId: 18,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddRect(SliderLeft, SliderTop, SliderTrackWidth, SliderTrackHeight,
+            _screenOverlay.AddRect(PresentationOverlayLayer.TopMost, SliderLeft, SliderTop, SliderTrackWidth, SliderTrackHeight,
                 new Vector4(0.12f, 0.15f, 0.19f, 1f),
                 new Vector4(0.36f, 0.44f, 0.56f, 1f),
                 stableId: 15,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddRect(SliderLeft, SliderTop, Math.Max(8, knobCenterX - SliderLeft), SliderTrackHeight,
+            _screenOverlay.AddRect(PresentationOverlayLayer.TopMost, SliderLeft, SliderTop, Math.Max(8, knobCenterX - SliderLeft), SliderTrackHeight,
                 new Vector4(0.21f, 0.58f, 0.96f, 0.92f),
                 new Vector4(0.21f, 0.58f, 0.96f, 0f),
                 stableId: 16,
                 dirtySerial: _frameSerial);
 
-            _screenOverlay.AddRect(knobCenterX - 8, SliderTop - 8, 16, SliderTrackHeight + 16,
+            _screenOverlay.AddRect(PresentationOverlayLayer.TopMost, knobCenterX - 8, SliderTop - 8, 16, SliderTrackHeight + 16,
                 new Vector4(0.96f, 0.98f, 1f, 0.96f),
                 new Vector4(0.06f, 0.08f, 0.12f, 1f),
                 stableId: 17,
@@ -313,6 +313,7 @@ namespace Ludots.Adapter.Raylib.Services
                 int x = startX + (col * 166);
                 int y = startY + (row * 14);
                 _screenOverlay.AddText(
+                    PresentationOverlayLayer.TopMost,
                     x,
                     y,
                     $"hud[{i:000}] hp={hp:000} en={energy:000} draw={stats.CpuDrawMs:0.0} ui={(timing?.ScreenOverlayDrawMs ?? 0f):0.0}",

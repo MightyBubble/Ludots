@@ -1,0 +1,90 @@
+{
+  "session": {
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 1,
+          "xCm": 487500,
+          "yCm": 562500,
+          "count": 12,
+          "template": "crowd_simulation.unit.infantry.r100"
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 3,
+          "xCm": 487500,
+          "yCm": 562500,
+          "count": 12,
+          "template": "crowd_simulation.unit.infantry.r100"
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "spawnAt",
+          "player": 2,
+          "xCm": 387500,
+          "yCm": 562500,
+          "count": 1,
+          "template": "crowd_simulation.unit.infantry.r100"
+        }
+      },
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "placeStructure",
+          "template": "building",
+          "xCm": 637500,
+          "yCm": 587500,
+          "sizeCm": 14000
+        }
+      },
+      {
+        "tick": 30,
+        "cmd": {
+          "type": "order",
+          "player": 3,
+          "xCm": 637500,
+          "yCm": 587500,
+          "shape": "box"
+        }
+      },
+      {
+        "tick": 300,
+        "cmd": {
+          "type": "order",
+          "player": 3,
+          "xCm": 330000,
+          "yCm": 560000,
+          "shape": "box"
+        }
+      },
+      {
+        "tick": 800,
+        "cmd": {
+          "type": "removeStructureAt",
+          "xCm": 637500,
+          "yCm": 587500
+        }
+      },
+      {
+        "tick": 860,
+        "cmd": {
+          "type": "order",
+          "player": 3,
+          "xCm": 637500,
+          "yCm": 587500,
+          "shape": "box"
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 共享视野（盟友看见的，本方也看见；盟友离开后留残影）"
+  }
+}

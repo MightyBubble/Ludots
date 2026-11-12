@@ -118,6 +118,9 @@ namespace Ludots.Core.Presentation.Minimap
         private int _reprojectedMarkerCountLastFrame = -1;
         private int _retainedMarkerCountLastFrame = -1;
         private int _fullRebuildFrameCounter;
+        private int[] _fieldPixelOccupancyStamps = Array.Empty<int>();
+        private int[] _fieldPixelOccupancyCounts = Array.Empty<int>();
+        private int _fieldPixelOccupancyStamp = 1;
         private float _seededCenterXcm;
         private float _seededCenterYcm;
         private float _seededHalfExtentCm;
@@ -453,6 +456,7 @@ namespace Ludots.Core.Presentation.Minimap
             if (NativeChromeVisible)
             {
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _panelX,
                     _panelY,
                     _panelWidth,
@@ -460,6 +464,7 @@ namespace Ludots.Core.Presentation.Minimap
                     new Vector4(0.02f, 0.05f, 0.07f, 1f),
                     new Vector4(0.48f, 0.70f, 0.86f, 1f));
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _fieldX,
                     _fieldY,
                     _fieldSize,
@@ -469,12 +474,13 @@ namespace Ludots.Core.Presentation.Minimap
                     stableId: 0,
                     dirtySerial: 0,
                     clipShape: fieldClip);
-                overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
-                overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
             }
             else
             {
                 overlay.AddRect(
+                    PresentationOverlayLayer.TopMost,
                     _fieldX,
                     _fieldY,
                     _fieldSize,
@@ -497,11 +503,11 @@ namespace Ludots.Core.Presentation.Minimap
             RenderToggleButtons(overlay);
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
-                overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
+                overlay.AddText(PresentationOverlayLayer.TopMost, _fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
             }
 
             int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
-            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, _panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -790,7 +796,21 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            ProjectMarkersFullRebuild(engine, markers, screenMarkers, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
+            KnowledgeProjectionResolver? knowledgeResolver = null;
+            int knowledgeTick = 0;
+            if (hasKnowledgeResolver)
+            {
+                KnowledgeProjectionConsumer.TryGetResolveContext(engine.GlobalContext, out knowledgeResolver, out knowledgeTick);
+            }
+
+            ProjectMarkersFullRebuild(
+                markers,
+                screenMarkers,
+                hasKnowledgeResolver && knowledgeResolver != null,
+                hasKnowledgeViewer,
+                knowledgeViewer,
+                knowledgeResolver,
+                knowledgeTick);
         }
 
         private bool ProjectionInputsUnchanged(int markerCount, bool hasKnowledgeResolver, bool hasKnowledgeViewer, Entity knowledgeViewer)
@@ -832,12 +852,13 @@ namespace Ludots.Core.Presentation.Minimap
         }
 
         private void ProjectMarkersFullRebuild(
-            GameEngine engine,
             MinimapMarkerBuffer markers,
             MinimapScreenMarkerBuffer screenMarkers,
             bool hasKnowledgeResolver,
             bool hasKnowledgeViewer,
-            Entity knowledgeViewer)
+            Entity knowledgeViewer,
+            KnowledgeProjectionResolver? knowledgeResolver,
+            int knowledgeTick)
         {
             _fullRebuildFrameCounter++;
             SeedProjectionInputs(markers.Count, hasKnowledgeResolver, hasKnowledgeViewer, knowledgeViewer);
@@ -873,6 +894,11 @@ namespace Ludots.Core.Presentation.Minimap
             Span<MinimapMarkerRenderBucketKey> cachedBucketKeys = stackalloc MinimapMarkerRenderBucketKey[MinimapScreenMarkerBuffer.OrientationBucketCount];
             Span<int> cachedBucketIndices = stackalloc int[MinimapScreenMarkerBuffer.OrientationBucketCount];
             cachedBucketIndices.Fill(-1);
+            int maxMarkersPerFieldPixel = _config.MaxMarkersPerFieldPixel;
+            if (maxMarkersPerFieldPixel > 0)
+            {
+                BeginFieldPixelOccupancy(_fieldSize);
+            }
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             int reprojected = 0;
@@ -885,26 +911,6 @@ namespace Ludots.Core.Presentation.Minimap
                 float markerSizePx = sizesPx[i];
                 bool useAuthoredStyleBucket = true;
                 Entity owner = owners[i];
-                if (hasKnowledgeResolver && owner != Entity.Null)
-                {
-                    if (!hasKnowledgeViewer ||
-                        !KnowledgeProjectionConsumer.TryResolveForViewer(
-                            engine.World,
-                            engine.GlobalContext,
-                            knowledgeViewer,
-                            owner,
-                            out KnowledgeProjection projection) ||
-                        !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))
-                    {
-                        continue;
-                    }
-
-                    knowledgeState = ResolveKnowledgeState(in projection);
-                    ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
-                    useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
-                                             knowledgeState == MinimapKnowledgeState.Unfiltered;
-                }
-
                 bool projected = axisAligned
                     ? WorldPlane2D.TryProjectWorldCmToScreenAxisAligned(
                         worldXcm,
@@ -939,6 +945,38 @@ namespace Ludots.Core.Presentation.Minimap
                 if (!projected)
                 {
                     continue;
+                }
+
+                if (maxMarkersPerFieldPixel > 0 &&
+                    !TryClaimFieldPixel(screenX, screenY, fieldX, fieldY, _fieldSize, maxMarkersPerFieldPixel))
+                {
+                    continue;
+                }
+
+                if (hasKnowledgeResolver && owner != Entity.Null)
+                {
+                    if (!hasKnowledgeViewer ||
+                        knowledgeResolver == null ||
+                        !KnowledgeProjectionConsumer.TryResolveDisclosure(
+                            knowledgeResolver,
+                            knowledgeTick,
+                            knowledgeViewer,
+                            owner,
+                            out KnowledgeDisclosureRecord disclosure) ||
+                        disclosure.Position < KnowledgePositionAccess.LastKnown)
+                    {
+                        if (maxMarkersPerFieldPixel > 0)
+                        {
+                            ReleaseFieldPixel(screenX, screenY, fieldX, fieldY, _fieldSize);
+                        }
+
+                        continue;
+                    }
+
+                    knowledgeState = ResolveKnowledgeState(in disclosure, knowledgeViewer, owner);
+                    ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
+                    useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
+                                             knowledgeState == MinimapKnowledgeState.Unfiltered;
                 }
 
                 uint flags = flagsValues[i];
@@ -1024,36 +1062,120 @@ namespace Ludots.Core.Presentation.Minimap
             _retainedMarkerCountLastFrame = 0;
         }
 
-        private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)
+        private void BeginFieldPixelOccupancy(int fieldSize)
         {
-            if (projection.Presence == KnowledgePresence.LiveVisible &&
-                projection.Position == KnowledgePositionAccess.Live)
+            int needed = checked(fieldSize * fieldSize);
+            if (_fieldPixelOccupancyStamps.Length < needed)
             {
-                return KnowledgePresenceSourceIsDisclosed(in projection)
+                _fieldPixelOccupancyStamps = new int[needed];
+                _fieldPixelOccupancyCounts = new int[needed];
+                _fieldPixelOccupancyStamp = 1;
+            }
+
+            _fieldPixelOccupancyStamp++;
+            if (_fieldPixelOccupancyStamp == int.MaxValue)
+            {
+                Array.Clear(_fieldPixelOccupancyStamps);
+                _fieldPixelOccupancyStamp = 1;
+            }
+        }
+
+        private bool TryClaimFieldPixel(
+            float screenX,
+            float screenY,
+            float fieldX,
+            float fieldY,
+            int fieldSize,
+            int maxMarkersPerFieldPixel)
+        {
+            int px = (int)MathF.Floor(screenX) - (int)fieldX;
+            int py = (int)MathF.Floor(screenY) - (int)fieldY;
+            if ((uint)px >= (uint)fieldSize || (uint)py >= (uint)fieldSize)
+            {
+                return false;
+            }
+
+            int slot = (py * fieldSize) + px;
+            int stamp = _fieldPixelOccupancyStamp;
+            if (_fieldPixelOccupancyStamps[slot] != stamp)
+            {
+                _fieldPixelOccupancyStamps[slot] = stamp;
+                _fieldPixelOccupancyCounts[slot] = 1;
+                return true;
+            }
+
+            int occupied = _fieldPixelOccupancyCounts[slot];
+            if (occupied >= maxMarkersPerFieldPixel)
+            {
+                return false;
+            }
+
+            _fieldPixelOccupancyCounts[slot] = occupied + 1;
+            return true;
+        }
+
+        private void ReleaseFieldPixel(
+            float screenX,
+            float screenY,
+            float fieldX,
+            float fieldY,
+            int fieldSize)
+        {
+            int px = (int)MathF.Floor(screenX) - (int)fieldX;
+            int py = (int)MathF.Floor(screenY) - (int)fieldY;
+            if ((uint)px >= (uint)fieldSize || (uint)py >= (uint)fieldSize)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(MinimapRuntime)} cannot release field pixel ({px},{py}) outside fieldSize={fieldSize}.");
+            }
+
+            int slot = (py * fieldSize) + px;
+            if (_fieldPixelOccupancyStamps[slot] != _fieldPixelOccupancyStamp)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(MinimapRuntime)} cannot release unclaimed field pixel ({px},{py}).");
+            }
+
+            int occupied = _fieldPixelOccupancyCounts[slot];
+            if (occupied <= 1)
+            {
+                _fieldPixelOccupancyStamps[slot] = 0;
+                _fieldPixelOccupancyCounts[slot] = 0;
+                return;
+            }
+
+            _fieldPixelOccupancyCounts[slot] = occupied - 1;
+        }
+
+        private static MinimapKnowledgeState ResolveKnowledgeState(
+            in KnowledgeDisclosureRecord disclosure,
+            Entity viewer,
+            Entity target)
+        {
+            bool disclosed = disclosure.Source != Entity.Null &&
+                             disclosure.Source != viewer &&
+                             disclosure.Source != target;
+            if (disclosure.Presence == KnowledgePresence.LiveVisible &&
+                disclosure.Position == KnowledgePositionAccess.Live)
+            {
+                return disclosed
                     ? MinimapKnowledgeState.Disclosed
                     : MinimapKnowledgeState.LiveVisible;
             }
 
-            if (KnowledgePresenceSourceIsDisclosed(in projection))
+            if (disclosed)
             {
                 return MinimapKnowledgeState.Disclosed;
             }
 
-            if (projection.Position == KnowledgePositionAccess.LastKnown)
+            if (disclosure.Position == KnowledgePositionAccess.LastKnown)
             {
                 return MinimapKnowledgeState.LastKnown;
             }
 
-            return projection.CanKnowEntity
+            return disclosure.Presence != KnowledgePresence.Unknown
                 ? MinimapKnowledgeState.Known
                 : MinimapKnowledgeState.Unknown;
-        }
-
-        private static bool KnowledgePresenceSourceIsDisclosed(in KnowledgeProjection projection)
-        {
-            return projection.Source != Entity.Null &&
-                   projection.Source != projection.Viewer &&
-                   projection.Source != projection.Target;
         }
 
         private static void ApplyKnowledgeMarkerStyle(
@@ -1230,14 +1352,14 @@ namespace Ludots.Core.Presentation.Minimap
             Vector4 fill = new(0.93f, 0.72f, 0.28f, 0.98f);
             Vector4 thumb = new(1f, 0.93f, 0.62f, 1f);
             Vector4 border = new(0.48f, 0.70f, 0.86f, 1f);
-            overlay.AddRect(trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
             int fillWidth = Math.Max(0, thumbCenterX - trackX);
             if (fillWidth > 0)
             {
-                overlay.AddRect(trackX, trackY, fillWidth, ZoomSliderTrackHeight, fill, fill);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, trackX, trackY, fillWidth, ZoomSliderTrackHeight, fill, fill);
             }
 
-            overlay.AddRect(thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
         }
 
         private void RenderToggleButtons(ScreenOverlayBuffer overlay)
@@ -1274,8 +1396,8 @@ namespace Ludots.Core.Presentation.Minimap
             Vector4 text = active
                 ? new Vector4(0.98f, 0.96f, 0.72f, 1f)
                 : new Vector4(0.70f, 0.80f, 0.88f, 1f);
-            overlay.AddRect(x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
-            overlay.AddText(x + 8, y + 5, label, 12, text);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 8, y + 5, label, 12, text);
         }
 
         private float ResolveMetricGridStepCm()
@@ -1335,6 +1457,7 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             overlay.AddLine(
+                PresentationOverlayLayer.TopMost,
                 (int)MathF.Round(x0),
                 (int)MathF.Round(y0),
                 (int)MathF.Round(x1),
@@ -1474,16 +1597,17 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector4 targetColor = new(1f, 0.95f, 0.55f, 1f);
                 int cx = (int)MathF.Round(targetX);
                 int cy = (int)MathF.Round(targetY);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
-                overlay.AddRect(cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - CameraCenterCrossHalfExtent - 1, cy - 2, (CameraCenterCrossHalfExtent * 2) + 2, CameraCenterCrossThickness + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - 2, cy - CameraCenterCrossHalfExtent - 1, CameraCenterCrossThickness + 2, (CameraCenterCrossHalfExtent * 2) + 2, Vector4.Zero, shadow, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - CameraCenterCrossHalfExtent, cy - 1, CameraCenterCrossHalfExtent * 2, CameraCenterCrossThickness, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
+                overlay.AddRect(PresentationOverlayLayer.TopMost, cx - 1, cy - CameraCenterCrossHalfExtent, CameraCenterCrossThickness, CameraCenterCrossHalfExtent * 2, Vector4.Zero, targetColor, stableId: 0, dirtySerial: 0, clipShape: clipShape);
             }
         }
 
         private static void AddScreenLine(ScreenOverlayBuffer overlay, Vector2 a, Vector2 b, int thickness, Vector4 color, PresentationClipShape clipShape)
         {
             overlay.AddLine(
+                PresentationOverlayLayer.TopMost,
                 (int)MathF.Round(a.X),
                 (int)MathF.Round(a.Y),
                 (int)MathF.Round(b.X),

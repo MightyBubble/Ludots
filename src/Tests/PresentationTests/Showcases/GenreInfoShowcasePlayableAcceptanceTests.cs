@@ -23,6 +23,7 @@ using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation;
 
@@ -48,8 +49,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
     [Test]
     public void GenreInfoShowcase_PlayableAcceptance_WritesLocalizedScreensAndArtifacts()
     {
-        string repoRoot = FindRepoRoot();
-        string artifactRoot = Path.Combine(repoRoot, "artifacts", "acceptance", "genre-info-showcase");
+        string artifactRoot = CommittedTestArtifacts.Resolve("artifacts/acceptance/genre-info-showcase");
         string screenRoot = Path.Combine(artifactRoot, "screens");
         Directory.CreateDirectory(screenRoot);
 

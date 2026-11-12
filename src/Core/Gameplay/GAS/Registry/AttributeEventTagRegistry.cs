@@ -1,13 +1,16 @@
+using Ludots.Core.Registry;
+
 namespace Ludots.Core.Gameplay.GAS.Registry
 {
     public static class AttributeEventTagRegistry
     {
-        private static readonly int[] _attributeIdToEventTagId = new int[AttributeRegistry.MaxAttributes];
+        private static int[] Table => ModRegistryAmbient.Current.AttributeEventTagIds;
 
         public static void Register(int attributeId, int eventTagId)
         {
-            if (attributeId < 0 || attributeId >= AttributeRegistry.MaxAttributes) return;
-            _attributeIdToEventTagId[attributeId] = eventTagId;
+            int[] table = Table;
+            if ((uint)attributeId >= (uint)table.Length) return;
+            table[attributeId] = eventTagId;
         }
 
         public static void Register(string attributeName, string eventTagName)
@@ -19,9 +22,9 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static int GetEventTagId(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= AttributeRegistry.MaxAttributes) return TagRegistry.InvalidId;
-            return _attributeIdToEventTagId[attributeId];
+            int[] table = Table;
+            if ((uint)attributeId >= (uint)table.Length) return TagRegistry.InvalidId;
+            return table[attributeId];
         }
     }
 }
-

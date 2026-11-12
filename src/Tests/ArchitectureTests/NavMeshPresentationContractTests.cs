@@ -322,7 +322,7 @@ namespace Ludots.Tests.Architecture
                 {
                     new NavLayerConfig { Id = GroundLayerId, Layer = 0 }
                 },
-                Areas = new List<NavAreaCostConfig>(),
+                Areas = new List<NavMeshAreaConfig>(),
                 RuntimeIncremental = new NavRuntimeIncrementalConfig
                 {
                     TileBudgetPerFixedTick = 1,
@@ -341,6 +341,7 @@ namespace Ludots.Tests.Architecture
                 new AgentProfileConfig
                 {
                     Id = "Small",
+                    NavProfileId = "Small",
                     RadiusCm = 30,
                     HeightCm = 180,
                     ClearanceCm = 40,

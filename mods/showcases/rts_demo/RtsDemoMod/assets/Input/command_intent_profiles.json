@@ -1,7 +1,6 @@
 {
-  "profiles": [
-    {
-      "id": "intent.command.default",
+  "profiles": {
+    "intent.command.default": {
       "groupPolicy": {
         "kind": "independent"
       },
@@ -61,5 +60,5 @@
         }
       ]
     }
-  ]
+  }
 }

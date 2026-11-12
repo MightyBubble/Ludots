@@ -25,6 +25,10 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 
 	private bool _isRebuilding;
 
+	private LeaseEntry[] _visibleEntries = Array.Empty<LeaseEntry>();
+
+	private bool _visibleEntriesDirty = true;
+
 	public UiScene? Scene => ReferenceEquals(_root.Scene, _scene) ? _scene : null;
 
 	public UiSurfaceHost(UIRoot root, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
@@ -43,6 +47,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 		if (_leases.TryGetValue(request.OwnerId, out LeaseEntry existing))
 		{
 			existing.Request = request;
+			_visibleEntriesDirty = true;
 			RequestRebuild();
 			return existing.Handle;
 		}
@@ -52,6 +57,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 			++_nextLeaseId,
 			++_nextGeneration);
 		_leases.Add(request.OwnerId, new LeaseEntry(handle, request));
+		_visibleEntriesDirty = true;
 		RequestRebuild();
 		return handle;
 	}
@@ -67,6 +73,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 		LeaseEntry entry = GetRequiredEntry(handle);
 		entry.Subscription?.Dispose();
 		entry.Contribution = contribution;
+		_visibleEntriesDirty = true;
 		entry.Subscription = contribution.SubscribeInvalidated(RequestRebuild);
 		// Mount / replace the contribution tree. Content ticks use Invalidate + SetState;
 		// calling Publish every frame forces a full retained-scene rebuild.
@@ -88,13 +95,14 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 
 		entry.Subscription?.Dispose();
 		_leases.Remove(handle.OwnerId);
+		_visibleEntriesDirty = true;
 		RebuildNow();
 		return true;
 	}
 
 	private bool RefreshRuntimeDependencies()
 	{
-		LeaseEntry[] visibleEntries = GetVisibleEntries().ToArray();
+		LeaseEntry[] visibleEntries = GetVisibleEntries();
 		HashSet<string>? runtimeChangedOwners = null;
 		if (!_pendingRebuild)
 		{
@@ -135,7 +143,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 		try
 		{
 			_pendingRebuild = false;
-			LeaseEntry[] visibleEntries = GetVisibleEntries().ToArray();
+			LeaseEntry[] visibleEntries = GetVisibleEntries();
 			if (visibleEntries.Length == 0)
 			{
 				_scene.LastReactiveUpdateMetrics = UiReactiveUpdateMetrics.None;
@@ -168,7 +176,17 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 		}
 	}
 
-	private IEnumerable<LeaseEntry> GetVisibleEntries()
+	private LeaseEntry[] GetVisibleEntries()
+	{
+		if (_visibleEntriesDirty)
+		{
+			_visibleEntries = ComputeVisibleEntries();
+			_visibleEntriesDirty = false;
+		}
+		return _visibleEntries;
+	}
+
+	private LeaseEntry[] ComputeVisibleEntries()
 	{
 		List<LeaseEntry> active = _leases.Values
 			.Where(entry => entry.Contribution != null)
@@ -186,7 +204,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 			.ToList();
 		if (exclusive.Count != 0)
 		{
-			return exclusive;
+			return exclusive.ToArray();
 		}
 
 		return active

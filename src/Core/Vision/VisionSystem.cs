@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
@@ -53,16 +54,21 @@ namespace Ludots.Core.Vision
 
         public override void Update(in float dt)
         {
-            int layerCount = CopyLayerIds();
+            int layerCount = CopyQueriedLayers();
             if (layerCount <= 0)
             {
+                if (!_knowledge.HasUnexpired(_session.CurrentTick))
+                {
+                    return;
+                }
+
                 _knowledge.RunMaintenance(_session.CurrentTick);
                 return;
             }
 
             ReadOnlySpan<FogLayerId> targetLayers = _layerIds.AsSpan(0, layerCount);
             int occupantCellSizeCm = ResolveSharedCellSizeCm(targetLayers);
-            AgeVisibleFields();
+            AgeVisibleFields(targetLayers);
             int occupantCount = CopyOccupants(occupantCellSizeCm);
             int emitterCount = CopyEmitters();
             var rules = FogRulesPolicy.Default;
@@ -105,20 +111,60 @@ namespace Ludots.Core.Vision
             _knowledge.RunMaintenance(_session.CurrentTick);
         }
 
-        private int CopyLayerIds()
+        private int CopyQueriedLayers()
         {
             EnsureLayerCapacity(_layers.Count);
-            return _layers.CopyLayerIds(_layerIds);
+            int count = _layers.CopyLayerIds(_layerIds);
+            int tick = _session.CurrentTick;
+            int written = 0;
+            for (int i = 0; i < count; i++)
+            {
+                FogLayerId id = _layerIds[i];
+                if (_layers.IsExternalStamp(id))
+                {
+                    continue;
+                }
+
+                FogLayerDefinition definition = _layers.Get(id);
+                int period = VisionUpdatePeriod.FromFixedDelta(Time.FixedDeltaTime, definition.UpdateHz);
+                if (period > 1 && tick % period != 0)
+                {
+                    continue;
+                }
+
+                _layerIds[written++] = id;
+            }
+
+            return written;
         }
 
-        private void AgeVisibleFields()
+        private void AgeVisibleFields(ReadOnlySpan<FogLayerId> targetLayers)
         {
             EnsureFieldCapacity(_fields.Count);
             int fieldCount = _fields.CopyFields(_fieldScratch);
             for (int i = 0; i < fieldCount; i++)
             {
-                _fieldScratch[i].AgeVisibleToExplored();
+                FogField field = _fieldScratch[i];
+                if (!ContainsLayer(targetLayers, field.LayerId))
+                {
+                    continue;
+                }
+
+                field.AgeVisibleToExplored();
             }
+        }
+
+        private static bool ContainsLayer(ReadOnlySpan<FogLayerId> layers, FogLayerId id)
+        {
+            for (int i = 0; i < layers.Length; i++)
+            {
+                if (layers[i] == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int CopyEmitters()

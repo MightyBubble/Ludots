@@ -48,9 +48,9 @@ internal sealed class AcceptancePresentationSystem : ISystem<float>
         Vector4 border = _progress.Stage == AcceptanceProgressStage.Failed
             ? new Vector4(0.92f, 0.27f, 0.24f, 1f)
             : Border;
-        _overlay.AddRect(14, 392, 760, 74, Fill, border, stableId: 71900, dirtySerial: (int)_progress.Stage + 1);
-        _overlay.AddText(28, 404, _copy.Title, 18, TitleColor, stableId: 71901, dirtySerial: 1);
-        _overlay.AddText(28, 432, status, 15, TextColor, stableId: 71902, dirtySerial: (int)_progress.Stage + 1);
+        _overlay.AddRect(PresentationOverlayLayer.TopMost, 14, 392, 760, 74, Fill, border, stableId: 71900, dirtySerial: (int)_progress.Stage + 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, 28, 404, _copy.Title, 18, TitleColor, stableId: 71901, dirtySerial: 1);
+        _overlay.AddText(PresentationOverlayLayer.TopMost, 28, 432, status, 15, TextColor, stableId: 71902, dirtySerial: (int)_progress.Stage + 1);
     }
 
     public void BeforeUpdate(in float dt)

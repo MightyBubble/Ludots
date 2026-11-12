@@ -1,0 +1,222 @@
+[
+  {
+    "id": "foot_r100",
+    "radiusCm": 100,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 2,
+    "layer": 0,
+    "navProfileId": "foot"
+  },
+  {
+    "id": "foot_r200",
+    "radiusCm": 200,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 3,
+    "layer": 0,
+    "navProfileId": "foot"
+  },
+  {
+    "id": "foot_r300",
+    "radiusCm": 300,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 4,
+    "layer": 0,
+    "navProfileId": "foot"
+  },
+  {
+    "id": "foot_r400",
+    "radiusCm": 400,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 5,
+    "layer": 0,
+    "navProfileId": "foot"
+  },
+  {
+    "id": "hull_r100",
+    "radiusCm": 100,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 2,
+    "layer": 0,
+    "navProfileId": "hull"
+  },
+  {
+    "id": "hull_r200",
+    "radiusCm": 200,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 3,
+    "layer": 0,
+    "navProfileId": "hull"
+  },
+  {
+    "id": "hull_r300",
+    "radiusCm": 300,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 4,
+    "layer": 0,
+    "navProfileId": "hull"
+  },
+  {
+    "id": "hull_r400",
+    "radiusCm": 400,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 5,
+    "layer": 0,
+    "navProfileId": "hull"
+  },
+  {
+    "id": "climber_r100",
+    "radiusCm": 100,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 3,
+    "layer": 0,
+    "navProfileId": "climber"
+  },
+  {
+    "id": "climber_r200",
+    "radiusCm": 200,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 4,
+    "layer": 0,
+    "navProfileId": "climber"
+  },
+  {
+    "id": "climber_r300",
+    "radiusCm": 300,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 5,
+    "layer": 0,
+    "navProfileId": "climber"
+  },
+  {
+    "id": "climber_r400",
+    "radiusCm": 400,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 6,
+    "layer": 0,
+    "navProfileId": "climber"
+  },
+  {
+    "id": "amphib_r100",
+    "radiusCm": 100,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 1,
+    "layer": 0,
+    "navProfileId": "amphib"
+  },
+  {
+    "id": "amphib_r200",
+    "radiusCm": 200,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 2,
+    "layer": 0,
+    "navProfileId": "amphib"
+  },
+  {
+    "id": "amphib_r300",
+    "radiusCm": 300,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 3,
+    "layer": 0,
+    "navProfileId": "amphib"
+  },
+  {
+    "id": "amphib_r400",
+    "radiusCm": 400,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 4,
+    "layer": 0,
+    "navProfileId": "amphib"
+  },
+  {
+    "id": "leaper_r100",
+    "radiusCm": 100,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 2,
+    "layer": 0,
+    "navProfileId": "leaper"
+  },
+  {
+    "id": "leaper_r200",
+    "radiusCm": 200,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 3,
+    "layer": 0,
+    "navProfileId": "leaper"
+  },
+  {
+    "id": "leaper_r300",
+    "radiusCm": 300,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 4,
+    "layer": 0,
+    "navProfileId": "leaper"
+  },
+  {
+    "id": "leaper_r400",
+    "radiusCm": 400,
+    "heightCm": 180,
+    "clearanceCm": 0,
+    "draftCm": 0,
+    "beamCm": 0,
+    "mass": 5,
+    "layer": 0,
+    "navProfileId": "leaper"
+  }
+]

@@ -1,0 +1,151 @@
+using System;
+using System.Collections.Generic;
+using Ludots.Core.CrowdSimulation.Nav;
+using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Mathematics.FixedPoint;
+
+namespace Ludots.Core.CrowdSimulation.Movement;
+
+/// <summary>
+/// 盘面接触(Fix64):净空侵蚀把圆盘取整成整格环后,可走格中心只保证半格自由,
+/// 这里精确解掉剩余的亚格重叠。被挡格 = 轴对齐盒。开放格缓存:3×3 邻域全走的格,
+/// r ≤ 格尺寸的圆盘够不到任何被挡格,直接跳过。
+/// </summary>
+public static class CrowdWalls
+{
+    /// <summary>开放格缓存:按 (navId, walk 版本) 懒填;0 未知 / 1 开放 / 2 非开放。</summary>
+    public sealed class OpenCellCache
+    {
+        private sealed class Entry
+        {
+            public int Version = -1;
+            public byte[]? Walk;
+            public byte[]? UpWalk; // 上层以 UpPass 为 walk 口径
+            public byte[]? Grid;
+            public bool Filled;
+        }
+
+        private readonly Dictionary<int, Entry> _byNavId = new();
+
+        public byte[] GridFor(NavContext nav)
+        {
+            int n2 = nav.NavCellsPerSide * nav.NavCellsPerSide;
+            if (!_byNavId.TryGetValue(nav.Id, out var e))
+            {
+                e = new Entry();
+                _byNavId[nav.Id] = e;
+            }
+
+            if (e.Version != nav.Version || !ReferenceEquals(e.Walk, nav.Walk) || !ReferenceEquals(e.UpWalk, nav.UpPass))
+            {
+                // 重烘对 Walk 是原地腐蚀(引用不变),失效必须看 NavContext.Version。只认引用会让放置当帧马达读到旧开放表。
+                e.Grid ??= new byte[2 * n2];
+                Array.Clear(e.Grid);
+                e.Version = nav.Version;
+                e.Walk = nav.Walk;
+                e.UpWalk = nav.UpPass;
+                e.Filled = false;
+            }
+
+            return e.Grid!;
+        }
+
+        /// <summary>把两层开放格一次性写满。IsOpen 只读缓存字节，并行马达不能边查边写。</summary>
+        public void EnsureFilled(NavContext nav)
+        {
+            var grid = GridFor(nav);
+            if (!_byNavId.TryGetValue(nav.Id, out var e))
+            {
+                throw new InvalidOperationException($"开放格缓存缺少 nav {nav.Id}。");
+            }
+
+            if (e.Filled) return;
+            int n = nav.NavCellsPerSide;
+            int n2 = n * n;
+            if (grid.Length < 2 * n2)
+            {
+                throw new InvalidOperationException($"开放格缓存长度 {grid.Length} 不足 nav {nav.Id} 的 {2 * n2}。");
+            }
+
+            Fill(grid, nav.Walk, n, 0, n2);
+            Fill(grid, nav.UpPass, n, n2, n2);
+            e.Filled = true;
+        }
+    }
+
+    /// <summary>该格的 3×3 邻域(界内)是否全可走。缓存必须已经由 EnsureFilled 写满。</summary>
+    public static bool IsOpen(byte[] grid, int cell, int levelOffset)
+    {
+        byte v = grid[levelOffset + cell];
+        if (v == 0)
+        {
+            throw new InvalidOperationException($"开放格缓存未填充: cell={cell} levelOffset={levelOffset}。");
+        }
+
+        return v == 1;
+    }
+
+    private static void Fill(byte[] grid, byte[] walk, int navCellsPerSide, int levelOffset, int count)
+    {
+        for (int cell = 0; cell < count; cell++)
+        {
+            if (grid[levelOffset + cell] != 0) continue;
+            int cy = cell / navCellsPerSide, cx = cell - cy * navCellsPerSide;
+            int open = 1;
+            for (int y = Math.Max(0, cy - 1); open != 0 && y <= Math.Min(navCellsPerSide - 1, cy + 1); y++)
+            {
+                for (int x = Math.Max(0, cx - 1); x <= Math.Min(navCellsPerSide - 1, cx + 1); x++)
+                {
+                    if (walk[y * navCellsPerSide + x] == 0) { open = 0; break; }
+                }
+            }
+
+            grid[levelOffset + cell] = open != 0 ? (byte)1 : (byte)2;
+        }
+    }
+
+    /// <summary>把圆盘推出所有相交的被挡格;返回 true 并写出修正位置与接触法线。</summary>
+    public static bool ResolveWalls(
+        byte[] walk, int navCellsPerSide, int navCellSizeCm,
+        Fix64 pxCm, Fix64 pyCm, Fix64 radiusCm,
+        out Fix64 outX, out Fix64 outY, out Fix64 normalX, out Fix64 normalY)
+    {
+        outX = pxCm;
+        outY = pyCm;
+        normalX = Fix64.Zero;
+        normalY = Fix64.Zero;
+        Fix64 navCellCm = Fix64.FromInt(navCellSizeCm);
+        int x0 = Math.Max(0, CrowdSimulationSpace.NavCellCoord(pxCm - radiusCm, navCellSizeCm));
+        int x1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pxCm + radiusCm, navCellSizeCm));
+        int y0 = Math.Max(0, CrowdSimulationSpace.NavCellCoord(pyCm - radiusCm, navCellSizeCm));
+        int y1 = Math.Min(navCellsPerSide - 1, CrowdSimulationSpace.NavCellCoord(pyCm + radiusCm, navCellSizeCm));
+        if (x0 == x1 && y0 == y1) return false; // 查询矩形只有一格就返回 false,不读 walk
+        bool moved = false;
+        Fix64 r2 = radiusCm * radiusCm;
+        Fix64 px = pxCm, py = pyCm;
+        for (int cy = y0; cy <= y1; cy++)
+        {
+            for (int cx = x0; cx <= x1; cx++)
+            {
+                if (walk[cy * navCellsPerSide + cx] != 0) continue;
+                Fix64 bx = Fix64.FromInt(cx) * navCellCm, by = Fix64.FromInt(cy) * navCellCm;
+                Fix64 qx = Fix64.Min(bx + navCellCm, Fix64.Max(bx, px));
+                Fix64 qy = Fix64.Min(by + navCellCm, Fix64.Max(by, py));
+                Fix64 dx = px - qx, dy = py - qy;
+                Fix64 d2 = dx * dx + dy * dy;
+                // Q31.32 下 FromFloat(1e-12f) 截断为 0,最小正 raw 量即守卫
+                if (d2 >= r2 || d2 <= Fix64.FromRaw(1)) continue;
+                CrowdContactNormal.Normalize(ref dx, ref dy, d2);
+                px = qx + dx * radiusCm;
+                py = qy + dy * radiusCm;
+                normalX = dx;
+                normalY = dy;
+                moved = true;
+            }
+        }
+
+        outX = px;
+        outY = py;
+        return moved;
+    }
+}

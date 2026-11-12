@@ -136,6 +136,9 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
+            Register("CrowdSimulationAgent", SetCrowdSimulationAgent, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationAgent>.ComponentType);
+            Register("CrowdSimulationStructure", SetCrowdSimulationStructure, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationStructure>.ComponentType);
+            Register("CrowdSimulationPathSpan", SetCrowdSimulationPathSpan, null, Component<Ludots.Core.CrowdSimulation.CrowdSimulationPathSpan>.ComponentType);
             Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
@@ -1968,10 +1971,62 @@ private static void SetMass2D(Entity entity, JsonNode data, ComponentAuthoringCo
                 throw new InvalidOperationException("MassNavigationAgent requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassNavigationAgent", "profileId");
+            ValidateProperties(obj, "MassNavigationAgent", "profileId", "agentTypeId");
             string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
+            string agentTypeId = RequireStringProperty(obj, "agentTypeId", "MassNavigationAgent");
             int profileKey = MassNavigationProfileRegistry.Register(profileId);
-            entity.Add(new MassNavigationAgent { ProfileId = profileKey });
+            entity.Add(new MassNavigationAgent { ProfileId = profileKey, AgentTypeId = agentTypeId });
+        }
+
+        private static void SetCrowdSimulationAgent(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationAgent requires an object payload.");
+            }
+
+            var facts = Ludots.Core.CrowdSimulation.Config.CrowdUnitTemplateFacts.Parse("template", obj);
+            // 模板装载不持有会话的档案表。下标在 CrowdSimUnits 生成时写入；0 是合法下标，未写入用 -1。
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationAgent
+            {
+                ProfileIndex = -1,
+                AgentTypeIndex = -1,
+                SpeedCmPerSec = facts.SpeedCmPerSec,
+                PushPriority = facts.PushPriority,
+                AutoDeploy = facts.AutoDeploy,
+            });
+        }
+
+        private static void SetCrowdSimulationStructure(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationStructure requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationStructure", "template");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationStructure
+            {
+                Template = RequireStringProperty(obj, "template", "CrowdSimulationStructure"),
+            });
+        }
+
+        private static void SetCrowdSimulationPathSpan(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CrowdSimulationPathSpan requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CrowdSimulationPathSpan", "fromXCm", "fromYCm", "toXCm", "toYCm", "widthCm");
+            entity.Add(new Ludots.Core.CrowdSimulation.CrowdSimulationPathSpan
+            {
+                FromXCm = ReadIntProperty(obj, "fromXCm", "CrowdSimulationPathSpan"),
+                FromYCm = ReadIntProperty(obj, "fromYCm", "CrowdSimulationPathSpan"),
+                ToXCm = ReadIntProperty(obj, "toXCm", "CrowdSimulationPathSpan"),
+                ToYCm = ReadIntProperty(obj, "toYCm", "CrowdSimulationPathSpan"),
+                WidthCm = ReadIntProperty(obj, "widthCm", "CrowdSimulationPathSpan"),
+            });
         }
 
         private static void SetMassNavigationBlocker(Entity entity, JsonNode data)

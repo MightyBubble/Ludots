@@ -12,12 +12,12 @@ public static class MassNavigationIds
         }
 
         if (engine.GetService(MassNavigationKeys.RuntimeBinding) is not Runtime.MassNavigationRuntimeBinding binding ||
-            binding.Current is not Runtime.MassNavigationSimulationRuntime simulation)
+            binding.Current is not Runtime.MassNavigationSimulationRuntime)
         {
             return false;
         }
 
-        return string.Equals(mapId, simulation.Config.MapId, System.StringComparison.Ordinal);
+        return string.Equals(mapId, binding.CurrentMapId.Value, System.StringComparison.Ordinal);
     }
 
     public static bool IsCurrentNavigationMap(GameEngine engine)

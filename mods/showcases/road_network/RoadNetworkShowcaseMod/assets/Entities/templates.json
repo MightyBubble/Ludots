@@ -31,7 +31,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "Small"
+        "profileId": "Small",
+        "agentTypeId": "RoadColumn"
       },
       "AttributeBuffer": {
         "base": {
@@ -85,7 +86,8 @@
         ]
       },
       "MassNavigationAgent": {
-        "profileId": "Small"
+        "profileId": "Small",
+        "agentTypeId": "RoadColumn"
       },
       "AttributeBuffer": {
         "base": {

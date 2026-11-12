@@ -149,6 +149,21 @@ namespace Ludots.Core.Mathematics.FixedPoint
             return new Fix64(Fixed64.DivPrecise(a.RawValue, b.RawValue));
         }
 
+        /// <summary>
+        /// 除以正整数。商的 raw 是被除数 raw 的 C# 整数除法（向零）。
+        /// <c>Fix64DivPositiveIntTests.DivPositiveInt_MatchesOperatorDiv_OnFixedSeed</c> 用种子 20261013 抽 300000 组：
+        /// 下标模 8 轮换 raw（0、<see cref="long.MaxValue"/>、<see cref="long.MinValue"/>、1、-1、非负随机、负随机、全范围随机），
+        /// 下标模 5 轮换正除数（1、<see cref="int.MaxValue"/>、6250、1 到 63、1 到 <see cref="int.MaxValue"/> 减 1）。
+        /// 每组断言与 <c>value / Fix64.FromInt(divisor)</c> 的 raw 相同。
+        /// 同一测试再用该种子抽 4096 个小于等于 0 的除数，并单测除数 0、-1、<see cref="int.MinValue"/>，断言抛出 <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Fix64 DivPositiveInt(Fix64 value, int divisor)
+        {
+            if (divisor <= 0) throw new ArgumentOutOfRangeException(nameof(divisor));
+            return new Fix64(value.RawValue / divisor);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Fix64 operator %(Fix64 a, Fix64 b) => new Fix64(a.RawValue % b.RawValue);
 

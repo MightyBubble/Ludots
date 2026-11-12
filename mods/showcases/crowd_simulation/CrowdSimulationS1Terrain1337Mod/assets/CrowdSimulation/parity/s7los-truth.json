@@ -1,0 +1,56 @@
+{
+  "fixedHz": 30,
+  "mapId": "crowd_simulation_s1337",
+  "seed": 1337,
+  "fogCellsPerSide": 64,
+  "eyeCm": 1000,
+  "note": "L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 缺省表示无不透明格、数值表示不透明格索引;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。",
+  "fromFogCell": [
+    10,
+    10
+  ],
+  "toFogCell": [
+    16,
+    10
+  ],
+  "hAvgTRaw": 171798691840,
+  "cases": [
+    {
+      "name": "biteThreshold",
+      "hMaxRaw": {
+        "651": 64424509439
+      },
+      "expect": false,
+      "got": false
+    },
+    {
+      "name": "thresholdExact",
+      "hMaxRaw": {
+        "651": 64424509440
+      },
+      "expect": false,
+      "got": false
+    },
+    {
+      "name": "belowBothTrees",
+      "hMaxRaw": {
+        "651": 62277025792
+      },
+      "expect": true,
+      "got": true
+    },
+    {
+      "name": "clearLos",
+      "hMaxRaw": {},
+      "expect": true,
+      "got": true
+    },
+    {
+      "name": "opaqueMidBlocks",
+      "hMaxRaw": {},
+      "opaque": 653,
+      "expect": false,
+      "got": false
+    }
+  ]
+}

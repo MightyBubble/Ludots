@@ -1,0 +1,14 @@
+{
+  "units": 50000,
+  "warmupTicks": 40,
+  "measuredTicks": 200,
+  "budgetMs": 33,
+  "ticks": 240,
+  "script": [
+    { "tick": 0, "cmd": { "type": "spawn", "count": 50000 } },
+    { "tick": 2, "cmd": { "type": "order", "player": 1, "xCm": 1200000, "yCm": 800000, "shape": "box" } },
+    { "tick": 2, "cmd": { "type": "order", "player": 2, "xCm": 1200000, "yCm": 800000, "shape": "box" } },
+    { "tick": 2, "cmd": { "type": "order", "player": 3, "xCm": 1200000, "yCm": 800000, "shape": "box" } },
+    { "tick": 2, "cmd": { "type": "order", "player": 4, "xCm": 1200000, "yCm": 800000, "shape": "box" } }
+  ]
+}

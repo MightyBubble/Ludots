@@ -131,10 +131,10 @@ namespace CameraAcceptanceMod.Systems
             const string statusLine = "Blue frame is the active board boundary for the current map.";
             const string guidanceLine = "Ground clicks outside the frame are clamped by Core to the nearest board boundary.";
 
-            overlay.AddRect(x, y, width, height, PanelFillColor, PanelBorderColor);
-            overlay.AddText(x + 12, y + 10, boundsLine, 16, TextColor);
-            overlay.AddText(x + 12, y + 32, statusLine, 14, TextColor);
-            overlay.AddText(x + 12, y + 52, guidanceLine, 12, TextColor);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, width, height, PanelFillColor, PanelBorderColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y + 10, boundsLine, 16, TextColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y + 32, statusLine, 14, TextColor);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 12, y + 52, guidanceLine, 12, TextColor);
         }
     }
 }

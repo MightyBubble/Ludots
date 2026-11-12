@@ -47,12 +47,26 @@ namespace Ludots.Core.Config
             float CurrentValue);
 
         private readonly World _world;
+        private readonly TemplateBatchComponentAdmission _admission = new();
         private readonly EntityTemplateKeyRegistry _templateKeys;
         private readonly PresentationStableIdAllocator? _stableIds;
         private readonly ISpatialPartitionWorld? _partition;
         private readonly WorldSizeSpec _worldSizeSpec;
         private readonly Entity[] _scratchEntities;
-        private readonly Dictionary<string, TemplateSpawnDescriptor> _descriptors = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, DescriptorCacheEntry> _descriptors = new(StringComparer.Ordinal);
+
+        private readonly struct DescriptorCacheEntry
+        {
+            public DescriptorCacheEntry(TemplateSpawnDescriptor descriptor, int admissionGeneration)
+            {
+                Descriptor = descriptor;
+                AdmissionGeneration = admissionGeneration;
+            }
+
+            public TemplateSpawnDescriptor Descriptor { get; }
+
+            public int AdmissionGeneration { get; }
+        }
 
         public TemplateEntityBatchSpawner(
             World world,
@@ -76,6 +90,18 @@ namespace Ludots.Core.Config
         }
 
         public int ScratchCapacity => _scratchEntities.Length;
+
+        public void RegisterBatchComponent<T>(string componentName) where T : unmanaged
+        {
+            _admission.Register<T>(componentName);
+        }
+
+        public bool UnregisterBatchComponent(string componentName)
+        {
+            return _admission.Unregister(componentName);
+        }
+
+        public int LargestCreatedBatch { get; private set; }
 
         public double LastWorldCreateMs { get; private set; }
 
@@ -114,7 +140,9 @@ namespace Ludots.Core.Config
             out ReadOnlySpan<Entity> createdEntities,
             Span<int> createdStableIds = default,
             Span<VisualTransform> createdVisuals = default,
-            Span<CullState> createdCulls = default)
+            Span<CullState> createdCulls = default,
+            IRuntimeSpawnInstanceInitializer? instanceInitializer = null,
+            ReadOnlySpan<int> instanceInitializerIndices = default)
         {
             createdEntities = default;
             if (requests.Length == 0)
@@ -209,6 +237,17 @@ namespace Ludots.Core.Config
                 signature += Component<EntityInfoTitleToken>.Signature;
             }
 
+            if (instanceInitializer != null)
+            {
+                if (instanceInitializerIndices.Length < requests.Length)
+                {
+                    throw new InvalidOperationException(
+                        "SPAWN.RUNTIME.ERR.InstanceInitializerIndexMissing: batch initializer requires one index per request.");
+                }
+
+                signature = instanceInitializer.AppendSignature(signature);
+            }
+
             long createStart = Stopwatch.GetTimestamp();
             _world.Create(_scratchEntities.AsSpan(0, requests.Length), signature, requests.Length);
             LastWorldCreateMs = ElapsedMs(createStart);
@@ -223,6 +262,18 @@ namespace Ludots.Core.Config
                 createdVisuals,
                 createdCulls);
             LastFillCreatedBatchMs = ElapsedMs(fillStart);
+            if (instanceInitializer != null)
+            {
+                instanceInitializer.WriteChunk(
+                    _world,
+                    _scratchEntities.AsSpan(0, requests.Length),
+                    instanceInitializerIndices.Slice(0, requests.Length));
+            }
+
+            if (requests.Length > LargestCreatedBatch)
+            {
+                LargestCreatedBatch = requests.Length;
+            }
 
             createdEntities = _scratchEntities.AsSpan(0, requests.Length);
             return true;
@@ -579,6 +630,8 @@ namespace Ludots.Core.Config
                             SingleRootTransformSync = 0,
                         };
                     }
+
+                    descriptor.WriteAdmitted(ref chunk, componentIndex);
                 }
 
                 batchIndex += run;
@@ -589,13 +642,16 @@ namespace Ludots.Core.Config
 
         private bool TryGetDescriptor(string templateId, EntityTemplate template, out TemplateSpawnDescriptor descriptor)
         {
-            if (_descriptors.TryGetValue(templateId, out descriptor))
+            int generation = _admission.Generation;
+            if (_descriptors.TryGetValue(templateId, out DescriptorCacheEntry cached) &&
+                cached.AdmissionGeneration == generation)
             {
+                descriptor = cached.Descriptor;
                 return descriptor.IsCompatible;
             }
 
-            descriptor = TemplateSpawnDescriptor.Create(templateId, template, _templateKeys);
-            _descriptors[templateId] = descriptor;
+            descriptor = TemplateSpawnDescriptor.Create(templateId, template, _templateKeys, _admission);
+            _descriptors[templateId] = new DescriptorCacheEntry(descriptor, generation);
             return descriptor.IsCompatible;
         }
 
@@ -829,6 +885,7 @@ namespace Ludots.Core.Config
             public readonly int OnSpawnEffectTemplateId;
             public readonly ComponentType[] TagComponentTypes;
             private readonly AttributeSeed[] _attributeSeeds;
+            private readonly AdmittedComponentSeed[] _admitted;
 
             private TemplateSpawnDescriptor(
                 bool isCompatible,
@@ -858,7 +915,8 @@ namespace Ludots.Core.Config
                 bool hasPlayerOwner,
                 int onSpawnEffectTemplateId,
                 ComponentType[] tagComponentTypes,
-                AttributeSeed[] attributeSeeds)
+                AttributeSeed[] attributeSeeds,
+                AdmittedComponentSeed[]? admittedSeeds = null)
             {
                 IsCompatible = isCompatible;
                 BaseSignature = baseSignature;
@@ -888,6 +946,15 @@ namespace Ludots.Core.Config
                 OnSpawnEffectTemplateId = onSpawnEffectTemplateId;
                 TagComponentTypes = tagComponentTypes ?? Array.Empty<ComponentType>();
                 _attributeSeeds = attributeSeeds ?? Array.Empty<AttributeSeed>();
+                _admitted = admittedSeeds ?? Array.Empty<AdmittedComponentSeed>();
+            }
+
+            public void WriteAdmitted(ref Chunk chunk, int componentIndex)
+            {
+                for (int i = 0; i < _admitted.Length; i++)
+                {
+                    _admitted[i].Write(ref chunk, componentIndex);
+                }
             }
 
             public AttributeBuffer CreateAttributeBuffer(AttributeSeed[] overrideSeeds = null)
@@ -992,7 +1059,11 @@ namespace Ludots.Core.Config
                 return snapshot;
             }
 
-            public static TemplateSpawnDescriptor Create(string templateId, EntityTemplate template, EntityTemplateKeyRegistry templateKeys)
+            public static TemplateSpawnDescriptor Create(
+                string templateId,
+                EntityTemplate template,
+                EntityTemplateKeyRegistry templateKeys,
+                TemplateBatchComponentAdmission admission)
             {
                 if (template == null)
                 {
@@ -1021,18 +1092,18 @@ namespace Ludots.Core.Config
                     return Incompatible(onSpawnEffectTemplateId);
                 }
 
-                if (!IsBatchCandidate(template.Components))
+                if (!IsBatchCandidate(template.Components, admission))
                 {
                     return Incompatible(onSpawnEffectTemplateId);
                 }
 
-                if (!TryValidateSupportedComponents(template.Components))
+                if (!TryValidateSupportedComponents(template.Components, admission))
                 {
                     return Incompatible(onSpawnEffectTemplateId);
                 }
 
                 Name name = ParseName(templateId, template.Components);
-                ComponentType[] tagComponentTypes = CollectTagComponentTypes(templateId, template.Components);
+                ComponentType[] tagComponentTypes = CollectTagComponentTypes(templateId, template.Components, admission);
 
                 var defaultWorldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
                 if (template.Components.TryGetValue("WorldPositionCm", out JsonNode worldPositionNode))
@@ -1229,6 +1300,12 @@ namespace Ludots.Core.Config
                     signature += new Signature(tagComponentTypes[i]);
                 }
 
+                AdmittedComponentSeed[] admitted = admission.ProbeAll(templateId, template.Components);
+                for (int i = 0; i < admitted.Length; i++)
+                {
+                    signature += admitted[i].ComponentSignature;
+                }
+
                 return new TemplateSpawnDescriptor(
                     isCompatible: true,
                     signature,
@@ -1257,7 +1334,8 @@ namespace Ludots.Core.Config
                     hasPlayerOwner,
                     onSpawnEffectTemplateId: onSpawnEffectTemplateId,
                     tagComponentTypes,
-                    attributeSeeds);
+                    attributeSeeds,
+                    admitted);
             }
 
             private static TemplateSpawnDescriptor Incompatible(int onSpawnEffectTemplateId)
@@ -1293,14 +1371,36 @@ namespace Ludots.Core.Config
                     attributeSeeds: Array.Empty<AttributeSeed>());
             }
 
-            private static bool IsBatchCandidate(IReadOnlyDictionary<string, JsonNode> components)
+            private static bool IsBatchCandidate(
+                IReadOnlyDictionary<string, JsonNode> components,
+                TemplateBatchComponentAdmission admission)
             {
-                return components.ContainsKey("Name") &&
-                       components.ContainsKey("WorldPositionCm") &&
-                       components.ContainsKey("FacingDirection");
+                if (!components.ContainsKey("Name"))
+                {
+                    return false;
+                }
+
+                if (components.ContainsKey("WorldPositionCm") && components.ContainsKey("FacingDirection"))
+                {
+                    return true;
+                }
+
+                // 没有位姿的模板只有在至少带一个已准入组件时才进批车道。
+                // Name+Team 这种原单条模板不会因为 Team 在白名单里就被新拉上来。
+                foreach (string componentName in components.Keys)
+                {
+                    if (admission.IsAdmitted(componentName))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
 
-            private static bool TryValidateSupportedComponents(IReadOnlyDictionary<string, JsonNode> components)
+            private static bool TryValidateSupportedComponents(
+                IReadOnlyDictionary<string, JsonNode> components,
+                TemplateBatchComponentAdmission admission)
             {
                 foreach (string componentName in components.Keys)
                 {
@@ -1322,7 +1422,8 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "SpatialPartitionExcluded", StringComparison.Ordinal))
+                        string.Equals(componentName, "SpatialPartitionExcluded", StringComparison.Ordinal) ||
+                        admission.IsAdmitted(componentName))
                     {
                         continue;
                     }
@@ -1340,12 +1441,14 @@ namespace Ludots.Core.Config
 
             private static ComponentType[] CollectTagComponentTypes(
                 string templateId,
-                IReadOnlyDictionary<string, JsonNode> components)
+                IReadOnlyDictionary<string, JsonNode> components,
+                TemplateBatchComponentAdmission admission)
             {
                 List<ComponentType>? collected = null;
                 foreach ((string componentName, JsonNode node) in components)
                 {
-                    if (IsBuiltInBatchComponent(componentName))
+                    if (IsBuiltInBatchComponent(componentName) ||
+                        admission.IsAdmitted(componentName))
                     {
                         continue;
                     }

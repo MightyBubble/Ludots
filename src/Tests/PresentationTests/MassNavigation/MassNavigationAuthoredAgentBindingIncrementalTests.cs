@@ -769,12 +769,12 @@ namespace Ludots.Tests.Presentation
                 teamRelations,
                 config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity,
                 config.RelationshipPolicy.CooperativeRelation));
-            var mapId = new MapId(config.MapId);
+            var mapId = new MapId(MassNavigationOrderChainTests.TestMapId);
             var runtimeBinding = new MassNavigationRuntimeBinding();
             runtimeBinding.Activate(mapId, simulation);
             runtimeBinding.MarkPrepared(mapId, simulation);
             engine.SetService(MassNavigationKeys.RuntimeBinding, runtimeBinding);
-            engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = config.MapId }));
+            engine.SetCurrentMapSessionForTests(new MapSession(mapId, new MapConfig { Id = MassNavigationOrderChainTests.TestMapId }));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity agent0 = CreateAuthoredAgentEntity(engine.World, localX: 1000f, localY: 1000f, layer);
