@@ -345,6 +345,10 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PresenterEmitCache> emitCaches = chunk.GetSpan<PresenterEmitCache>();
                 bool hasStaticStableVisual = chunk.Has<PerfStaticStableVisual>();
                 bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
+                bool hasTransformOverride = chunk.Has<PresenterInstanceTransformOverride>();
+                Span<PresenterInstanceTransformOverride> transformOverrides = hasTransformOverride
+                    ? chunk.GetSpan<PresenterInstanceTransformOverride>()
+                    : default;
 
                 foreach (int index in chunk)
                 {
@@ -394,7 +398,8 @@ namespace Ludots.Core.Presentation.Systems
                         ref scales[index],
                         ref emitCaches[index],
                         hasStaticStableVisual,
-                        hasRetainedPresentationRequest);
+                        hasRetainedPresentationRequest,
+                        hasTransformOverride ? transformOverrides[index] : default);
                 }
             }
         }
@@ -467,6 +472,9 @@ namespace Ludots.Core.Presentation.Systems
 
                 Components<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache> childTransforms =
                     World.Get<PresenterTransformSource, PresenterWorldPosition, PresenterWorldPlanePosition, PresenterWorldRotation, PresenterWorldFacing, PresenterWorldScale, PresenterEmitCache>(child);
+                PresenterInstanceTransformOverride instanceOverride = World.Has<PresenterInstanceTransformOverride>(child)
+                    ? World.Get<PresenterInstanceTransformOverride>(child)
+                    : default;
                 ApplyFastParentAttachment(
                     child,
                     in slot.Attachment,
@@ -482,7 +490,8 @@ namespace Ludots.Core.Presentation.Systems
                     ref childTransforms.t5,
                     ref childTransforms.t6,
                     World.Has<PerfStaticStableVisual>(child),
-                    World.Has<PerfRetainedPresentationRequest>(child));
+                    World.Has<PerfRetainedPresentationRequest>(child),
+                    in instanceOverride);
             }
 
             return requiresInheritedPropagation;
@@ -541,7 +550,8 @@ namespace Ludots.Core.Presentation.Systems
             ref PresenterWorldScale scale,
             ref PresenterEmitCache emitCache,
             bool hasStaticStableVisual,
-            bool hasRetainedPresentationRequest)
+            bool hasRetainedPresentationRequest,
+            in PresenterInstanceTransformOverride instanceOverride)
         {
             Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
             Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
@@ -549,10 +559,19 @@ namespace Ludots.Core.Presentation.Systems
                 ? normalizedParentScale * config.Offset
                 : config.Offset;
             Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
             Quaternion nextRotation = VisualMath.NormalizeOrIdentity(
                 normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
             Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+            if (instanceOverride.HasOverride)
+            {
+                PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                    in instanceOverride,
+                    ref nextPosition,
+                    ref nextRotation,
+                    ref nextScale);
+            }
+
+            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
             bool changed =
                 source.Value != TransformSource.AttachedToParent ||
                 position.Value != nextPosition ||

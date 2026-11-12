@@ -38,8 +38,9 @@ void main()
     vec4 inst = instanceData[instanceVec4 + 3];
     vec3 pos = vec3(tC0.w, tC1.w, tC2.w);
 
-    int poseRow = int(inst.x + 0.5);
-    int packedRgb = int(inst.y + 0.5);
+    // CPU 写入的是 ≤ 2^24-1 的精确整数，直接截断；+0.5 在 2^23 以上会按就近取偶进位（白色 0xFFFFFF 变成 2^24，三通道全成 0）
+    int poseRow = int(inst.x);
+    int packedRgb = int(inst.y);
     vec3 tint = vec3(
         float(packedRgb % 256),
         float((packedRgb / 256) % 256),
@@ -47,7 +48,7 @@ void main()
 
     // 朝向 = 游走轨迹切线（与网格路径旋转一致），位置 = 驻留点 + 游走
     float heading;
-    vec3 wander = CrowdWanderOffset(int(inst.w + 0.5), uTime, heading);
+    vec3 wander = CrowdWanderOffset(int(inst.w), uTime, heading);
     pos += wander * uWanderScale;
     float bakedYaw = atan(tC2.x, tC2.z);
     float yaw = mix(bakedYaw, heading, uWanderScale);

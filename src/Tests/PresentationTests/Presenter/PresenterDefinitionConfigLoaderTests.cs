@@ -5149,6 +5149,301 @@ namespace Ludots.Tests.Presentation
             Assert.That(overrideData.InstanceChildren[0].InstanceOverride!.InstanceBehaviors[0].Sound.SoundAssetId, Is.EqualTo(3));
         }
 
+        [Test]
+        public void Load_RejectsBoneIdWhenTargetIsNotBone()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bone_id_without_bone_target",
+                    "behaviors": [
+                      {
+                        "slot": "attachment",
+                        "kind": "Attachment",
+                        "activeByDefault": true,
+                        "attachment": {
+                          "boneId": 3,
+                          "offset": [0, 0.5, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": false
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException omitted = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(omitted.Message, Does.Contain("bone_id_without_bone_target"));
+            Assert.That(omitted.Message, Does.Contain("attachment"));
+            Assert.That(omitted.Message, Does.Contain("target must be Bone when boneId is present"));
+
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bone_id_with_parent_target",
+                    "behaviors": [
+                      {
+                        "slot": "attachment",
+                        "kind": "Attachment",
+                        "activeByDefault": true,
+                        "attachment": {
+                          "target": "Parent",
+                          "boneId": 3,
+                          "offset": [0, 0.5, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": false
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            (_, _, pipeline, catalog) = BuildPipeline();
+            loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException parentTarget = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(parentTarget.Message, Does.Contain("bone_id_with_parent_target"));
+            Assert.That(parentTarget.Message, Does.Contain("attachment"));
+            Assert.That(parentTarget.Message, Does.Contain("target must be Bone when boneId is present"));
+        }
+
+        [Test]
+        public void Load_RejectsBoneTargetWithoutBoneId()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bone_target_missing_bone_id",
+                    "behaviors": [
+                      {
+                        "slot": "attachment",
+                        "kind": "Attachment",
+                        "activeByDefault": true,
+                        "attachment": {
+                          "target": "Bone",
+                          "offset": [0, 0.5, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": false
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(missing.Message, Does.Contain("bone_target_missing_bone_id"));
+            Assert.That(missing.Message, Does.Contain("presenters.json[bone_target_missing_bone_id].behaviors[0].attachment"));
+            Assert.That(missing.Message, Does.Contain("positive integer boneId"));
+            Assert.That(missing.Message, Does.Contain("got 0"));
+
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bone_target_zero_bone_id",
+                    "behaviors": [
+                      {
+                        "slot": "minimap",
+                        "kind": "Attachment",
+                        "activeByDefault": true,
+                        "attachment": {
+                          "target": "Bone",
+                          "boneId": 0,
+                          "offset": [0, 0, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": false
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            (_, _, pipeline, catalog) = BuildPipeline();
+            loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException zero = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(zero.Message, Does.Contain("bone_target_zero_bone_id"));
+            Assert.That(zero.Message, Does.Contain("presenters.json[bone_target_zero_bone_id].behaviors[0].attachment"));
+            Assert.That(zero.Message, Does.Contain("positive integer boneId (got 0)"));
+        }
+
+        [Test]
+        public void Load_AcceptsBoneAttachmentWhenTargetAndBoneIdAgree()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "bone_attachment_ok",
+                    "behaviors": [
+                      {
+                        "slot": "attachment",
+                        "kind": "Attachment",
+                        "activeByDefault": true,
+                        "attachment": {
+                          "target": "Bone",
+                          "boneId": 1,
+                          "offset": [0, 0.5, 0],
+                          "rotationOffset": [0, 0, 0, 1],
+                          "inheritScale": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PresenterDefinitionRegistry();
+            new PresenterDefinitionConfigLoader(pipeline, registry).Load(catalog);
+            PresenterDefinition definition = registry.Get(registry.GetId("bone_attachment_ok"));
+            Assert.That(definition.Behaviors[0].Attachment.Target, Is.EqualTo(AttachmentTarget.Bone));
+            Assert.That(definition.Behaviors[0].Attachment.BoneId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Load_RejectsInstanceChildAnchorOffsetCombinedWithTransformOverride()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "anchored_leaf",
+                    "anchor": { "offset": [0, 2, 0] }
+                  },
+                  { "id": "holder" },
+                  {
+                    "id": "root_instance_override",
+                    "children": [
+                      {
+                        "definitionId": "holder",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "anchored_leaf",
+                            "overrides": {
+                              "transform": { "localPosition": [3, 0, 0] }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("root_instance_override"));
+            Assert.That(ex.Message, Does.Contain("instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("anchored_leaf"));
+            Assert.That(ex.Message, Does.Contain("anchor.offset"));
+            Assert.That(ex.Message, Does.Contain("overrides.transform"));
+            Assert.That(ex.Message, Does.Contain("one local transform source"));
+        }
+
+        [Test]
+        public void Load_RejectsAnchorOffsetCombinedWithScaleOnlyTransformOverride()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "anchored_scaled",
+                    "anchor": { "offset": [0, 1, 0] }
+                  },
+                  {
+                    "id": "root_scale_only",
+                    "children": [
+                      {
+                        "definitionId": "anchored_scaled",
+                        "overrides": {
+                          "transform": { "localScale": [2, 2, 2] }
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("root_scale_only"));
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("anchored_scaled"));
+            Assert.That(ex.Message, Does.Contain("overrides.transform"));
+            Assert.That(ex.Message, Does.Contain("one local transform source"));
+        }
+
+        [Test]
+        public void Load_RejectsNestedInstanceBehaviorAttachmentAgainstReferencedAnchorOffset()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "anchored_part",
+                    "anchor": { "offset": [0, 1, 0] }
+                  },
+                  { "id": "holder" },
+                  {
+                    "id": "root_nested_attachment",
+                    "children": [
+                      {
+                        "definitionId": "holder",
+                        "childrenMode": "Instance",
+                        "instanceChildren": [
+                          {
+                            "definitionId": "anchored_part",
+                            "instanceBehaviors": [
+                              {
+                                "slot": "attachment",
+                                "kind": "Attachment",
+                                "activeByDefault": true,
+                                "attachment": {
+                                  "target": "Parent",
+                                  "offset": [0, 0.2, 0],
+                                  "rotationOffset": [0, 0, 0, 1],
+                                  "inheritScale": false
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("root_nested_attachment"));
+            Assert.That(ex.Message, Does.Contain("instanceChildren[0]"));
+            Assert.That(ex.Message, Does.Contain("instanceBehaviors"));
+            Assert.That(ex.Message, Does.Contain("anchored_part"));
+            Assert.That(ex.Message, Does.Contain("anchor.offset"));
+            Assert.That(ex.Message, Does.Contain("Attachment"));
+        }
+
 
         private static void NoOpExtensionCommand(in PresenterCommandExecutionContext context)
         {

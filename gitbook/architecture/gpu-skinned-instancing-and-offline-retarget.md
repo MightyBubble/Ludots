@@ -39,7 +39,10 @@ src/Client/.../RaylibPrimitiveRenderer.cs
 - 采样：关键帧全局 TRS + `bindPose⁻¹` 一次性驻模型数据 SSBO；每帧 compute（`skinning_pose_compute.glsl`）按行描述合成骨骼矩阵（raylib 5.5 `UpdateModelAnimationBones` 的 TRS 分解式逐位等价，5330 万元素对账合同）
 - 分桶键：`(meshAssetId, materialId, LOD, profile, clipIndex, 相位桶)`；姿势行驻姿势 SSBO（每行 `MaxBoneSlots` 个 mat4），实例（仿射变换 3×vec4 + poseRow/tint）驻实例 SSBO——零逐实例上传
 - 绘制：每帧每 program 一次 1 实例 raylib `DrawMeshInstanced` priming（NVIDIA GL 按首次调用模式特化 program，实验锁定），其余全部直接 `glDrawElementsInstanced`
-- 着色器：`skin(poseMatrices[poseRow*uPoseStride+uBoneBase+boneId], weights) * instanceTransform * mvp`（binding 2=姿势、3=实例，GLSL 430）
+- 着色器：`skin(poseMatrices[poseRow*uPoseStride+boneId], weights) * instanceTransform * mvp`（binding 2=姿势、3=实例，GLSL 430）。raylib 5.5 同一模型的所有网格共用一套骨架，骨骼编号直接就是姿势行里的槽位
+- 刚性网格（父节点是关节、glTF 里没有骨骼编号和权重）在加载时按层级绑到最近的关节祖先，权重 1；找不到关节祖先或有多套骨架时加载报错
+- 实例里打包的整数（poseRow、tint RGB、alpha）用截断解码：`0xFFFFFF` 这类 24 位值加 0.5 会被 float 进位成 2^24
+- 直接绘制路径自己负责状态：画不透明网格前关混合、画完按原状态恢复；网格没有顶点色时显式设白色默认值，不读上下文残留值
 - 能力门：`Gl43.Initialize` 探针——ARB 扩展 + 最小 430 着色器实测编译，缺失即 fail-closed（mac GL 4.1 不在此特性级）
 - GPU 计时：`gpuSkinPoseGpu/gpuSkinMainGpu/gpuSkinShadowGpu` 三列（glQueryCounter 延迟回读）
 
