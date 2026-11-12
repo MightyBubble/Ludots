@@ -19,7 +19,6 @@ layout(std430, binding = 3) readonly buffer InstanceBlock { vec4 instanceData[];
 
 uniform mat4 mvp;
 uniform float uInstanceBase;  // 本 draw 首实例的全局 vec4 组编号（SetShaderValue 走 glUniform1fv，float 合同）
-uniform float uBoneBase;      // 本 mesh 首骨骼在姿势行内的槽位基址
 uniform float uPoseStride;    // 每姿势行的 mat4 槽位数（容量 MaxBoneSlots）
 
 out vec2 fragTexCoord;
@@ -40,15 +39,16 @@ void main()
         vec4(transformC2.xyz, 0.0),
         vec4(transformC0.w, transformC1.w, transformC2.w, 1.0));
 
-    int poseRow = int(instance.x + 0.5);
-    int packedRgb = int(instance.y + 0.5);
+    // CPU 写入的是 ≤ 2^24-1 的精确整数，直接截断；+0.5 在 2^23 以上会按就近取偶进位（白色 0xFFFFFF 变成 2^24，三通道全成 0）
+    int poseRow = int(instance.x);
+    int packedRgb = int(instance.y);
     vec3 tint = vec3(
         packedRgb % 256,
         (packedRgb / 256) % 256,
         (packedRgb / 65536) % 256) / 255.0;
     float alpha = instance.z;
 
-    int poseBase = poseRow * int(uPoseStride + 0.5) + int(uBoneBase);
+    int poseBase = poseRow * int(uPoseStride + 0.5);
     mat4 skin = mat4(0.0);
     if (vertexBoneWeights.x > 0.0)
     {

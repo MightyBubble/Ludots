@@ -109,25 +109,21 @@ public sealed unsafe class RaylibGpuSkinnedSsboPipeline : IDisposable
     }
 
     /// <summary>延迟回读 compute 的 GPU 计时：query 结果就绪即上报（滞后约数帧）。</summary>
-    private unsafe void ReadBackPoseComputeGpuMs()
+    private void ReadBackPoseComputeGpuMs()
     {
         const int WarmupFrames = 3;
-        ulong end = 0;
-        Gl43.GetQueryObjectui64v(PoseComputeEndQuery, Gl43.GL_QUERY_RESULT_NO_WAIT, &end);
-        if (end == 0)
+        if (!Gl43.TryReadElapsedNanoseconds(PoseComputeStartQuery, PoseComputeEndQuery, out ulong elapsedNs))
         {
             return;
         }
 
-        ulong start = 0;
-        Gl43.GetQueryObjectui64v(PoseComputeStartQuery, Gl43.GL_QUERY_RESULT, &start);
         if (_poseComputeWarmupFrames < WarmupFrames)
         {
             _poseComputeWarmupFrames++;
             return;
         }
 
-        LastPoseComputeGpuMs = (end - start) / 1e6;
+        LastPoseComputeGpuMs = elapsedNs / 1e6;
     }
 
     /// <summary>模型驻留后调用一次：关键帧与逆绑定姿势写入模型数据 SSBO（同资产幂等）。</summary>

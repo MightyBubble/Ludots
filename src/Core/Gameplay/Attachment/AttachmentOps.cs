@@ -6,6 +6,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Movement;
+using Ludots.Core.Presentation.Components;
+using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Gameplay.Attachment
 {
@@ -431,6 +433,18 @@ namespace Ludots.Core.Gameplay.Attachment
             else if (!world.Has<FacingDirection>(child) && localPose.LocalFacingRad != Fix64.Zero)
             {
                 Upsert(world, child, new FacingDirection { AngleRad = localPose.LocalFacingRad.ToFloat() });
+            }
+
+            // 有世界坐标就要有画面变换，与 WorldPositionCm 组件装配、运行时出生同一合同；
+            // 否则 SourceHasVisualTransform 的展示规则会把吸附子件静默跳过。
+            if (!world.Has<VisualTransform>(child))
+            {
+                world.Add(child, VisualTransform.Default);
+            }
+
+            if (!world.Has<CullState>(child))
+            {
+                world.Add(child, new CullState { IsVisible = false, LOD = LODLevel.Low });
             }
         }
 

@@ -925,27 +925,41 @@ namespace Ludots.Core.Presentation.Config
             PresenterDefinition definition,
             IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
         {
-            ChildPresenterRef[] children = definition.Children;
-            if (children == null)
+            ValidateChildTransformOverrideAgainstAnchor(key, "children", definition.Children, parsedByKey);
+        }
+
+        private static void ValidateChildTransformOverrideAgainstAnchor(
+            string key,
+            string segmentName,
+            ChildPresenterRef[]? children,
+            IReadOnlyDictionary<string, PresenterDefinition> parsedByKey)
+        {
+            if (children == null || children.Length == 0)
             {
                 return;
             }
 
             for (int i = 0; i < children.Length; i++)
             {
-                if (!children[i].TransformOverride.HasOverride)
+                ref readonly ChildPresenterRef child = ref children[i];
+                string entryContext = $"{segmentName}[{i}]";
+                if (child.TransformOverride.HasOverride &&
+                    TryFindDefinitionById(parsedByKey, child.DefinitionId, out PresenterDefinition childDefinition) &&
+                    childDefinition.PositionOffset != Vector3.Zero)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Presenter '{key}' {entryContext} declares overrides.transform while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local transform source. Remove one of them.");
                 }
 
-                if (!TryFindDefinitionById(parsedByKey, children[i].DefinitionId, out PresenterDefinition childDefinition) ||
-                    childDefinition.PositionOffset == Vector3.Zero)
+                PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
+                if (instanceOverride?.InstanceChildren != null && instanceOverride.InstanceChildren.Length != 0)
                 {
-                    continue;
+                    ValidateChildTransformOverrideAgainstAnchor(
+                        key,
+                        $"{entryContext}.instanceChildren",
+                        instanceOverride.InstanceChildren,
+                        parsedByKey);
                 }
-
-                throw new InvalidOperationException(
-                    $"Presenter '{key}' children[{i}] declares overrides.transform.localPosition while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local position source. Remove one of them.");
             }
         }
 
@@ -2890,6 +2904,20 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
+            if (referenced.PositionOffset != Vector3.Zero)
+            {
+                for (int i = 0; i < instanceBehaviors.Length; i++)
+                {
+                    if (instanceBehaviors[i].Kind != BehaviorKind.Attachment)
+                    {
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Presenter '{key}' {entryContext}.instanceBehaviors[{i}] adds an Attachment behavior while referenced definition '{referenced.Key}' declares anchor.offset; the root transform accepts exactly one offset source. Remove one of them.");
+                }
+            }
+
             ChildPresenterRef[] instanceChildren = instanceOverride.InstanceChildren;
             for (int i = 0; i < instanceChildren.Length; i++)
             {
@@ -3098,7 +3126,10 @@ namespace Ludots.Core.Presentation.Config
                         break;
                     case BehaviorKind.Attachment:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
-                        slot.Attachment = ParseAttachment(obj["attachment"], $"{behaviorPath}.attachment");
+                        slot.Attachment = ParseAttachment(
+                            obj["attachment"],
+                            $"{behaviorPath}.attachment",
+                            ownerKey);
                         break;
                     case BehaviorKind.Sound:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
@@ -3719,7 +3750,7 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static AttachmentConfig ParseAttachment(JsonNode? node, string path)
+        private static AttachmentConfig ParseAttachment(JsonNode? node, string path, string ownerKey)
         {
             if (node is not JsonObject obj)
             {
@@ -3728,10 +3759,25 @@ namespace Ludots.Core.Presentation.Config
 
             RejectUnknownFields(obj, path, AttachmentFields);
 
+            bool wroteBoneId = obj["boneId"] != null;
+            int boneId = wroteBoneId ? obj["boneId"]!.GetValue<int>() : 0;
+            AttachmentTarget target = ParseEnum(obj["target"]?.GetValue<string>(), AttachmentTarget.Parent);
+            if (wroteBoneId && target != AttachmentTarget.Bone)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{ownerKey}' {path} writes boneId while target is '{target}'. target must be Bone when boneId is present.");
+            }
+
+            if (target == AttachmentTarget.Bone && boneId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Presenter '{ownerKey}' {path} sets target Bone and requires a positive integer boneId (got {boneId}).");
+            }
+
             return new AttachmentConfig
             {
-                Target = ParseEnum(obj["target"]?.GetValue<string>(), AttachmentTarget.Parent),
-                BoneId = obj["boneId"]?.GetValue<int>() ?? 0,
+                Target = target,
+                BoneId = boneId,
                 Offset = ParseVector3(obj["offset"]),
                 RotationOffset = ParseQuaternion(obj["rotationOffset"]),
                 InheritScale = obj["inheritScale"]?.GetValue<bool>() ?? false,

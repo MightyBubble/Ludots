@@ -26,7 +26,7 @@
 | 旋钮 | 范围 | 演示什么 |
 |------|------|----------|
 | 区域形状 | 模板 `RegionVolumeCm.shape`（circle/rect/凸 polygon/segment） | 触发区几何如何声明 |
-| 区域位置 | 地图 `PositionXCm/PositionYCm` 摆放 | 锚点兜底：体积随摆放走 |
+| 区域位置 | 地图 `PositionXCm/PositionYCm` 摆放 | 摆放位置盖过模板默认坐标，体积随摆放走 |
 | 谁触发 | `RegionVolumeTagFilterCm.tags` | any-of 过滤语义 |
 | 一次性粒度 | 图体闸门链（按过境次数/换成按 SourceEntity 记名单） | UE DoOnce 同款图体组合，入口 once 之外的正规做法 |
 | 刷什么刷哪 | `SpawnTemplate.template` + 坐标/锚点 | 波次内容数据化 |

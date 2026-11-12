@@ -476,6 +476,17 @@ namespace Ludots.Raylib.Render
                 return false;
             }
 
+            for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+            {
+                Mesh mesh = model.meshes[meshIndex];
+                if (mesh.boneIds == null || mesh.boneWeights == null || mesh.vboId == null
+                    || mesh.vboId[RaylibNativeResources.BoneIdsAttribLocation] == 0 || mesh.vboId[RaylibNativeResources.BoneWeightsAttribLocation] == 0)
+                {
+                    failure = $"meshAssetId={meshAssetId} path='{fullPath}' mesh[{meshIndex}] has no bone ids/weights; GPU skinning would read undefined bones for it.";
+                    return false;
+                }
+            }
+
             failure = null;
             return true;
         }
