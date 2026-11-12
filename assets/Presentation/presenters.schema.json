@@ -327,8 +327,8 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "target": { "enum": ["Parent"] },
-            "boneId": { "type": ["string", "integer"] },
+            "target": { "enum": ["Parent", "Bone"] },
+            "boneId": { "type": "integer", "minimum": 1 },
             "offset": { "$ref": "#/$defs/vec3" },
             "rotationOffset": { "$ref": "#/$defs/vec3" },
             "inheritScale": { "type": "boolean" }

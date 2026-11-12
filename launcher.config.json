@@ -159,6 +159,14 @@
       }
     },
     {
+      "name": "presenter_tree_override_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/presenter_tree_override/PresenterTreeOverrideShowcaseMod",
+        "projectPath": "PresenterTreeOverrideShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "presenter_blacksmith_large_world",
       "target": {
         "type": "path",

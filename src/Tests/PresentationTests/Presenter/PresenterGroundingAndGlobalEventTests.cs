@@ -403,18 +403,20 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_BoneAttached_ComposesAssetAndInstanceScale()
+        public void ResolveTransform_BoneAttached_KeepsPoseAlreadyWrittenByAttachment()
         {
             var instance = new PresenterTransformSnapshot
             {
                 TransformSource = TransformSource.BoneAttached,
                 WorldPosition = new Vector3(5f, 6f, 7f),
-                WorldRotation = Quaternion.Identity,
+                WorldRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.4f),
                 WorldScale = new Vector3(1.5f, 2f, 2.5f),
             };
 
             var instanceOverride = new PresenterInstanceTransformOverride
             {
+                LocalPosition = new Vector3(3f, 0f, 0f),
+                LocalRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.2f),
                 LocalScale = new Vector3(0.5f, 2f, 1f),
                 HasOverride = true,
             };
@@ -429,7 +431,8 @@ namespace Ludots.Tests.Presentation
                 instanceOverride);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(0.75f, 4f, 2.5f)));
+            Assert.That(resolved.Rotation, Is.EqualTo(VisualMath.NormalizeOrIdentity(instance.WorldRotation)));
+            Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
         }
 
         [Test]

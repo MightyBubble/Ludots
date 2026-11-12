@@ -104,6 +104,7 @@
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
+          "target": "Bone",
           "boneId": 1,
           "offset": [
             0,

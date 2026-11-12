@@ -1,0 +1,12 @@
+[
+  {
+    "id": "ptree.knight.clip.spinning",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "RaylibPlatformMeshesMod:assets/Models/Knight.glb#anim:11"
+      }
+    ]
+  }
+]
