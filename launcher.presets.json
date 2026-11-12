@@ -105,6 +105,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "presenter_tree_override_showcase_raylib",
+      "name": "Presenter Tree Override Showcase Raylib",
+      "selectors": [
+        "$presenter_tree_override_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "presenter_blacksmith_large_world_raylib",
       "name": "Presenter Blacksmith Large World Raylib",
       "selectors": [

@@ -871,7 +871,7 @@ namespace Ludots.Tests.ThreeC
             manager.Update(0.016f);
 
             behaviorInput.Clear();
-            // Look.Y+ 降低 pitch。负值会顶到最大俯仰，到不了这个用例要压住的视口角。
+            // Look.Y+ 视线上仰，pitch 减小，贴到下限；这个角度下视口角会离开有限高度图。
             behaviorInput.Apply(CameraBehaviorInputChannels.LookY, 200f, AttributeBindingMode.Override);
             behaviorInput.Apply(CameraBehaviorInputChannels.RotateHold, 1f, AttributeBindingMode.Override);
 

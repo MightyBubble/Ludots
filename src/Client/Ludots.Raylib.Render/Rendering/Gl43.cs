@@ -48,9 +48,8 @@ internal static unsafe class Gl43
     public const uint GL_VERSION = 0x1F00;
     public const uint GL_RENDERER = 0x1F01;
     public const uint GL_QUERY_RESULT = 0x8866;
-    public const uint GL_QUERY_RESULT_AVAILABLE = 0x8865;
+    public const uint GL_QUERY_RESULT_AVAILABLE = 0x8867;
     public const uint GL_TIMESTAMP = 0x8E28;
-    public const uint GL_QUERY_RESULT_NO_WAIT = 0x919D;
     public const uint GL_DRAW_INDIRECT_BUFFER = 0x8F3F;
     public const uint GL_COMMAND_BARRIER_BIT = 0x0040;
     public const uint GL_COPY_READ_BUFFER = 0x8F36;
@@ -211,9 +210,16 @@ internal static unsafe class Gl43
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate void EnableVertexAttribArrayDelegate(uint index);
+    public delegate void VertexAttrib4fDelegate(uint index, float x, float y, float z, float w);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate void DisableDelegate(uint capability);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    public delegate void EnableDelegate(uint capability);
+
+    [UnmanagedFunctionPointer(CallingConvention.Winapi)]
+    public delegate byte IsEnabledDelegate(uint capability);
 
     [UnmanagedFunctionPointer(CallingConvention.Winapi)]
     public delegate void VertexAttribDivisorDelegate(uint index, uint divisor);
@@ -268,7 +274,10 @@ internal static unsafe class Gl43
     public static ViewportDelegate Viewport = null!;
     public static VertexAttribPointerDelegate VertexAttribPointer = null!;
     public static EnableVertexAttribArrayDelegate EnableVertexAttribArray = null!;
+    public static VertexAttrib4fDelegate VertexAttrib4f = null!;
     public static DisableDelegate Disable = null!;
+    public static EnableDelegate Enable = null!;
+    public static IsEnabledDelegate IsEnabled = null!;
     public static VertexAttribDivisorDelegate VertexAttribDivisor = null!;
     public static GetUniformfvDelegate GetUniformfv = null!;
 
@@ -455,9 +464,50 @@ internal static unsafe class Gl43
         Viewport = Marshal.GetDelegateForFunctionPointer<ViewportDelegate>(Require(resolve, "glViewport"));
         VertexAttribPointer = Marshal.GetDelegateForFunctionPointer<VertexAttribPointerDelegate>(Require(resolve, "glVertexAttribPointer"));
         EnableVertexAttribArray = Marshal.GetDelegateForFunctionPointer<EnableVertexAttribArrayDelegate>(Require(resolve, "glEnableVertexAttribArray"));
+        VertexAttrib4f = Marshal.GetDelegateForFunctionPointer<VertexAttrib4fDelegate>(Require(resolve, "glVertexAttrib4f"));
         Disable = Marshal.GetDelegateForFunctionPointer<DisableDelegate>(Require(resolve, "glDisable"));
+        Enable = Marshal.GetDelegateForFunctionPointer<EnableDelegate>(Require(resolve, "glEnable"));
+        IsEnabled = Marshal.GetDelegateForFunctionPointer<IsEnabledDelegate>(Require(resolve, "glIsEnabled"));
         VertexAttribDivisor = Marshal.GetDelegateForFunctionPointer<VertexAttribDivisorDelegate>(Require(resolve, "glVertexAttribDivisor"));
         GetUniformfv = Marshal.GetDelegateForFunctionPointer<GetUniformfvDelegate>(Require(resolve, "glGetUniformfv"));
+    }
+
+    /// <summary>直绘不透明批次前关混合，返回调用前的混合状态。rlgl 只在初始化时开一次混合、
+    /// 之后不再重开，调用方必须用 <see cref="RestoreBlend"/> 原样还回去，否则后续按 alpha
+    /// 合成的屏幕叠加层会把透明像素当不透明黑色盖满整屏。</summary>
+    public static bool DisableBlendForOpaqueDraw()
+    {
+        bool wasEnabled = IsEnabled(GL_BLEND) != 0;
+        Disable(GL_BLEND);
+        return wasEnabled;
+    }
+
+    public static void RestoreBlend(bool wasEnabled)
+    {
+        if (wasEnabled)
+        {
+            Enable(GL_BLEND);
+        }
+    }
+
+    /// <summary>两枚 GL_TIMESTAMP 查询的间隔；结束查询尚未就绪时返回 false，不阻塞。
+    /// 只能对已经 QueryCounter 过的查询调用。</summary>
+    public static unsafe bool TryReadElapsedNanoseconds(uint startQuery, uint endQuery, out ulong elapsedNanoseconds)
+    {
+        elapsedNanoseconds = 0;
+        ulong available = 0;
+        GetQueryObjectui64v(endQuery, GL_QUERY_RESULT_AVAILABLE, &available);
+        if (available == 0)
+        {
+            return false;
+        }
+
+        ulong start = 0;
+        ulong end = 0;
+        GetQueryObjectui64v(startQuery, GL_QUERY_RESULT, &start);
+        GetQueryObjectui64v(endQuery, GL_QUERY_RESULT, &end);
+        elapsedNanoseconds = end - start;
+        return true;
     }
 
     private static IntPtr Require(Func<string, IntPtr> resolve, string name)
