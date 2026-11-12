@@ -9,7 +9,6 @@ public sealed class MassNavigationCadenceConfig
     public int TargetUpdateHz { get; set; }
     public int FlowStepHz { get; set; }
     public int FlowCrowdStampHz { get; set; }
-    public int FlowObstacleStampHz { get; set; }
     public int HardResolveHz { get; set; }
     public int EntitySyncHz { get; set; }
     public int MaxStepsPerFixedTick { get; set; }
@@ -29,7 +28,6 @@ public sealed class MassNavigationCadenceConfig
         ValidateHz(nameof(TargetUpdateHz), TargetUpdateHz, allowZero: true);
         ValidateHz(nameof(FlowStepHz), FlowStepHz, allowZero: true);
         ValidateHz(nameof(FlowCrowdStampHz), FlowCrowdStampHz, allowZero: true);
-        ValidateHz(nameof(FlowObstacleStampHz), FlowObstacleStampHz, allowZero: true);
         ValidateHz(nameof(HardResolveHz), HardResolveHz, allowZero: true);
         ValidateHz(nameof(EntitySyncHz), EntitySyncHz, allowZero: true);
 
@@ -65,7 +63,6 @@ internal readonly record struct MassNavigationCadenceStep(
     bool UpdateTargets,
     bool RefreshFlow,
     bool RefreshCrowd,
-    bool RefreshObstacles,
     bool RunHardResolve,
     bool SyncEntities,
     int AgentSliceIndex,
@@ -82,7 +79,6 @@ internal sealed class MassNavigationCadenceScheduler
     private DiscreteRateTickDistributor? _targetUpdate;
     private DiscreteRateTickDistributor? _flowStep;
     private DiscreteRateTickDistributor? _flowCrowd;
-    private DiscreteRateTickDistributor? _flowObstacle;
     private DiscreteRateTickDistributor? _hardResolve;
     private DiscreteRateTickDistributor? _entitySync;
 
@@ -93,7 +89,6 @@ internal sealed class MassNavigationCadenceScheduler
     private int _targetUpdateHz;
     private int _flowStepHz;
     private int _flowCrowdStampHz;
-    private int _flowObstacleStampHz;
     private int _hardResolveHz;
     private int _entitySyncHz;
 
@@ -101,7 +96,6 @@ internal sealed class MassNavigationCadenceScheduler
     private bool _roundUpdateTargets;
     private bool _roundRefreshFlow;
     private bool _roundRefreshCrowd;
-    private bool _roundRefreshObstacles;
     private bool _roundRunHardResolve;
     private bool _roundSyncEntities;
 
@@ -131,7 +125,6 @@ internal sealed class MassNavigationCadenceScheduler
             _roundUpdateTargets = ShouldRun(_targetUpdate);
             _roundRefreshFlow = ShouldRun(_flowStep);
             _roundRefreshCrowd = ShouldRun(_flowCrowd);
-            _roundRefreshObstacles = ShouldRun(_flowObstacle);
             _roundRunHardResolve = ShouldRun(_hardResolve);
             _roundSyncEntities = ShouldRun(_entitySync);
         }
@@ -148,7 +141,6 @@ internal sealed class MassNavigationCadenceScheduler
             _roundUpdateTargets,
             _roundRefreshFlow,
             _roundRefreshCrowd,
-            _roundRefreshObstacles,
             _roundRunHardResolve,
             _roundSyncEntities,
             sliceIndex,
@@ -189,7 +181,6 @@ internal sealed class MassNavigationCadenceScheduler
             _targetUpdateHz == _config.TargetUpdateHz &&
             _flowStepHz == _config.FlowStepHz &&
             _flowCrowdStampHz == _config.FlowCrowdStampHz &&
-            _flowObstacleStampHz == _config.FlowObstacleStampHz &&
             _hardResolveHz == _config.HardResolveHz &&
             _entitySyncHz == _config.EntitySyncHz)
         {
@@ -200,13 +191,11 @@ internal sealed class MassNavigationCadenceScheduler
         _targetUpdateHz = _config.TargetUpdateHz;
         _flowStepHz = _config.FlowStepHz;
         _flowCrowdStampHz = _config.FlowCrowdStampHz;
-        _flowObstacleStampHz = _config.FlowObstacleStampHz;
         _hardResolveHz = _config.HardResolveHz;
         _entitySyncHz = _config.EntitySyncHz;
         _targetUpdate = Reset(_targetUpdate, simHz, _config.TargetUpdateHz, 1);
         _flowStep = Reset(_flowStep, simHz, _config.FlowStepHz, 1);
         _flowCrowd = Reset(_flowCrowd, simHz, _config.FlowCrowdStampHz, 1);
-        _flowObstacle = Reset(_flowObstacle, simHz, _config.FlowObstacleStampHz, 1);
         _hardResolve = Reset(_hardResolve, simHz, _config.HardResolveHz, 1);
         _entitySync = Reset(_entitySync, simHz, _config.EntitySyncHz, 1);
     }
@@ -216,7 +205,6 @@ internal sealed class MassNavigationCadenceScheduler
         _targetUpdate = null;
         _flowStep = null;
         _flowCrowd = null;
-        _flowObstacle = null;
         _hardResolve = null;
         _entitySync = null;
         _sliceStepOrdinal = 0;

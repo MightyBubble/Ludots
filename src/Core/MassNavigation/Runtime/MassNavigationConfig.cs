@@ -170,7 +170,6 @@ public sealed class MassNavigationConfig
             "targetUpdateHz",
             "flowStepHz",
             "flowCrowdStampHz",
-            "flowObstacleStampHz",
             "hardResolveHz",
             "entitySyncHz",
             "maxStepsPerFixedTick",
