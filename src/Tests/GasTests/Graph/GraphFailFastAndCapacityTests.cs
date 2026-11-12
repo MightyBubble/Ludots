@@ -325,6 +325,40 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RelationshipQuery_Incoming_OverMaxTargets_ThrowsIncomplete()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRelationshipRuntime(world, out int typeId);
+            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+            Entity source = world.Create();
+            for (int i = 0; i < GraphVmLimits.MaxTargets + 1; i++)
+            {
+                runtime.EnsureLink(world.Create(), source, typeId);
+            }
+
+            GraphExecutionState state = CreateGraphState(world, api, source);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryIncoming, A = 0, Dst = (byte)typeId, Flags = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
+
+            InvalidOperationException? error = null;
+            try
+            {
+                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            }
+            catch (InvalidOperationException caught)
+            {
+                error = caught;
+            }
+
+            That(error, Is.Not.Null);
+            That(error!.Message, Does.Contain("RelationshipQueryIncomplete"));
+        }
+
+        [Test]
         public void RelationshipQuery_AllowTruncated_PublishesDroppedCount()
         {
             using var world = World.Create();

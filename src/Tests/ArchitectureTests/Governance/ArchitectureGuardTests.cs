@@ -1037,11 +1037,11 @@ namespace Ludots.Tests.Architecture.Governance
                     missing.Add($"{spec.Issue}: GasTests.csproj missing {spec.ModName}.csproj reference");
                 }
 
-                if (!acceptance.Contains("\"artifacts\"", StringComparison.Ordinal) ||
-                    !acceptance.Contains("\"showcases\"", StringComparison.Ordinal) ||
-                    !acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
+                string evidencePath = "artifacts/showcases/" + spec.ArtifactFolder;
+                if (!acceptance.Contains($"CommittedTestArtifacts.Resolve(\"{evidencePath}\")", StringComparison.Ordinal) &&
+                    !acceptance.Contains($"CommittedTestArtifacts.Resolve($\"{evidencePath}\")", StringComparison.Ordinal))
                 {
-                    missing.Add($"{spec.Issue}: acceptance test missing artifacts/showcases/{spec.ArtifactFolder}");
+                    missing.Add($"{spec.Issue}: acceptance test missing {evidencePath}");
                 }
 
                 if (spec.PurePhysics)
