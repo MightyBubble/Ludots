@@ -34,7 +34,7 @@ void main()
 
     // 游走：位置偏移 + 朝向对齐轨迹切线（实例表第 4 个 vec4 的 .w = 源索引）
     float heading;
-    vec3 wander = CrowdWanderOffset(int(inst.w + 0.5), uTime, heading) * uWanderScale;
+    vec3 wander = CrowdWanderOffset(int(inst.w), uTime, heading) * uWanderScale;
     float baseYaw = atan(tC2.x, tC2.z);
     float dy = (heading - baseYaw) * uWanderScale;
     float cs = cos(dy), sn = sin(dy);
@@ -46,8 +46,9 @@ void main()
         vec4(rotatedTransform[2], 0.0),
         vec4(tC0.w + wander.x, tC1.w + wander.y, tC2.w + wander.z, 1.0));
 
-    int poseRow = int(inst.x + 0.5);
-    int packedRgb = int(inst.y + 0.5);
+    // CPU 写入的是 ≤ 2^24-1 的精确整数，直接截断；+0.5 在 2^23 以上会按就近取偶进位（白色 0xFFFFFF 变成 2^24，三通道全成 0）
+    int poseRow = int(inst.x);
+    int packedRgb = int(inst.y);
     vec3 tint = vec3(
         float(packedRgb % 256),
         float((packedRgb / 256) % 256),

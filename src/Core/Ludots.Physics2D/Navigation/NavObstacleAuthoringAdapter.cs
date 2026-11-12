@@ -85,16 +85,7 @@ public static class NavObstacleAuthoringAdapter
                 }
             }
 
-            if (entityData.PositionXCm.HasValue != entityData.PositionYCm.HasValue)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{map.Id}' entity '{ResolveEntityContextId(entityData, i)}' authors PositionXCm/PositionYCm partially; set both or neither.");
-            }
-
-            bool hasAuthoredWorldPosition =
-                template.Components.ContainsKey("WorldPositionCm") ||
-                (entityData.Overrides != null && entityData.Overrides.ContainsKey("WorldPositionCm"));
-            if (entityData.PositionXCm.HasValue && !hasAuthoredWorldPosition)
+            if (entityData.TryResolvePlacementPositionCm(map.Id, ResolveEntityContextId(entityData, i), out int placementXCm, out int placementYCm))
             {
                 builder.WithOverride(
                     "WorldPositionCm",
@@ -102,8 +93,8 @@ public static class NavObstacleAuthoringAdapter
                     {
                         ["Value"] = new JsonObject
                         {
-                            ["X"] = entityData.PositionXCm.Value,
-                            ["Y"] = entityData.PositionYCm!.Value,
+                            ["X"] = placementXCm,
+                            ["Y"] = placementYCm,
                         },
                     });
             }

@@ -58,9 +58,131 @@ public static unsafe class RaylibNativeResources
     public static Model LoadModel(string fileName)
     {
         Model model = Rl.LoadModel(fileName);
+        if (model.boneCount > 0 && model.meshCount > 0 && RaylibGltfRigidMeshJoints.IsGltf(fileName))
+        {
+            try
+            {
+                BindRigidMeshesToJoints(model, RaylibGltfRigidMeshJoints.Read(fileName), fileName);
+            }
+            catch
+            {
+                Rl.UnloadModel(model);
+                throw;
+            }
+        }
+
         TrackIfResident(RaylibNativeResourceKind.Model, ModelIdentity(model), EstimateModelBytes(model));
         return model;
     }
+
+    public const int BoneIdsAttribLocation = 7;
+    public const int BoneWeightsAttribLocation = 8;
+    private const int RlUnsignedByte = 0x1401;
+    private const int RlFloat = 0x1406;
+
+    /// <summary>
+    /// 给刚性网格补“整体跟随祖先关节”的骨骼属性（编号=关节、权重 1），让 GPU 蒙皮与 raylib CPU 动画
+    /// 都把它当作单骨蒙皮处理；内存走 raylib 分配器、VBO 记进 mesh.vboId，由 UnloadModel 一并释放。
+    /// </summary>
+    private static void BindRigidMeshesToJoints(Model model, RaylibGltfRigidMeshJoints.MeshSkinSource[] sources, string fileName)
+    {
+        if (sources.Length != model.meshCount)
+        {
+            throw new InvalidOperationException(
+                $"model '{fileName}' raylib meshCount={model.meshCount} but glTF expands to {sources.Length} triangle primitives; mesh order contract with raylib 5.5 is broken.");
+        }
+
+        for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+        {
+            ref Mesh mesh = ref model.meshes[meshIndex];
+            RaylibGltfRigidMeshJoints.MeshSkinSource source = sources[meshIndex];
+            if (mesh.vertexCount != source.VertexCount)
+            {
+                throw new InvalidOperationException(
+                    $"model '{fileName}' mesh[{meshIndex}] vertexCount={mesh.vertexCount} but glTF node '{source.NodeName}' has {source.VertexCount}; mesh order contract with raylib 5.5 is broken.");
+            }
+
+            if (mesh.boneIds != null && mesh.boneWeights != null)
+            {
+                continue;
+            }
+
+            if (source.HasJoints)
+            {
+                throw new InvalidOperationException(
+                    $"model '{fileName}' mesh[{meshIndex}] node '{source.NodeName}' declares JOINTS_0/WEIGHTS_0 but raylib loaded no bone attributes.");
+            }
+
+            if (source.RigidJointIndex >= model.boneCount || source.RigidJointIndex > byte.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"model '{fileName}' mesh[{meshIndex}] node '{source.NodeName}' joint {source.RigidJointIndex} is outside boneCount={model.boneCount}.");
+            }
+
+            AttachRigidJointSkin(ref mesh, (byte)source.RigidJointIndex, model.boneCount);
+        }
+    }
+
+    private static void AttachRigidJointSkin(ref Mesh mesh, byte jointIndex, int boneCount)
+    {
+        int vertexCount = mesh.vertexCount;
+        byte* boneIds = (byte*)Rl.MemAlloc(vertexCount * 4);
+        float* boneWeights = (float*)Rl.MemAlloc(vertexCount * 4 * sizeof(float));
+        for (int v = 0; v < vertexCount; v++)
+        {
+            boneIds[v * 4] = jointIndex;
+            boneWeights[v * 4] = 1f;
+        }
+
+        mesh.boneIds = boneIds;
+        mesh.boneWeights = boneWeights;
+        mesh.boneCount = boneCount;
+        if (mesh.animVertices == null && mesh.vertices != null)
+        {
+            mesh.animVertices = (float*)Rl.MemAlloc(vertexCount * 3 * sizeof(float));
+            Buffer.MemoryCopy(mesh.vertices, mesh.animVertices, vertexCount * 3 * sizeof(float), vertexCount * 3 * sizeof(float));
+        }
+
+        if (mesh.animNormals == null && mesh.normals != null)
+        {
+            mesh.animNormals = (float*)Rl.MemAlloc(vertexCount * 3 * sizeof(float));
+            Buffer.MemoryCopy(mesh.normals, mesh.animNormals, vertexCount * 3 * sizeof(float), vertexCount * 3 * sizeof(float));
+        }
+
+        if (mesh.vaoId == 0 || mesh.vboId == null)
+        {
+            throw new InvalidOperationException("rigid joint skin requires an uploaded mesh VAO.");
+        }
+
+        if (!RlEnableVertexArrayNative(mesh.vaoId))
+        {
+            throw new InvalidOperationException($"rlEnableVertexArray({mesh.vaoId}) failed; VAO-less GL backends cannot carry bone attributes.");
+        }
+
+        mesh.vboId[BoneIdsAttribLocation] = RlLoadVertexBufferNative(boneIds, vertexCount * 4, false);
+        RlSetVertexAttributeNative(BoneIdsAttribLocation, 4, RlUnsignedByte, false, 0, 0);
+        RlEnableVertexAttributeNative(BoneIdsAttribLocation);
+        mesh.vboId[BoneWeightsAttribLocation] = RlLoadVertexBufferNative(boneWeights, vertexCount * 4 * sizeof(float), false);
+        RlSetVertexAttributeNative(BoneWeightsAttribLocation, 4, RlFloat, false, 0, 0);
+        RlEnableVertexAttributeNative(BoneWeightsAttribLocation);
+        RlDisableVertexArrayNative();
+    }
+
+    [DllImport("raylib", EntryPoint = "rlEnableVertexArray", CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.I1)]
+    private static extern bool RlEnableVertexArrayNative(uint vaoId);
+
+    [DllImport("raylib", EntryPoint = "rlDisableVertexArray", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void RlDisableVertexArrayNative();
+
+    [DllImport("raylib", EntryPoint = "rlLoadVertexBuffer", CallingConvention = CallingConvention.Cdecl)]
+    private static extern uint RlLoadVertexBufferNative(void* buffer, int size, [MarshalAs(UnmanagedType.I1)] bool dynamic);
+
+    [DllImport("raylib", EntryPoint = "rlSetVertexAttribute", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void RlSetVertexAttributeNative(uint index, int compSize, int type, [MarshalAs(UnmanagedType.I1)] bool normalized, int stride, nint offset);
+
+    [DllImport("raylib", EntryPoint = "rlEnableVertexAttribute", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void RlEnableVertexAttributeNative(uint index);
 
     public static void UnloadModel(Model model)
     {

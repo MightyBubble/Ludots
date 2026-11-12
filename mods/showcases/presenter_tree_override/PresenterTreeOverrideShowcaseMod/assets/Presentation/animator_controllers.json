@@ -1,0 +1,10 @@
+[
+  {
+    "id": "ptree.knight.swing",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 51, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": []
+  }
+]

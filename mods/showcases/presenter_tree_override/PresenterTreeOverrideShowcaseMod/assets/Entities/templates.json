@@ -1,0 +1,179 @@
+[
+  {
+    "id": "ptree.observer",
+    "components": {
+      "Name": {
+        "Value": "Presenter Tree Observer"
+      }
+    }
+  },
+  {
+    "id": "ptree.ground",
+    "components": {
+      "Name": {
+        "Value": "Presenter Tree Ground"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.station.a1",
+    "components": {
+      "Name": {
+        "Value": "A1 Whole Tree"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.station.a2",
+    "components": {
+      "Name": {
+        "Value": "A2 Transform Override"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.station.a3",
+    "components": {
+      "Name": {
+        "Value": "A3 Param Override"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.station.a4",
+    "components": {
+      "Name": {
+        "Value": "A4 Instance Children"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.station.a5",
+    "components": {
+      "Name": {
+        "Value": "A5 Instance Behaviors"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.cart",
+    "components": {
+      "Name": {
+        "Value": "Patrol Cart"
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresenterTreeOrbitMotion": {
+        "CenterXCm": 2000,
+        "CenterYCm": 2600,
+        "RadiusCm": 450,
+        "PeriodSeconds": 14,
+        "PhaseDeg": 0
+      }
+    }
+  },
+  {
+    "id": "ptree.rider",
+    "components": {
+      "Name": {
+        "Value": "Rider"
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresenterTreeRiderTag": {}
+    }
+  },
+  {
+    "id": "ptree.knight",
+    "components": {
+      "Name": {
+        "Value": "Sword Knight"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": -1.5708
+      }
+    }
+  },
+  {
+    "id": "ptree.camp",
+    "components": {
+      "Name": {
+        "Value": "Camp"
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    },
+    "children": [
+      {
+        "localId": "hq",
+        "template": "ptree.camp.tent",
+        "attach": true,
+        "localPose": {
+          "offsetXCm": 0,
+          "offsetYCm": -60,
+          "facingDeg": 0,
+          "inheritParentFacing": false,
+          "offsetRotation": "None"
+        }
+      }
+    ]
+  },
+  {
+    "id": "ptree.camp.tent",
+    "components": {
+      "Name": {
+        "Value": "Command Tent"
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  },
+  {
+    "id": "ptree.beacon",
+    "components": {
+      "Name": {
+        "Value": "Signal Beacon"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      }
+    }
+  }
+]

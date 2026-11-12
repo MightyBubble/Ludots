@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>LiteNetLib</AssemblyName>
     <RootNamespace>LiteNetLib</RootNamespace>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <OutputType>Library</OutputType>
     <LangVersion>8</LangVersion>
