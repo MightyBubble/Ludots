@@ -84,6 +84,7 @@ namespace Ludots.Core.Presentation.Presenters
         public double LastChildBatchComponentFillMs { get; private set; }
         public double LastChildBatchIndexWriteMs { get; private set; }
         public double LastChildBatchStableIdMs { get; private set; }
+        public int LastChildBatchCreatedCount { get; private set; }
 
         public const int CreateTraceCapacity = 8192;
 
@@ -221,6 +222,7 @@ namespace Ludots.Core.Presentation.Presenters
             LastChildBatchComponentFillMs = 0d;
             LastChildBatchIndexWriteMs = 0d;
             LastChildBatchStableIdMs = 0d;
+            LastChildBatchCreatedCount = 0;
         }
 
         private static double ElapsedMs(long startTimestamp)
@@ -2698,6 +2700,12 @@ namespace Ludots.Core.Presentation.Presenters
                     includeOwnerPayloadAttachedTransformSync,
                     includeAttachmentTick,
                     includeGroundingTick);
+                bool hasTransformOverride = node.TransformOverride.HasOverride;
+                if (hasTransformOverride)
+                {
+                    signature += Component<PresenterInstanceTransformOverride>.Signature;
+                }
+
                 LastChildBatchSetupMs += ElapsedMs(childSetupStart);
 
                 long childWorldCreateStart = Stopwatch.GetTimestamp();
@@ -2740,6 +2748,24 @@ namespace Ludots.Core.Presentation.Presenters
                     }
                 }
 
+                if (node.ParamOverrides != null && node.ParamOverrides.Length != 0)
+                {
+                    for (int i = 0; i < childScopeCount; i++)
+                    {
+                        ApplyParamOverrides(_childBatchCreated[i], node.ParamOverrides);
+                    }
+                }
+
+                if (hasTransformOverride)
+                {
+                    for (int i = 0; i < childScopeCount; i++)
+                    {
+                        Entity child = _childBatchCreated[i];
+                        _world.Get<PresenterInstanceTransformOverride>(child) = node.TransformOverride;
+                        InitializeTransform(child, childDefinition);
+                    }
+                }
+
                 for (int i = 0; i < childScopeCount; i++)
                 {
                     AppendCreateTrace(new PresenterCreateTraceEntry(
@@ -2749,6 +2775,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 _activeCount += childScopeCount;
                 _nonRootCount += childScopeCount;
+                LastChildBatchCreatedCount += childScopeCount;
                 _structureVersion++;
             }
         }
@@ -2826,7 +2853,8 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < nodes.Length; i++)
             {
                 PresenterCreatePlanNode node = nodes[i];
-                if (node.ParentNodeIndex != -1 || node.HasOverridePayload)
+                // 实例子树覆盖会在子物体下面再长出一层节点和行为，只能逐个走完整计划。
+                if (node.ParentNodeIndex != -1 || node.InstanceOverride != null)
                 {
                     return false;
                 }
