@@ -13,7 +13,7 @@ namespace Ludots.Client.Raylib.Rendering
     /// boneId 语义 = 蒙皮模型骨骼数组索引（BoneInfo 顺序，与 GLTF skin joints 一致）。
     /// 求值链：父 presenter stableId → 定义里的 SkinnedMesh 资产槽组合出 visual stableId →
     /// SkinnedVisualBatchBuffer 里取该父 presenter 已发射的蒙皮可视项（与渲染器同源，含 meshAssetId、
-    /// 世界 TRS、AnimatorPackedState）→ clip/frame 解析 → framePoses[frame][bone]。
+    /// 世界 TRS、AnimatorPackedState）→ 与渲染器同一个 ResolveRenderedPose 解析 clip/frame → framePoses[frame][bone]。
     /// raylib 5.5 的 GLTF loader 装载时已用 BuildPoseFromParentJoints 把父链乘进 framePoses，
     /// 即 framePoses 条目本身是模型空间 pose，此处不再沿 BoneInfo.parent 链乘。
     /// </summary>
@@ -22,6 +22,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly SkinnedVisualBatchBuffer _skinnedBatch;
         private readonly PresenterDefinitionRegistry _definitions;
         private readonly IRenderMeshAssets _meshAssets;
+        private readonly int _gpuSkinnedPosePhaseBuckets;
         private readonly EntryResolver _resolveEntry;
         private readonly TryEntryResolver? _tryResolveEntry;
 
@@ -40,12 +41,17 @@ namespace Ludots.Client.Raylib.Rendering
             out RaylibGpuSkinnedModelCache.Entry entry,
             out string? status);
 
+        /// <param name="gpuSkinnedPosePhaseBuckets">
+        /// 必须取自绘制 GpuSkinnedInstance 的渲染器（RaylibPrimitiveRenderer.GpuSkinnedPosePhaseBuckets），
+        /// 否则挂点与身体落在不同帧。
+        /// </param>
         public RaylibBoneTransformProvider(
             SkinnedVisualBatchBuffer skinnedBatch,
             PresenterDefinitionRegistry definitions,
             IRenderMeshAssets meshAssets,
+            int gpuSkinnedPosePhaseBuckets,
             EntryResolver resolveEntry)
-            : this(skinnedBatch, definitions, meshAssets, resolveEntry, null)
+            : this(skinnedBatch, definitions, meshAssets, gpuSkinnedPosePhaseBuckets, resolveEntry, null)
         {
         }
 
@@ -53,12 +59,14 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer skinnedBatch,
             PresenterDefinitionRegistry definitions,
             IRenderMeshAssets meshAssets,
+            int gpuSkinnedPosePhaseBuckets,
             EntryResolver resolveEntry,
             TryEntryResolver? tryResolveEntry)
         {
             _skinnedBatch = skinnedBatch ?? throw new ArgumentNullException(nameof(skinnedBatch));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _meshAssets = meshAssets ?? throw new ArgumentNullException(nameof(meshAssets));
+            _gpuSkinnedPosePhaseBuckets = gpuSkinnedPosePhaseBuckets;
             _resolveEntry = resolveEntry ?? throw new ArgumentNullException(nameof(resolveEntry));
             _tryResolveEntry = tryResolveEntry;
         }
@@ -110,7 +118,7 @@ namespace Ludots.Client.Raylib.Rendering
                 entry = _resolveEntry(item.MeshAssetId, descriptor);
             }
             AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
+            RaylibSkinnedPlayback.ResolveRenderedPose(
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
@@ -118,6 +126,8 @@ namespace Ludots.Client.Raylib.Rendering
                     item.AnimationProfileId,
                     item.MeshAssetId,
                     AnimationStateMapResolver),
+                item.RenderPath,
+                _gpuSkinnedPosePhaseBuckets,
                 out int clipIndex,
                 out int frameIndex);
 

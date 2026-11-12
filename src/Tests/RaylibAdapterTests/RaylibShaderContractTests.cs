@@ -19,7 +19,9 @@ public sealed class RaylibShaderContractTests
             Assert.That(shader, Does.Contain("#version 430"));
             Assert.That(shader, Does.Contain("layout(std430, binding = 2) readonly buffer PoseMatrixBlock"));
             Assert.That(shader, Does.Contain("layout(std430, binding = 3) readonly buffer InstanceBlock"));
-            Assert.That(shader, Does.Contain("int poseBase = poseRow * int(uPoseStride + 0.5) + int(uBoneBase);"));
+            // 同一模型的全部网格共用 skins[0] 一套骨架，骨骼编号直接索引姿势行，不存在逐网格槽位偏移
+            Assert.That(shader, Does.Contain("int poseBase = poseRow * int(uPoseStride + 0.5);"));
+            Assert.That(shader, Does.Not.Contain("uBoneBase"));
             Assert.That(shader, Does.Contain("int instanceVec4 = (int(uInstanceBase) + gl_InstanceID) * 4;"));
             // 实例变换来自 SSBO 的仿射三列重建，不再有实例矩阵顶点属性
             Assert.That(shader, Does.Contain("vec4(transformC0.w, transformC1.w, transformC2.w, 1.0)"));
@@ -27,10 +29,30 @@ public sealed class RaylibShaderContractTests
             Assert.That(shader, Does.Not.Contain("texelFetch"));
         }
 
-        Assert.That(main, Does.Contain("int packedRgb = int(instance.y + 0.5);"));
+        Assert.That(main, Does.Contain("int packedRgb = int(instance.y);"));
         Assert.That(main, Does.Contain("packedRgb % 256"));
         Assert.That(main, Does.Contain("(packedRgb / 65536) % 256"));
         Assert.That(main, Does.Contain("float alpha = instance.z;"));
+    }
+
+    [Test]
+    public void PackedInstanceIntegers_DecodeByTruncationNotRoundHalfUp()
+    {
+        const int white = 255 | (255 << 8) | (255 << 16);
+        float stored = white;
+        Assert.That((int)stored, Is.EqualTo(white), "2^24-1 is exactly representable in float32.");
+        Assert.That((int)(stored + 0.5f), Is.EqualTo(1 << 24), "IEEE round-to-even turns white+0.5 into 2^24, whose RGB channels are all 0.");
+
+        string shaderRoot = Path.Combine(FindRepoRoot(), "src", "Platforms", "Desktop");
+        foreach (string fileName in new[] { "skinning_instanced_ssbo.vs", "shadow_depth_skinning_ssbo.vs", "gpu_imposter.vs", "gpu_crowd_preskin.vs" })
+        {
+            string shader = File.ReadAllText(Path.Combine(shaderRoot, fileName));
+            foreach (string channel in new[] { ".x + 0.5)", ".y + 0.5)", ".w + 0.5)" })
+            {
+                Assert.That(shader, Does.Not.Contain("int(instance" + channel), fileName);
+                Assert.That(shader, Does.Not.Contain("int(inst" + channel), fileName);
+            }
+        }
     }
 
     [Test]

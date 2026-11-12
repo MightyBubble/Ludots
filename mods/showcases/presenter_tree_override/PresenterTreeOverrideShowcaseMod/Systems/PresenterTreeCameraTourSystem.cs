@@ -8,8 +8,8 @@ using PresenterTreeOverrideShowcaseMod.Runtime;
 namespace PresenterTreeOverrideShowcaseMod.Systems
 {
     /// <summary>
-    /// 镜头按地图 metadata 的 cameraTour 依次停在全景和每个案例站台上，只在换站那一帧发一次姿态请求，
-    /// 停留期间不抢玩家的镜头。
+    /// 镜头按地图 metadata 的 cameraTour 循环换站。每一站到点就强制写一次姿态，
+    /// 停留的那几秒不再改。玩家不能把镜头留在某一站。
     /// </summary>
     internal sealed class PresenterTreeCameraTourSystem : BaseSystem<World, float>
     {

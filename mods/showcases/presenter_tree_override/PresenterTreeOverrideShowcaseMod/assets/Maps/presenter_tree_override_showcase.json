@@ -12,13 +12,13 @@
       "cameraTour": {
         "stopSeconds": 5,
         "stops": [
-          { "targetXCm": 900, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 2000, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 3100, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 4200, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
-          { "targetXCm": 5300, "targetYCm": 1000, "distanceCm": 900, "pitch": 35 },
+          { "targetXCm": 900, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 2000, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 3100, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 4200, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
+          { "targetXCm": 5300, "targetYCm": 1000, "distanceCm": 1400, "pitch": 48 },
           { "targetXCm": 2000, "targetYCm": 2600, "distanceCm": 1700, "pitch": 48 },
-          { "targetXCm": 4600, "targetYCm": 2600, "distanceCm": 700, "pitch": 25 },
+          { "targetXCm": 4600, "targetYCm": 2600, "distanceCm": 1100, "pitch": 38 },
           { "targetXCm": 1550, "targetYCm": 4300, "distanceCm": 1800, "pitch": 40 },
           { "targetXCm": 4400, "targetYCm": 4300, "distanceCm": 1900, "pitch": 40 }
         ]
@@ -113,21 +113,24 @@
     {
       "InstanceId": "ptree.beacon.red",
       "Template": "ptree.beacon",
-      "Overrides": { "WorldPositionCm": { "Value": { "X": 3600, "Y": 4300 } } },
+      "PositionXCm": 3600,
+      "PositionYCm": 4300,
       "entityInfo": { "titleToken": "ptree.title.beacon_red" },
       "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [1, 0.25, 0.2, 1] } ]
     },
     {
       "InstanceId": "ptree.beacon.green",
       "Template": "ptree.beacon",
-      "Overrides": { "WorldPositionCm": { "Value": { "X": 4400, "Y": 4300 } } },
+      "PositionXCm": 4400,
+      "PositionYCm": 4300,
       "entityInfo": { "titleToken": "ptree.title.beacon_green" },
       "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [0.3, 0.95, 0.4, 1] } ]
     },
     {
       "InstanceId": "ptree.beacon.blue",
       "Template": "ptree.beacon",
-      "Overrides": { "WorldPositionCm": { "Value": { "X": 5200, "Y": 4300 } } },
+      "PositionXCm": 5200,
+      "PositionYCm": 4300,
       "entityInfo": { "titleToken": "ptree.title.beacon_blue" },
       "PresenterParamOverrides": [ { "ParamKey": "ptree.beacon.color", "Lane": "Vector", "VectorValue": [0.3, 0.55, 1, 1] } ]
     }

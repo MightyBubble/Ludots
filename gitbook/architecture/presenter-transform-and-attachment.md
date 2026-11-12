@@ -210,6 +210,13 @@ public interface IBoneTransformProvider
 
 Raylib 的 provider 读的是上一帧 `PresenterEmitSystem` 写入的蒙皮可视项。`PresenterBehaviorSystem` 排在动画时间推进和本帧发射之前，所以第 N 帧的骨骼挂件用的是第 N-1 帧的骨骼姿势和父世界位姿。CPU 蒙皮和 GPU 人群两条通道都是这样。要消掉这一帧，得把骨骼挂点挪到动画器推进之后、本帧发射之前，并用本帧父位姿重算挂点子树。这是表现管线顺序的改动，本页只记录，不在挂载合同的修补里改。
 
+选帧只有 `RaylibSkinnedPlayback.ResolveRenderedPose` 一处，按父蒙皮可视项的渲染通道决定：
+
+- `GpuSkinnedInstance`：先按动画器算精确帧，再按 `presentation.gpuSkinned.posePhaseBuckets` 量化到相位桶中心帧。桶数从绘制身体的渲染器读（`RaylibPrimitiveRenderer.GpuSkinnedPosePhaseBuckets`）。
+- `SkinnedMesh`：逐项用精确帧。
+
+身体和挂点走同一个选帧函数，量化误差两边一致。Knight 片段 11（40 帧，演示里 1 秒一圈）每桶 2.5 帧，最多差 1 帧（25 ms）。演示骑士实测：挂点 119/119 帧等于上一帧的手骨；量化到同一个桶时看不出，跨桶那一帧剑和手最多差 0.33 m（120 帧里 32 帧）。
+
 ### 5.4 挂载与 Grounding
 
 `ApplyGrounding` 不看 `TransformSource`，加载器也不拒绝“挂载 + Grounding”同时存在。贴地会改已经算好的位置。挂在骨骼上的物体如果再开贴地，会被拉到地面高度。不要两套一起开。
@@ -314,8 +321,8 @@ public struct SplineConfig
 
 摆放和创建时要注意：
 
+- 地图摆放的 `PositionXCm` / `PositionYCm` 是这一份实例的位置，盖过模板里的默认 `WorldPositionCm`。单体摆放和批量摆放（写了 `PresenterParamOverrides` 的那条）都这样。两个轴必须一起写。再同时写 `Overrides.WorldPositionCm` 会在加载时报错。
+- 实体子件挂到父实体上时，`AttachmentOps.ApplyAttachedPose` 按父位姿写出世界坐标，并补上 `VisualTransform`。模板子件因此不必自带 `WorldPositionCm`，`SourceHasVisualTransform` 也能给它建外观。
 - Raylib 实机要有本地座位（`game.json` 的 `startupLocalSeats`，加上地图的 `Teams` / `Players`）。没有座位时可见性裁剪不会武装，挂在实体上的外观一直不画，加载不报错。
-- 生成条件 `SourceHasVisualTransform` 看的是属主有没有组件 `VisualTransform`。模板子件不带 `WorldPositionCm` 时通常没有这个组件，带这个条件的生成规则不会给它建外观。
-- 地图摆放写了 `PresenterParamOverrides` 就必须能走批量路径，否则加载抛错。批量路径不读 `PositionXCm` / `PositionYCm`，这两项被忽略，不报错；坐标写在 `Overrides.WorldPositionCm`。非批量路径只有模板和 Overrides 都没有 `WorldPositionCm` 时，才使用成对的 `PositionXCm` / `PositionYCm`。只写其中一个会抛错。
-- 子 presenter 带了位姿覆盖、参数覆盖或实例行为（`HasOverridePayload`）时，不进批量创建，改为逐个创建。
+- 位姿覆盖和参数覆盖留在批量创建里。只有实例子树覆盖（`instanceChildren` / `instanceBehaviors`）和再往下长出的节点改为逐个创建。
 - 属主带 `PresentationStaticTransform` 时，第 5.5 节的创建期初始化只发生一次。Bone 挂载和 `instanceBehaviors` 追加的挂载不在这次初始化里。

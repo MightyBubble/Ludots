@@ -434,6 +434,7 @@ namespace Ludots.Adapter.Raylib
                         engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
                             ?? throw new InvalidOperationException("Raylib host requires the Core PresenterDefinitionRegistry service."),
                         residencyMeshes,
+                        primitiveRenderer.GpuSkinnedPosePhaseBuckets,
                         (meshAssetId, descriptor) => primitiveRenderer.GpuSkinnedModelCache.GetOrLoad(meshAssetId, in descriptor),
                         (int meshAssetId, MeshAssetDescriptor descriptor, out RaylibGpuSkinnedModelCache.Entry entry, out string? status) =>
                         {

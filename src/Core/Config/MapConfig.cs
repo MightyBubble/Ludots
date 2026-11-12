@@ -170,12 +170,37 @@ namespace Ludots.Core.Config
         public string Template { get; set; }
 
         /// <summary>
-        /// Placement anchor of last resort (cm): lands as WorldPositionCm only when
-        /// neither the template nor an explicit override supplies one. Both axes must
-        /// be authored together.
+        /// 这个实例的摆放位置（cm），盖过模板里的默认 WorldPositionCm。两个轴必须一起写，
+        /// 且不能与 Overrides.WorldPositionCm 同时出现。
         /// </summary>
         public int? PositionXCm { get; set; }
         public int? PositionYCm { get; set; }
+
+        public bool TryResolvePlacementPositionCm(string mapId, string contextId, out int xCm, out int yCm)
+        {
+            if (PositionXCm.HasValue != PositionYCm.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity '{contextId}' authors PositionXCm/PositionYCm partially; set both or neither.");
+            }
+
+            if (!PositionXCm.HasValue)
+            {
+                xCm = 0;
+                yCm = 0;
+                return false;
+            }
+
+            if (Overrides != null && Overrides.ContainsKey("WorldPositionCm"))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity '{contextId}' authors both PositionXCm/PositionYCm and Overrides.WorldPositionCm; keep exactly one placement position.");
+            }
+
+            xCm = PositionXCm.Value;
+            yCm = PositionYCm!.Value;
+            return true;
+        }
         public Dictionary<string, JsonNode> Overrides { get; set; }
         public List<ParamOverrideData> PresenterParamOverrides { get; set; } = new List<ParamOverrideData>();
 
