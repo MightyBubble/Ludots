@@ -23,8 +23,11 @@ namespace PresenterTreeOverrideShowcaseMod
                 var engine = ctx.GetEngine();
                 if (engine != null)
                 {
+                    // capabilityId: presenter-tree-override.orbit-motion
                     engine.RegisterSystem(new PresenterTreeOrbitMotionSystem(engine.World), SystemGroup.InputCollection);
+                    // capabilityId: presenter-tree-override.rider-shuttle
                     engine.RegisterSystem(new PresenterTreeRiderShuttleSystem(engine), SystemGroup.PostMovement);
+                    // capabilityId: presenter-tree-override.camera-tour
                     engine.RegisterSystem(new PresenterTreeCameraTourSystem(engine), SystemGroup.PostMovement);
                 }
 
