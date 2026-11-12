@@ -160,6 +160,7 @@ namespace Ludots.Raylib.Render
 
         /// <summary>GPU 蒙皮模型/动画缓存；宿主骨骼挂点 provider 与绘制路径共用同一实例（同一动画数据源）。</summary>
         public RaylibGpuSkinnedModelCache GpuSkinnedModelCache => _gpuSkinnedModelCache;
+        public int GpuSkinnedPosePhaseBuckets => _gpuSkinned.PosePhaseBuckets;
 
         /// <summary>单件静态网格（StaticMesh 车道）的 Decal 接收面；宿主把它与地形接收面组合绑定。</summary>
         public IRaylibReceiverMeshProjector StaticMeshReceiverProjector => _staticMeshReceiverProjector;
@@ -1953,8 +1954,8 @@ namespace Ludots.Raylib.Render
         }
 
         /// <summary>
-        /// SkinnedMesh 通道：一个可视项一份 CPU 蒙皮姿势，按与骨骼挂件相同的 ResolveFromAnimator 选精确帧
-        /// （不做人群通道的相位量化），所以身体与挂在骨骼上的子物体永远是同一帧。
+        /// SkinnedMesh 通道：一个可视项一份 CPU 蒙皮姿势，与骨骼挂件共用 ResolveRenderedPose 选帧，
+        /// 所以身体与挂在骨骼上的子物体永远是同一帧。
         /// 不依赖 GL 4.3，同一资产的多个可视项按绘制顺序逐个摆姿势后立即提交。
         /// </summary>
         private unsafe bool TryPoseSkinnedComponent(
@@ -1987,11 +1988,13 @@ namespace Ludots.Raylib.Render
             }
 
             AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
+            RaylibSkinnedPlayback.ResolveRenderedPose(
                 in animator,
                 entry.Animations,
                 entry.AnimCount,
                 RaylibSkinnedPlayback.ResolveStateMap(item.AnimationProfileId, item.MeshAssetId, AnimationStateMapResolver),
+                item.RenderPath,
+                GpuSkinnedPosePhaseBuckets,
                 out int clipIndex,
                 out int frameIndex);
             Rl.UpdateModelAnimation(entry.Model, entry.Animations[clipIndex], frameIndex);

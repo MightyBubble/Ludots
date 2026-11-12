@@ -167,6 +167,39 @@ namespace Ludots.Raylib.Render
             frameIndex = ResolveFrameIndex(animations[clipIndex].frameCount, normalizedTime01, looping);
         }
 
+        /// <summary>
+        /// 渲染通道实际画出的 clip/帧。身体绘制与骨骼挂点求值都必须走这里：
+        /// GpuSkinnedInstance 按相位桶量化后共用姿势行，SkinnedMesh 逐项摆精确帧。
+        /// </summary>
+        public static void ResolveRenderedPose(
+            in AnimatorPackedState packed,
+            ModelAnimation* animations,
+            int animCount,
+            IReadOnlyDictionary<int, int>? stateToClipMap,
+            VisualRenderPath renderPath,
+            int gpuSkinnedPosePhaseBuckets,
+            out int clipIndex,
+            out int frameIndex)
+        {
+            ResolveFromAnimator(
+                in packed,
+                animations,
+                animCount,
+                stateToClipMap,
+                out clipIndex,
+                out int exactFrameIndex);
+            frameIndex = renderPath switch
+            {
+                VisualRenderPath.GpuSkinnedInstance => QuantizeFrameIndex(
+                    exactFrameIndex,
+                    animations[clipIndex].frameCount,
+                    gpuSkinnedPosePhaseBuckets),
+                VisualRenderPath.SkinnedMesh => exactFrameIndex,
+                _ => throw new InvalidOperationException(
+                    $"{nameof(RaylibSkinnedPlayback)} renderPath={renderPath} has no skinned pose source."),
+            };
+        }
+
         public static int MapStateToClipIndex(int stateIndex, IReadOnlyDictionary<int, int>? stateToClipMap)
         {
             if (stateToClipMap == null)

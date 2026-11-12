@@ -235,6 +235,15 @@ public interface IBoneTransformProvider
 
 这是 attachment 功能的 adapter 侧前置条件。
 
+Raylib 的挂点必须和身体画同一帧。选帧只有 `RaylibSkinnedPlayback.ResolveRenderedPose` 一处，按父蒙皮可视项的渲染通道决定：
+
+- `GpuSkinnedInstance`：先按动画器算精确帧，再按 `presentation.gpuSkinned.posePhaseBuckets` 量化到相位桶中心帧，身体和挂点都用量化后的帧。桶数从绘制身体的渲染器读（`RaylibPrimitiveRenderer.GpuSkinnedPosePhaseBuckets`），挂点不自己配。
+- `SkinnedMesh`：逐项摆精确帧，挂点也用精确帧。
+
+量化本身的误差：每桶 `frameCount / posePhaseBuckets` 帧，最多差半桶。Knight 片段 11（40 帧，演示里 1 秒一圈）每桶 2.5 帧，最多差 1 帧（25 ms）；Knight 最长的片段 236 帧，每桶约 15 帧。挂点和身体共用一个选帧函数后，这部分误差两边一致，不再错开。
+
+已知还差一帧：`PresenterBehaviorSystem` 在动画器推进和本帧发射之前求骨骼挂点，读到的是上一帧发射的蒙皮可视项（上一帧的动画时间和父位姿），身体画的是本帧。演示骑士实测：挂点 119/119 帧等于上一帧的手骨；量化到同一个桶时看不出，跨桶那一帧剑和手最多差 0.33 m（120 帧里 32 帧）。要消掉这一帧，挂点求值得挪到动画器推进之后、用本帧父位姿，并重新传播挂点子树，这是表现管线顺序的改动，单独做。
+
 ### 5.4 Attachment 与 Grounding 的交互
 
 骨骼挂载的 presenter **不做 grounding**。即使 `GroundingMode != None`，当 `TransformSource == BoneAttached` 时跳过 grounding。骨骼位置已经包含了角色的地面贴合信息。

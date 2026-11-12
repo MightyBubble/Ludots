@@ -391,17 +391,15 @@ namespace Ludots.Raylib.Render
             }
 
             AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
+            RaylibSkinnedPlayback.ResolveRenderedPose(
                 in animator,
                 family.Animations,
                 family.AnimCount,
                 family.StateToClipMap,
+                VisualRenderPath.GpuSkinnedInstance,
+                PosePhaseBuckets,
                 out int clipIndex,
-                out int frameIndex);
-            int poseFrame = RaylibSkinnedPlayback.QuantizeFrameIndex(
-                frameIndex,
-                family.Animations[clipIndex].frameCount,
-                PosePhaseBuckets);
+                out int poseFrame);
 
             var key = new GpuSkinnedInstanceBatchKey(
                 item.MeshAssetId,
@@ -432,7 +430,7 @@ namespace Ludots.Raylib.Render
                 if (_poseRowByKey.Count >= capacity.MaxUniquePoses)
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose row for meshAssetId={item.MeshAssetId}, clipIndex={clipIndex}, frameIndex={frameIndex}; configured maxUniquePoses={capacity.MaxUniquePoses}.");
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose row for meshAssetId={item.MeshAssetId}, clipIndex={clipIndex}, frameIndex={poseFrame}; configured maxUniquePoses={capacity.MaxUniquePoses}.");
                 }
 
                 poseRow = _poseRowByKey.Count;
