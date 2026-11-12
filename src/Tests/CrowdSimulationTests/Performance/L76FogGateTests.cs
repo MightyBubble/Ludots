@@ -12,6 +12,7 @@ using Ludots.Core.CrowdSimulation.Nav.Pathing;
 using Ludots.Core.CrowdSimulation.Presentation;
 using Ludots.Core.CrowdSimulation.Units;
 using Ludots.Core.CrowdSimulation.Structures;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
@@ -223,12 +224,238 @@ public sealed class L76FogGateTests
         Assert.That(scopeAfterShare, Is.EqualTo(groupA + 1));
     }
 
-    /// <summary>认知导航版本和到达集合还没有基线，这行先不测。</summary>
+    /// <summary>
+    /// s7 雾脚本和回收脚本：认知导航是否物化、版本、流场到达格、到达单位句柄。
+    /// 挂组会解析认知导航，版本是槽号乘 1048576。
+    /// 到达格按当前会话重录。相对 a412d9f581712b683d84bf644c9b594095ed11e3 变宽，来自
+    /// 14ec62b3ec7cafa88aa97c9f8b5b67f8876022c9（按瓦片多起点合并走廊）和
+    /// 09745d4e6099fd1c337bd65c46bf975100e949ca（折返场并入旧掩码）。
+    /// 地面单位的中心不落在阻挡足迹上，所在格也不是水、山、崖。
+    /// </summary>
     [Test]
-    public void CognitiveNav_AndArrivalSet_WaitForBaseline()
+    public void CognitiveNavVersion_AndArrivalCells_MatchBaseline()
     {
-        Assert.Ignore("认知导航版本和到达集合还没有基线，这行先不测。");
+        JsonObject fixture = JsonNode.Parse(File.ReadAllText(CognitiveNavBaselinePath()))!.AsObject();
+        JsonObject scenarios = fixture["scenarios"]!.AsObject();
+        var actualByName = new Dictionary<string, JsonObject>(scenarios.Count);
+        foreach (var scenario in scenarios)
+        {
+            actualByName[scenario.Key] = SampleCognitiveNav(scenario.Key);
+        }
+
+        foreach (bool cognitiveOnly in new[] { true, false })
+        {
+            foreach (var scenario in scenarios)
+            {
+                JsonObject actual = actualByName[scenario.Key];
+                JsonObject expected = scenario.Value!.AsObject();
+                Assert.That(actual["period"]!.GetValue<int>(), Is.EqualTo(expected["period"]!.GetValue<int>()), scenario.Key);
+                Assert.That(actual["endTick"]!.GetValue<int>(), Is.EqualTo(expected["endTick"]!.GetValue<int>()), scenario.Key);
+                AssertSeries(expected["samples"]!.AsArray(), actual["samples"]!.AsArray(), scenario.Key, cognitiveOnly);
+                AssertSnapshot(expected["end"]!, actual["end"]!, $"{scenario.Key} end", cognitiveOnly);
+            }
+        }
     }
+
+    private static JsonObject SampleCognitiveNav(string truthName)
+    {
+        var (runtime, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
+        using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
+        session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
+        session.BlockOnDueReplies = true;
+
+        string dir = Path.Combine(Parity.S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
+        var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, truthName)))!;
+        var reference = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
+        reference.ValidateStructure(session);
+        var fog = session.Fog!;
+        int period = fog.Period;
+        int ticks = meta["ticks"]!.GetValue<int>();
+        var surface = Parity.S1SurfaceTruthTests.ReadSurface("s1337");
+        var impassable = ImpassableTerrain(surface);
+        var samples = new JsonArray();
+        for (int t = 0; t < ticks; t++)
+        {
+            reference.ApplyDue(session);
+            Step(session);
+            AssertUnitsStayOnFooting(session, surface, impassable, truthName, t);
+            if (t % period == 0) samples.Add(CognitiveSnapshot(session, t));
+        }
+
+        var fogVersion = new JsonArray();
+        for (int g = 0; g < fog.VisionGroupCount; g++) fogVersion.Add(fog.Version[g]);
+        return new JsonObject
+        {
+            ["ticks"] = ticks,
+            ["period"] = period,
+            ["endTick"] = session.TickCount,
+            ["fogVersion"] = fogVersion,
+            ["samples"] = samples,
+            ["end"] = CognitiveSnapshot(session, session.TickCount),
+        };
+    }
+
+    private static HashSet<byte> ImpassableTerrain(NavSurfaceAsset surface)
+    {
+        var impassable = new HashSet<byte>();
+        for (int i = 0; i < surface.TerrainTypeIds.Length; i++)
+        {
+            if (surface.TerrainTypeIds[i] is "water" or "mountain" or "cliff") impassable.Add((byte)i);
+        }
+
+        if (impassable.Count != 3)
+        {
+            Assert.Fail($"s1337 地形表里水、山、崖应各有一项，实际 {impassable.Count} 项：{string.Join(",", surface.TerrainTypeIds)}");
+        }
+
+        return impassable;
+    }
+
+    private static void AssertUnitsStayOnFooting(
+        CrowdSimSession session,
+        NavSurfaceAsset surface,
+        HashSet<byte> impassable,
+        string truthName,
+        int tick)
+    {
+        var store = session.Structures ?? throw new InvalidOperationException($"{truthName} 会话没有结构仓。");
+        int cell = surface.NavCellSizeCm;
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            var entity = session.Units.EntityAt(i);
+            var state = session.World.Get<CrowdSimulationUnitState>(entity);
+            // 层 1 走桥面。桥下可以是水，桥面足迹也不是地面阻挡。
+            if (state.Level != 0) continue;
+            var pos = session.World.Get<WorldPositionCm>(entity).Value;
+            int cx = pos.X.ToInt() / cell;
+            int cy = pos.Y.ToInt() / cell;
+            if ((uint)cx >= (uint)surface.NavCellsX || (uint)cy >= (uint)surface.NavCellsY)
+            {
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 落在导航格外 ({cx},{cy})");
+            }
+
+            byte terrain = surface.TerrainAt(cx, cy);
+            if (impassable.Contains(terrain))
+            {
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 踩在 {surface.TerrainTypeIds[terrain]} ({cx},{cy})");
+            }
+
+            foreach (int id in store.EntityIds)
+            {
+                if (!store.TryGetTemplate(id, out int template) || !session.Config.Structures.Templates[template].Blocks) continue;
+                if (!store.FootprintOf(id).Covers(pos.X, pos.Y)) continue;
+                Assert.Fail($"{truthName} tick {tick} 单位 {session.Units.HandleAt(i)} 进入阻挡 {id}");
+            }
+        }
+    }
+
+    private static JsonObject CognitiveSnapshot(CrowdSimSession session, int tick)
+    {
+        var groups = new JsonArray();
+        foreach (var group in session.Groups.Groups)
+        {
+            if (group == null || group.Count == 0) continue;
+            bool cognitive = group.NavId >= CrowdBeliefNavs.BeliefStride;
+            bool materialized = session.TryGetMaterializedNav(group.NavId, out var nav);
+            var row = new JsonObject
+            {
+                ["id"] = group.Id,
+                ["player"] = group.Player,
+                ["count"] = group.Count,
+                ["navId"] = group.NavId,
+                ["cognitive"] = cognitive,
+                ["materialized"] = materialized,
+                ["navVersion"] = materialized ? JsonValue.Create(nav.Version) : null,
+            };
+            if (group.Flow == null)
+            {
+                row["arrivalCells"] = null;
+                row["reached"] = null;
+            }
+            else
+            {
+                row["reached"] = group.Flow.Reached;
+                row["goal"] = group.Flow.Goal;
+                row["flowNavId"] = group.Flow.NavId;
+                row["arrivalCells"] = ArrivalCells(group.Flow);
+            }
+
+            groups.Add(row);
+        }
+
+        var arrived = new JsonArray();
+        for (int i = 0; i < session.Units.Count; i++)
+        {
+            if (session.World.Get<CrowdSimulationUnitState>(session.Units.EntityAt(i)).State == (byte)CrowdUnitState.Arrived)
+            {
+                arrived.Add(session.Units.HandleAt(i));
+            }
+        }
+
+        return new JsonObject
+        {
+            ["tick"] = tick,
+            ["groups"] = groups,
+            ["arrivedHandles"] = arrived,
+        };
+    }
+
+    private static JsonArray ArrivalCells(Ludots.Core.CrowdSimulation.Nav.FlowField flow)
+    {
+        var integ = flow.Integ;
+        var cells = new JsonArray();
+        for (int i = 0; i < integ.Length; i++)
+        {
+            if (integ[i] != Fix64.MaxValue) cells.Add(i);
+        }
+
+        return cells;
+    }
+
+    private static void AssertSeries(JsonArray expected, JsonArray actual, string label, bool cognitiveOnly)
+    {
+        Assert.That(actual.Count, Is.EqualTo(expected.Count), label);
+        for (int i = 0; i < expected.Count; i++)
+        {
+            AssertSnapshot(expected[i]!, actual[i]!, $"{label} tick {expected[i]!["tick"]}", cognitiveOnly);
+        }
+    }
+
+    private static void AssertSnapshot(JsonNode expected, JsonNode actual, string label, bool cognitiveOnly)
+    {
+        Assert.That(actual["tick"]!.GetValue<int>(), Is.EqualTo(expected["tick"]!.GetValue<int>()), label);
+        if (!JsonNode.DeepEquals(expected["arrivedHandles"], actual["arrivedHandles"]))
+        {
+            Assert.Fail($"{label} 到达句柄 基线 {expected["arrivedHandles"]!.ToJsonString()} 当前 {actual["arrivedHandles"]!.ToJsonString()}");
+        }
+
+        JsonArray expectedGroups = expected["groups"]!.AsArray();
+        JsonArray actualGroups = actual["groups"]!.AsArray();
+        Assert.That(actualGroups.Count, Is.EqualTo(expectedGroups.Count), label);
+        for (int i = 0; i < expectedGroups.Count; i++)
+        {
+            bool cognitive = expectedGroups[i]!["cognitive"]!.GetValue<bool>() || actualGroups[i]!["cognitive"]!.GetValue<bool>();
+            if (cognitive != cognitiveOnly) continue;
+            AssertGroup(expectedGroups[i]!.AsObject(), actualGroups[i]!.AsObject(), $"{label} 组 {expectedGroups[i]!["id"]}");
+        }
+    }
+
+    private static void AssertGroup(JsonObject expected, JsonObject actual, string label)
+    {
+        foreach (string key in new[] { "id", "player", "count", "navId", "cognitive", "materialized", "navVersion", "reached", "goal", "flowNavId" })
+        {
+            if (JsonNode.DeepEquals(expected[key], actual[key])) continue;
+            Assert.Fail($"{label} {key} 基线 {Text(expected[key])} 当前 {Text(actual[key])}");
+        }
+
+        if (JsonNode.DeepEquals(expected["arrivalCells"], actual["arrivalCells"])) return;
+        Assert.Fail($"{label} arrivalCells 基线 {Count(expected["arrivalCells"])} 格 当前 {Count(actual["arrivalCells"])} 格");
+    }
+
+    private static string Text(JsonNode? node) => node?.ToJsonString() ?? "null";
+
+    private static string Count(JsonNode? node) => node is JsonArray cells ? cells.Count.ToString() : "null";
 
     private static void AssertCounts(JsonNode before, JsonNode after)
     {
@@ -443,5 +670,18 @@ public sealed class L76FogGateTests
         }
 
         throw new InvalidOperationException("找不到 l76-fog.json。");
+    }
+
+    private static string CognitiveNavBaselinePath()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir != null)
+        {
+            string path = Path.Combine(dir.FullName, "src", "Tests", "CrowdSimulationTests", "Performance", "l76-cognitive-nav-arrival.json");
+            if (File.Exists(path)) return path;
+            dir = dir.Parent;
+        }
+
+        throw new InvalidOperationException("找不到 l76-cognitive-nav-arrival.json。");
     }
 }

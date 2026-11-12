@@ -56,7 +56,7 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -c
 dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdSimulationTests.Showcases"
 ```
 
-真实窗口截图和录像在 `artifacts/acceptance/crowdsimulation-showcases/`，用 Raylib 客户端加 `mod:AgentBridgeMod` 拍：进图后暂停，每次步进 10 tick，到点截图。图里 HUD 第三行的 tick 是会话 tick。
+真实窗口截图和录像在 `artifacts/acceptance/crowdsimulation-showcases/`，用 Raylib 客户端加 `mod:AgentBridgeMod` 拍：进图后暂停，远离目标时每次步进 10 tick，距目标约 40 tick 以内每次 1 tick，并等 HUD 采样落到这个 tick 再截。会话 tick 在左栏调试视图「缓存」页的「tick / 指令日志」，格式是 `{会话 tick} / {指令日志条数}`。这一行在默认 1280×720 里布局 y=815，画在窗口外。2026-10-17 重拍行军和连点时，只在当次进程里把这两个场景的窗口改成 1280×1100，拍完把 `game.json` 还原。机器是 `Linux 6.12.94+ x86_64`，`DISPLAY=:1`，`LIBGL_ALWAYS_SOFTWARE=1`，`GALLIUM_DRIVER=llvmpipe`。六张图上的读数是：`march_leg1_a.png` 300 / 2，`march_leg2_b.png` 472 / 3，`march.png` 712 / 4，`repeat_click_leg1_settling.png` 300 / 2，`repeat_click_leg2_clicks.png` 480 / 5，`repeat_click.png` 630 / 10。
 
 | 场景 | 文件（会话 tick） |
 |---|---|
@@ -72,11 +72,16 @@ dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedNa
 
 ## 50k 帧时：Web 与 C# 对照
 
-同一场景文件 `assets/CrowdSimulation/regress/stress-50k.json`（演示与 `CrowdKernel50KBenchmarkTests` 共用）。计时只含仿真步进（运动、迷雾、认知、校验码），不含 Raylib 渲染。
+同一场景文件 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json`（sha256 `d49b6d576a883ef2af748b838ee684c77ecfcbb09c8d9a0177a8f65a2815e778`）。演示和 `CrowdKernel50KBenchmarkTests` 读的是这份文件。Web 脚本正本 `tools/crowdsimulation-export/benchmarkStress50k.mjs` 也读这份文件：`spawn` 原样入队，`order` 把玩家号减 1、厘米除以 100，`shape` 放进 `opts`。脚本不引用 `BENCH_SCENARIOS`。
 
-| 端 | 命令 | 典型环境（4 vCPU / 15 GiB，Release） |
-|---|---|---|
-| C# | `dotnet build mods/LudotsCoreMod -c Release` 后 `dotnet test src/Tests/CrowdSimulationTests -c Release --filter "FullyQualifiedName~CrowdKernel50KBenchmarkTests"` | 产物 `artifacts/benchmarks/crowd-kernel-50k-tick/trace.jsonl`（含 avg / p50 / p95 / max）；硬门 P95 &lt; 33 ms 仅 Release |
-| Web | 沙盒根目录 `node scripts/benchmarkStress50k.mjs --warmup 40 --measured 200`（脚本正本 `tools/crowdsimulation-export/benchmarkStress50k.mjs`） | 产物 `artifacts/benchmarks/crowd-stress50k-web/web-timing.json`（`tickAvgMs` / `tickP95Ms`）；墙钟随机器变化，与 C# 比趋势不比逐位 |
+2026-10-17 那次对照是在忙机器上测的：C# 开窗前 1 分钟负载高于 4 核，门禁等到超时才开测。那组帧时已从本文和产物里撤下。`artifacts/benchmarks/crowd-kernel-50k-tick/` 恢复为这次对照之前的 C# 记录。它不是和 Web 紧挨着测的，不能拿来当对照。
 
-测量前读 `/proc/loadavg`：1 分钟负载高于核数时 C# 门禁会最多等 180 s 再开窗（见 `CrowdKernel50KBenchmarkTests` 注释）。Web 脚本把场景跑一遍并报告 headless `runScenario` 的 tick 统计；两端数字写入上表路径，更新文档时替换本段表格中的示例值。
+重测要在空闲机器上，和 Web 紧挨着做。开窗时 1 分钟负载要明显低于核数，`CrowdKernel50KBenchmarkTests` 的等待是 0 ms。Web 用同一份 `stress-50k.json`，放在这次 C# 的前一次或后一次立刻跑。两端产物一起换：`artifacts/benchmarks/crowd-kernel-50k-tick/` 的 `benchmark-report.md` 与 `trace.jsonl`，以及 `artifacts/benchmarks/crowd-stress50k-web/web-timing.json`。
+
+```bash
+dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Release --filter "FullyQualifiedName~CrowdKernel50KBenchmarkTests"
+```
+
+```bash
+node scripts/benchmarkStress50k.mjs --scenario mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json
+```
