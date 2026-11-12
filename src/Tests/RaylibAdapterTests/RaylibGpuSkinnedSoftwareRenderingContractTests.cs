@@ -135,6 +135,32 @@ public sealed class RaylibGpuSkinnedSoftwareRenderingContractTests
         Assert.That(ReadRendering("RaylibGpuSkinnedSsboPipeline.cs"), Does.Contain("Gl43.TryReadElapsedNanoseconds("));
     }
 
+    [Test]
+    public void SkinnedMeshLane_AnimatesWithTheSameFrameAsBoneAttachmentsOnAnIsolatedModelCopy()
+    {
+        string renderer = ReadRendering("RaylibPrimitiveRenderer.cs");
+        string boneProvider = File.ReadAllText(Path.Combine(
+            FindRepoRoot(), "src", "Client", "Ludots.Client.Raylib", "Rendering", "RaylibBoneTransformProvider.cs"));
+
+        string drawSkinnedBatch = MethodBody(renderer, "private void DrawSkinnedBatch(");
+        Assert.That(drawSkinnedBatch, Does.Contain("DrawSkinnedComponent(in item, meshes, scaleMul);"));
+        Assert.That(drawSkinnedBatch, Does.Not.Contain("DrawAssetRecursive("), "SkinnedMesh must not fall back to a static bind-pose draw.");
+
+        string shadow = MethodBody(renderer, "public void DrawPreparedSkinnedShadow(");
+        Assert.That(shadow, Does.Contain("TryPoseSkinnedComponent(in item, meshes, out _, out Model posedModel)"));
+
+        string pose = MethodBody(renderer, "private unsafe bool TryPoseSkinnedComponent(");
+        Assert.That(pose, Does.Contain("_skinnedComponentModelCache.TryGetOrLoad("));
+        Assert.That(pose, Does.Contain("RaylibSkinnedPlayback.ResolveFromAnimator("));
+        Assert.That(pose, Does.Contain("Rl.UpdateModelAnimation(entry.Model, entry.Animations[clipIndex], frameIndex);"));
+        Assert.That(pose, Does.Contain("cannot animate"));
+        Assert.That(pose, Does.Not.Contain("QuantizeFrameIndex"), "bone attachments read the exact frame; the body must too.");
+        Assert.That(boneProvider, Does.Contain("RaylibSkinnedPlayback.ResolveFromAnimator("));
+
+        Assert.That(renderer, Does.Contain("_skinnedComponentModelStore = CreateModelStore(vfs, syncAssetLoad);"));
+        Assert.That(renderer, Does.Contain("_skinnedComponentModelCache = new RaylibGpuSkinnedModelCache(vfs, _skinnedComponentModelStore);"));
+    }
+
     private static void AssertRigid(RaylibGltfRigidMeshJoints.MeshSkinSource[] meshes, string nodeName, int jointIndex)
     {
         RaylibGltfRigidMeshJoints.MeshSkinSource mesh = meshes.Single(candidate => candidate.NodeName == nodeName);

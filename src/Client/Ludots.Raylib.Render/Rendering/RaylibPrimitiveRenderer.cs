@@ -70,6 +70,9 @@ namespace Ludots.Raylib.Render
         private IRaylibInstancedBatchLaneSource? _instancedBatchLaneSource;
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
         private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
+        // SkinnedMesh 通道用 CPU 蒙皮改写顶点缓冲，必须持有独立模型副本，否则同帧的 GPU 蒙皮与静态绘制会读到已摆姿势的顶点
+        private readonly RaylibAssetStore<Model> _skinnedComponentModelStore;
+        private readonly RaylibGpuSkinnedModelCache _skinnedComponentModelCache;
         private readonly RaylibInstancedMaterialPipeline _materialPipeline;
         private readonly RaylibGpuSkinnedBatchRenderer _gpuSkinned;
         private ISkinnedVisualBatchSnapshot? _preparedSkinnedSnapshot;
@@ -267,7 +270,6 @@ namespace Ludots.Raylib.Render
             if (syncAssetLoad)
             {
                 _textureStore = new RaylibAssetStore<Texture2D>(vfs, LoadTextureResource, RaylibNativeResources.UnloadTexture);
-                _modelStore = new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel);
             }
             else
             {
@@ -283,13 +285,11 @@ namespace Ludots.Raylib.Render
                         Rl.UnloadImage(image);
                         return ValidateTexture(texture, "cpu-prepared image");
                     });
-                _modelStore = new RaylibAssetStore<Model>(
-                    vfs,
-                    LoadModelResource,
-                    RaylibNativeResources.UnloadModel,
-                    cpuPrepare: fullPath => RaylibModelFileLoader.PrepareNativeLoadable(fullPath),
-                    uploader: payload => LoadModelResource((string)payload!));
             }
+
+            _modelStore = CreateModelStore(vfs, syncAssetLoad);
+            _skinnedComponentModelStore = CreateModelStore(vfs, syncAssetLoad);
+            _skinnedComponentModelCache = new RaylibGpuSkinnedModelCache(vfs, _skinnedComponentModelStore);
             _materialLibrary = vfs != null && materials != null
                 ? new RaylibMaterialLibrary(vfs, materials, _textureStore)
                 : null;
@@ -332,6 +332,18 @@ namespace Ludots.Raylib.Render
             return texture;
         }
 
+        private static RaylibAssetStore<Model> CreateModelStore(IRenderAssetPathResolver? vfs, bool syncAssetLoad)
+        {
+            return syncAssetLoad
+                ? new RaylibAssetStore<Model>(vfs, LoadModelResource, RaylibNativeResources.UnloadModel)
+                : new RaylibAssetStore<Model>(
+                    vfs,
+                    LoadModelResource,
+                    RaylibNativeResources.UnloadModel,
+                    cpuPrepare: fullPath => RaylibModelFileLoader.PrepareNativeLoadable(fullPath),
+                    uploader: payload => LoadModelResource((string)payload!));
+        }
+
         private static Model LoadModelResource(string fullPath)
         {
             // OBJ 直走 native LoadModel 是 #1050 的 AccessViolation 路径；统一经
@@ -351,19 +363,22 @@ namespace Ludots.Raylib.Render
         {
             _textureStore.FlushRetired();
             _modelStore.FlushRetired();
+            _skinnedComponentModelStore.FlushRetired();
         }
 
         public void PumpAssetUploads()
         {
             _textureStore.PumpUploads();
             _modelStore.PumpUploads();
+            _skinnedComponentModelStore.PumpUploads();
         }
 
-        public int ResidentAssetCount => _modelStore.ResidentCount + _textureStore.ResidentCount;
+        public int ResidentAssetCount => _modelStore.ResidentCount + _skinnedComponentModelStore.ResidentCount + _textureStore.ResidentCount;
 
-        public int InFlightAssetCount => _modelStore.InFlightCount + _textureStore.InFlightCount + _gpuSkinnedModelCache.AnimationInFlightCount;
+        public int InFlightAssetCount => _modelStore.InFlightCount + _skinnedComponentModelStore.InFlightCount + _textureStore.InFlightCount
+            + _gpuSkinnedModelCache.AnimationInFlightCount + _skinnedComponentModelCache.AnimationInFlightCount;
 
-        public int RetiredAssetCount => _modelStore.RetiredCount + _textureStore.RetiredCount;
+        public int RetiredAssetCount => _modelStore.RetiredCount + _skinnedComponentModelStore.RetiredCount + _textureStore.RetiredCount;
 
         public RaylibAssetAcquireOutcome TryAcquireExternalModel(
             string uri,
@@ -442,6 +457,24 @@ namespace Ludots.Raylib.Render
                 if (outcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
                 {
                     return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Failed, status);
+                }
+
+                if (asset.RenderPath == VisualRenderPath.SkinnedMesh)
+                {
+                    RaylibGpuSkinnedModelAcquireOutcome componentOutcome = _skinnedComponentModelCache.TryGetOrLoad(
+                        asset.AssetId,
+                        in descriptor,
+                        out _,
+                        out string? componentStatus);
+                    if (componentOutcome == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+                    {
+                        return BuildSkinnedResidencySnapshot(componentStatus);
+                    }
+
+                    if (componentOutcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+                    {
+                        return new RenderAssetResidencySnapshot(RenderAssetResidencyState.Failed, componentStatus);
+                    }
                 }
 
                 if (_gpuSkinnedModelCache.TryGetSelectedSourceUri(asset.AssetId, out string selectedUri))
@@ -879,15 +912,26 @@ namespace Ludots.Raylib.Render
                     continue;
                 }
 
-                DrawShadowLeafAsset(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * _preparedSkinnedScaleMul,
-                    default,
-                    meshes,
-                    shadow,
-                    item.MaterialId);
+                if (meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor shadowDescriptor) &&
+                    shadowDescriptor.Type == MeshAssetType.Primitive)
+                {
+                    DrawShadowLeafAsset(
+                        item.MeshAssetId,
+                        item.Position,
+                        item.Rotation,
+                        item.Scale * _preparedSkinnedScaleMul,
+                        default,
+                        meshes,
+                        shadow,
+                        item.MaterialId);
+                    continue;
+                }
+
+                if (TryPoseSkinnedComponent(in item, meshes, out _, out Model posedModel))
+                {
+                    ToAxisAngleDegrees(item.Rotation, out Vector3 axis, out float angleDegrees);
+                    shadow.DrawModelShadow(posedModel, item.Position, axis, angleDegrees, item.Scale * _preparedSkinnedScaleMul);
+                }
             }
         }
 
@@ -1342,15 +1386,7 @@ namespace Ludots.Raylib.Render
                             continue;
                         }
 
-                        DrawAssetRecursive(
-                            item.MeshAssetId,
-                            item.Position,
-                            item.Rotation,
-                            item.Scale * scaleMul,
-                            item.Color,
-                            camera,
-                            meshes,
-                            item.MaterialId);
+                        DrawSkinnedComponent(in item, meshes, scaleMul);
                     }
                 }
 
@@ -1890,13 +1926,77 @@ namespace Ludots.Raylib.Render
                 return;
             }
 
+            DrawModelWithHostMaterial(cached.Model, position, rotation, scale, color, materialId);
+        }
+
+        private void DrawModelWithHostMaterial(Model model, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId)
+        {
             var tint = ToRaylibColor(color);
-            var model = cached.Model;
             RaylibMaterialDrawState.RequireLaneShaderKey(_materials, materialId, $"{nameof(RaylibPrimitiveRenderer)} immediate model");
             ApplyHostMapsToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
+        }
+
+        private void DrawSkinnedComponent(in SkinnedVisualBatchItem item, IRenderMeshAssets meshes, float scaleMul)
+        {
+            if (!TryPoseSkinnedComponent(in item, meshes, out MeshAssetDescriptor descriptor, out Model posedModel))
+            {
+                return;
+            }
+
+            Vector3 scale = item.Scale * scaleMul;
+            CountMeshVisual();
+            RecordSubmittedLeaf(in descriptor, item.Position, item.Rotation, scale);
+            DrawModelWithHostMaterial(posedModel, item.Position, item.Rotation, scale, item.Color, item.MaterialId);
+        }
+
+        /// <summary>
+        /// SkinnedMesh 通道：一个可视项一份 CPU 蒙皮姿势，按与骨骼挂件相同的 ResolveFromAnimator 选精确帧
+        /// （不做人群通道的相位量化），所以身体与挂在骨骼上的子物体永远是同一帧。
+        /// 不依赖 GL 4.3，同一资产的多个可视项按绘制顺序逐个摆姿势后立即提交。
+        /// </summary>
+        private unsafe bool TryPoseSkinnedComponent(
+            in SkinnedVisualBatchItem item,
+            IRenderMeshAssets meshes,
+            out MeshAssetDescriptor descriptor,
+            out Model posedModel)
+        {
+            posedModel = default;
+            if (!meshes.TryGetDescriptor(item.MeshAssetId, out descriptor) || descriptor.Type != MeshAssetType.Model)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} SkinnedMesh meshAssetId={item.MeshAssetId} must be a registered Model (or a prototype primitive).");
+            }
+
+            RaylibGpuSkinnedModelAcquireOutcome outcome = _skinnedComponentModelCache.TryGetOrLoad(
+                item.MeshAssetId,
+                in descriptor,
+                out RaylibGpuSkinnedModelCache.Entry entry,
+                out string? status);
+            if (outcome == RaylibGpuSkinnedModelAcquireOutcome.InFlight)
+            {
+                return false;
+            }
+
+            if (outcome == RaylibGpuSkinnedModelAcquireOutcome.Failed)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} SkinnedMesh meshAssetId={item.MeshAssetId} stableId={item.StableId} cannot animate: {status}");
+            }
+
+            AnimatorPackedState animator = item.Animator;
+            RaylibSkinnedPlayback.ResolveFromAnimator(
+                in animator,
+                entry.Animations,
+                entry.AnimCount,
+                RaylibSkinnedPlayback.ResolveStateMap(item.AnimationProfileId, item.MeshAssetId, AnimationStateMapResolver),
+                out int clipIndex,
+                out int frameIndex);
+            Rl.UpdateModelAnimation(entry.Model, entry.Animations[clipIndex], frameIndex);
+            posedModel = entry.Model;
+            return true;
         }
 
         private void DrawModelShadow(
@@ -3733,6 +3833,8 @@ namespace Ludots.Raylib.Render
 
             _gpuSkinnedModelCache.UnloadAll(model => _materialLibrary?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
+            _skinnedComponentModelCache.UnloadAll(model => _materialLibrary?.DetachOwnedMaps(model));
+            _skinnedComponentModelCache.Dispose();
             _vfxRenderer.Dispose();
             _effectShaders.Dispose();
             _materialLibrary?.Dispose();
@@ -3759,6 +3861,7 @@ namespace Ludots.Raylib.Render
             // 存储销毁必须最晚：蒙皮缓存/材质库/VFX 的释放回调（DetachOwnedMaps 等）仍要触碰模型与贴图，
             // 先销毁存储会产生悬空指针；模型先于贴图销毁保持与旧实现一致（模型内部纹理随模型释放）。
             _modelStore.Dispose();
+            _skinnedComponentModelStore.Dispose();
             _textureStore.Dispose();
         }
 
