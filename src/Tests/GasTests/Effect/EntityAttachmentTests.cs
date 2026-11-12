@@ -65,6 +65,26 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Attach_ChildWithoutWorldPosition_GainsPresentationTransformContract()
+        {
+            using World world = World.Create();
+            Entity parent = world.Create(WorldPositionCm.FromCm(1000, 2000), new FacingDirection { AngleRad = 0f });
+            Entity child = world.Create(new Name { Value = "tent" });
+
+            AttachmentOps.Attach(world, arbiter: null, child, parent, OffsetPose(150, 0));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<WorldPositionCm>(child).Value, Is.EqualTo(Fix64Vec2.FromInt(1150, 2000)));
+                Assert.That(world.Has<Ludots.Core.Presentation.Components.VisualTransform>(child), Is.True,
+                    "SourceHasVisualTransform presenter rules must see an attached child that has a world position");
+                Assert.That(world.Has<Ludots.Core.Presentation.Components.CullState>(child), Is.True);
+                Assert.That(world.Get<Ludots.Core.Presentation.Components.CullState>(child).IsVisible, Is.False,
+                    "visibility stays owned by render culling");
+            });
+        }
+
+        [Test]
         public void Attach_WithNavAuthority_CommitsPendingAtBoundaryAndRollbackRemovesIt()
         {
             using World world = World.Create();

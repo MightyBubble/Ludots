@@ -1,0 +1,43 @@
+{
+  "defaultLocale": "zh-CN",
+  "locales": {
+    "zh-CN": {
+      "ptree.text.title_line": "{0}",
+      "ptree.title.a1": "A1 整棵树一起出现",
+      "ptree.title.a2": "A2 右灯柱放大挪位",
+      "ptree.title.a3": "A3 右水晶改成红色",
+      "ptree.title.a4": "A4 右塔换了塔顶",
+      "ptree.title.a5": "A5 右宝珠多一个吸附",
+      "ptree.title.cart_inner": "C1 巡逻车：旗与灯",
+      "ptree.title.cart_outer": "D1 第二辆换了轨道",
+      "ptree.title.rider": "D6 乘客",
+      "ptree.title.knight": "B2 剑挂在右手",
+      "ptree.title.camp_north": "D2 北营地",
+      "ptree.title.camp_harbor": "D2 港口营地",
+      "ptree.title.tent_north": "北营指挥帐",
+      "ptree.title.tent_harbor": "港口指挥帐",
+      "ptree.title.beacon_red": "D4 红信号塔",
+      "ptree.title.beacon_green": "D4 绿信号塔",
+      "ptree.title.beacon_blue": "D4 蓝信号塔"
+    },
+    "en-US": {
+      "ptree.text.title_line": "{0}",
+      "ptree.title.a1": "A1 Whole tree",
+      "ptree.title.a2": "A2 Right lamp scaled",
+      "ptree.title.a3": "A3 Right crystal red",
+      "ptree.title.a4": "A4 Right tower new top",
+      "ptree.title.a5": "A5 Right orb extra attachment",
+      "ptree.title.cart_inner": "C1 Patrol cart",
+      "ptree.title.cart_outer": "D1 Second cart orbit",
+      "ptree.title.rider": "D6 Rider",
+      "ptree.title.knight": "B2 Sword on hand",
+      "ptree.title.camp_north": "D2 North camp",
+      "ptree.title.camp_harbor": "D2 Harbor camp",
+      "ptree.title.tent_north": "North tent",
+      "ptree.title.tent_harbor": "Harbor tent",
+      "ptree.title.beacon_red": "D4 Red beacon",
+      "ptree.title.beacon_green": "D4 Green beacon",
+      "ptree.title.beacon_blue": "D4 Blue beacon"
+    }
+  }
+}

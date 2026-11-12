@@ -28,6 +28,7 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed unsafe class RaylibBoneTransformProviderTests
     {
+        private const int PosePhaseBuckets = 16;
         private RecordingLogBackend _log = null!;
         private ModelAnimation* _animations;
         private int _animCount;
@@ -121,6 +122,7 @@ namespace Ludots.Tests.Presentation
                 fixture.Batch,
                 fixture.Definitions,
                 fixture.Meshes,
+                PosePhaseBuckets,
                 (_, _) =>
                 {
                     synchronousResolverCalled = true;
@@ -154,6 +156,7 @@ namespace Ludots.Tests.Presentation
                 fixture.Batch,
                 fixture.Definitions,
                 fixture.Meshes,
+                PosePhaseBuckets,
                 (_, _) => throw new InvalidOperationException("synchronous resolver must not run"),
                 (int _, MeshAssetDescriptor _, out RaylibGpuSkinnedModelCache.Entry entry, out string? status) =>
                 {
@@ -240,6 +243,7 @@ namespace Ludots.Tests.Presentation
                 skinnedBatch,
                 definitions,
                 meshAssets,
+                PosePhaseBuckets,
                 (_, _) => new RaylibGpuSkinnedModelCache.Entry(default, _animations, _animCount, string.Empty, loaded: true));
             using var system = new PresenterBehaviorSystem(
                 world,
@@ -256,19 +260,18 @@ namespace Ludots.Tests.Presentation
             var presenterPosition = new Vector3(5f, 0f, 0f);
             int visualStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(ParentStableId, 0, AssetKind.SkinnedMesh, parentDefId);
             ModelAnimation animation = _animations[clipIndex];
-            int lastFrame = animation.frameCount - 1;
+            int firstFrame = ExpectedGpuSkinnedInstanceFrame(0, animation.frameCount);
+            int lastFrame = ExpectedGpuSkinnedInstanceFrame(animation.frameCount - 1, animation.frameCount);
 
-            // 帧 0：t=0 → frameIndex 0。
             SubmitSkinnedItem(skinnedBatch, visualStableId, meshAssetId, clipIndex, normalizedTime01: 0f, presenterPosition, presenterRotation, presenterScale);
             system.Update(0.016f);
-            Vector3 expectedFrame0 = ComposeExpectedWorld(animation, 0, boneId, presenterPosition, presenterRotation, presenterScale);
+            Vector3 expectedFrame0 = ComposeExpectedWorld(animation, firstFrame, boneId, presenterPosition, presenterRotation, presenterScale);
             Vector3 childAtFrame0 = world.Get<PresenterWorldPosition>(childPresenter).Value;
             Assert.That(world.Get<PresenterTransformSource>(childPresenter).Value, Is.EqualTo(TransformSource.BoneAttached));
             Assert.That(childAtFrame0.X, Is.EqualTo(expectedFrame0.X).Within(0.0001f));
             Assert.That(childAtFrame0.Y, Is.EqualTo(expectedFrame0.Y).Within(0.0001f));
             Assert.That(childAtFrame0.Z, Is.EqualTo(expectedFrame0.Z).Within(0.0001f));
 
-            // 末帧：t=1 → frameIndex frameCount-1，挂点必须随动画帧移动。
             SubmitSkinnedItem(skinnedBatch, visualStableId, meshAssetId, clipIndex, normalizedTime01: 1f, presenterPosition, presenterRotation, presenterScale);
             system.Update(0.016f);
             Vector3 expectedLast = ComposeExpectedWorld(animation, lastFrame, boneId, presenterPosition, presenterRotation, presenterScale);
@@ -277,6 +280,92 @@ namespace Ludots.Tests.Presentation
             Assert.That(childAtLast.Y, Is.EqualTo(expectedLast.Y).Within(0.0001f));
             Assert.That(childAtLast.Z, Is.EqualTo(expectedLast.Z).Within(0.0001f));
             Assert.That(Vector3.Distance(childAtFrame0, childAtLast), Is.GreaterThan(0.001f), "挂点位置必须随动画帧移动");
+        }
+
+        [TestCase(VisualRenderPath.GpuSkinnedInstance)]
+        [TestCase(VisualRenderPath.SkinnedMesh)]
+        public void TryGetBoneWorldTransform_UsesTheFrameTheBodyIsDrawnWith(VisualRenderPath renderPath)
+        {
+            const int ShowcaseSwingClip = 11;
+            const int SwordBone = 13;
+            const int PresenterStableId = 7400;
+            LoadKnightAnimations();
+            ModelAnimation animation = _animations[ShowcaseSwingClip];
+            Assert.That(animation.frameCount, Is.GreaterThan(PosePhaseBuckets), "样本片段必须比相位桶多帧，量化才会生效。");
+
+            var definitions = new PresenterDefinitionRegistry();
+            int definitionId = definitions.Register("boneprovider.frame_source", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.SkinnedMesh,
+                            RenderPath = renderPath,
+                        },
+                    },
+                ],
+            });
+            var meshAssets = new MeshAssetRegistry();
+            int meshAssetId = meshAssets.Register("boneprovider.frame_source.mesh", MeshAssetDescriptor.Model(0));
+            var skinnedBatch = new SkinnedVisualBatchBuffer(1);
+            var provider = new RaylibBoneTransformProvider(
+                skinnedBatch,
+                definitions,
+                meshAssets,
+                PosePhaseBuckets,
+                (_, _) => new RaylibGpuSkinnedModelCache.Entry(default, _animations, _animCount, string.Empty, loaded: true));
+            int visualStableId = PresenterBehaviorRuntimeUtility.ComposeVisualStableId(
+                PresenterStableId, 0, AssetKind.SkinnedMesh, definitionId);
+
+            int quantizedFrames = 0;
+            float maxExactToDrawnMeters = 0f;
+            for (int exactFrame = 0; exactFrame < animation.frameCount; exactFrame++)
+            {
+                float normalizedTime01 = (exactFrame + 0.5f) / animation.frameCount;
+                SubmitSkinnedItem(skinnedBatch, visualStableId, meshAssetId, ShowcaseSwingClip, normalizedTime01,
+                    Vector3.Zero, Quaternion.Identity, Vector3.One, renderPath, looping: true);
+
+                Assert.That(provider.TryGetBoneWorldTransform(PresenterStableId, SwordBone, out Vector3 bonePosition, out _, out _), Is.True);
+
+                int drawnFrame = renderPath == VisualRenderPath.GpuSkinnedInstance
+                    ? ExpectedGpuSkinnedInstanceFrame(exactFrame, animation.frameCount)
+                    : exactFrame;
+                Vector3 expected = ComposeExpectedWorld(animation, drawnFrame, SwordBone, Vector3.Zero, Quaternion.Identity, Vector3.One);
+                Assert.That(Vector3.Distance(bonePosition, expected), Is.LessThan(0.0001f), $"exactFrame={exactFrame} drawnFrame={drawnFrame}");
+
+                if (drawnFrame != exactFrame)
+                {
+                    quantizedFrames++;
+                    Vector3 exact = ComposeExpectedWorld(animation, exactFrame, SwordBone, Vector3.Zero, Quaternion.Identity, Vector3.One);
+                    maxExactToDrawnMeters = MathF.Max(maxExactToDrawnMeters, Vector3.Distance(exact, expected));
+                }
+            }
+
+            if (renderPath == VisualRenderPath.GpuSkinnedInstance)
+            {
+                Assert.That(quantizedFrames, Is.GreaterThan(0));
+                Assert.That(maxExactToDrawnMeters, Is.GreaterThan(0.05f), "精确帧与量化帧在样本骨骼上必须拉得开，断言才区分得出错帧。");
+            }
+            else
+            {
+                Assert.That(quantizedFrames, Is.Zero);
+            }
+        }
+
+        private static int ExpectedGpuSkinnedInstanceFrame(int exactFrame, int frameCount)
+        {
+            if (PosePhaseBuckets >= frameCount)
+            {
+                return exactFrame;
+            }
+
+            int bucket = exactFrame * PosePhaseBuckets / frameCount;
+            return (int)((bucket + 0.5f) / PosePhaseBuckets * frameCount);
         }
 
         [Test]
@@ -346,6 +435,7 @@ namespace Ludots.Tests.Presentation
                 skinnedBatch ?? new SkinnedVisualBatchBuffer(8),
                 definitions,
                 meshAssets,
+                PosePhaseBuckets,
                 entryResolver ?? ((_, _) => throw new InvalidOperationException("测试 entry 源不应被触碰。")));
         }
 
@@ -403,17 +493,23 @@ namespace Ludots.Tests.Presentation
             float normalizedTime01,
             Vector3 position,
             Quaternion rotation,
-            Vector3 scale)
+            Vector3 scale,
+            VisualRenderPath renderPath = VisualRenderPath.GpuSkinnedInstance,
+            bool looping = false)
         {
             skinnedBatch.Clear();
             var animator = AnimatorPackedState.Create(1);
             animator.SetPrimaryStateIndex(clipIndex);
             animator.SetNormalizedTime01(normalizedTime01);
+            if (looping)
+            {
+                animator.SetFlags(animator.GetFlags() | AnimatorPackedStateFlags.Looping);
+            }
             Assert.That(skinnedBatch.TryAdd(new SkinnedVisualBatchItem
             {
                 StableId = visualStableId,
                 MeshAssetId = meshAssetId,
-                RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                RenderPath = renderPath,
                 AssetKind = AssetKind.SkinnedMesh,
                 Animator = animator,
                 Position = position,

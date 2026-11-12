@@ -55,7 +55,7 @@ internal static class CefRuntimeLayoutPreflight
 
 		throw new PlatformNotSupportedException(
 			"Ludots.UI.Browser.Cef ships CefSharp.OffScreen.NETCore win-x64 natives only " +
-			$"(TFM net8.0-windows / RID win-x64). Current OS '{RuntimeInformation.OSDescription}' cannot load libcef.dll. " +
+			$"(TFM net9.0-windows / RID win-x64). Current OS '{RuntimeInformation.OSDescription}' cannot load libcef.dll. " +
 			"Disable browserRuntime on this host, or register a Linux-capable provider such as Ultralight.");
 	}
 

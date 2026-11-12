@@ -69,17 +69,13 @@ namespace Ludots.Core.Presentation.Presenters
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
-                    basePosition = presenter.WorldPosition;
-                    baseRotation = VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = VisualMath.NormalizeScale(presenter.WorldScale);
-                    baseFacing = presenter.WorldFacing;
-                    return ApplyInstanceOverride(
-                        basePosition,
-                        baseRotation,
-                        baseScale,
-                        baseFacing,
-                        instanceOverride,
-                        inheritScale: true);
+                    // 这两个来源的位姿由挂载行为从父节点或骨骼重算，覆盖也在那里叠。
+                    // 这里再叠一次会把上一帧结果当底；挂载中途返回时，覆盖会逐帧累加。
+                    return CreateResolvedTransform(
+                        presenter.WorldPosition,
+                        VisualMath.NormalizeOrIdentity(presenter.WorldRotation),
+                        VisualMath.NormalizeScale(presenter.WorldScale),
+                        presenter.WorldFacing);
 
                 case TransformSource.WorldFixed:
                     ComposeInstanceOverride(instanceOverride, out Vector3 fixedOffset, out Quaternion fixedRotation, out Vector3 fixedScale);
@@ -169,6 +165,24 @@ namespace Ludots.Core.Presentation.Presenters
             Vector3 currentUp = Vector3.Transform(Vector3.UnitY, VisualMath.NormalizeOrIdentity(rotation));
             Quaternion alignment = CreateRotationBetween(currentUp, targetNormal);
             return VisualMath.NormalizeOrIdentity(alignment * VisualMath.NormalizeOrIdentity(rotation));
+        }
+
+        // 位姿覆盖是吸附结果之后的局部变换：偏移只按吸附旋转转，不乘吸附缩放。
+        public static void ComposeAttachmentSpaceOverride(
+            in PresenterInstanceTransformOverride instanceOverride,
+            ref Vector3 position,
+            ref Quaternion rotation,
+            ref Vector3 scale)
+        {
+            if (!instanceOverride.HasOverride)
+            {
+                return;
+            }
+
+            Quaternion attachmentRotation = VisualMath.NormalizeOrIdentity(rotation);
+            position += Vector3.Transform(instanceOverride.LocalPosition, attachmentRotation);
+            rotation = WorldPlane2D.ComposeVisualRotation(attachmentRotation, instanceOverride.LocalRotation);
+            scale = VisualMath.NormalizeScale(scale) * VisualMath.NormalizeScale(instanceOverride.LocalScale);
         }
 
         private static PresenterResolvedTransform ApplyInstanceOverride(

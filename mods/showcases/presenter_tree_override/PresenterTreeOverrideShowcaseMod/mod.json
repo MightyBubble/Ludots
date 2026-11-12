@@ -1,0 +1,14 @@
+{
+  "name": "PresenterTreeOverrideShowcaseMod",
+  "version": "1.0.0",
+  "description": "表现树“同一套，这里改一点”：同一个定义摆多份，每份单独挪位置、换颜色、换部件、加挂件；巡逻车、骑士骨骼挂载、运行中上下车、地图摆放覆盖一屏看全。",
+  "main": "bin/net9.0/PresenterTreeOverrideShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "RaylibPlatformMeshesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "presenter", "attachment", "override"]
+}

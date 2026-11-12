@@ -58,6 +58,8 @@ namespace Ludots.Raylib.Render
         private bool _frameSealed;
         private readonly uint[] _drawTimingQueries = new uint[4];
         private bool _drawTimingQueriesReady;
+        private bool _mainDrawTimingIssued;
+        private bool _shadowDrawTimingIssued;
         public double LastMainDrawGpuMs { get; private set; }
         public double LastShadowDrawGpuMs { get; private set; }
 
@@ -76,23 +78,18 @@ namespace Ludots.Raylib.Render
             _drawTimingQueriesReady = true;
         }
 
-        private unsafe void ReadBackDrawTiming()
+        private void ReadBackDrawTiming()
         {
-            ulong mainEnd = 0, shadowEnd = 0;
-            Gl43.GetQueryObjectui64v(_drawTimingQueries[1], Gl43.GL_QUERY_RESULT_NO_WAIT, &mainEnd);
-            Gl43.GetQueryObjectui64v(_drawTimingQueries[3], Gl43.GL_QUERY_RESULT_NO_WAIT, &shadowEnd);
-            if (mainEnd != 0)
+            if (_mainDrawTimingIssued &&
+                Gl43.TryReadElapsedNanoseconds(_drawTimingQueries[0], _drawTimingQueries[1], out ulong mainNs))
             {
-                ulong mainStart = 0;
-                Gl43.GetQueryObjectui64v(_drawTimingQueries[0], Gl43.GL_QUERY_RESULT, &mainStart);
-                LastMainDrawGpuMs = (mainEnd - mainStart) / 1e6;
+                LastMainDrawGpuMs = mainNs / 1e6;
             }
 
-            if (shadowEnd != 0)
+            if (_shadowDrawTimingIssued &&
+                Gl43.TryReadElapsedNanoseconds(_drawTimingQueries[2], _drawTimingQueries[3], out ulong shadowNs))
             {
-                ulong shadowStart = 0;
-                Gl43.GetQueryObjectui64v(_drawTimingQueries[2], Gl43.GL_QUERY_RESULT, &shadowStart);
-                LastShadowDrawGpuMs = (shadowEnd - shadowStart) / 1e6;
+                LastShadowDrawGpuMs = shadowNs / 1e6;
             }
         }
 
@@ -107,8 +104,8 @@ namespace Ludots.Raylib.Render
         private readonly Dictionary<(int MeshAssetId, int ClipIndex, int FrameIndex), int> _poseRowByKey;
         private readonly List<(int PoseRow, GpuSkinnedInstanceBatch Batch, int ClipIndex, int FrameIndex)> _dirtyPoseRows;
         private int _locInstanceBase = -1;
-        private int _locBoneBase = -1;
         private int _locPoseStride = -1;
+        private int _locVertexColor = -1;
         private int _locMvp = -1;
         private int _posePhaseBuckets;
 
@@ -394,17 +391,15 @@ namespace Ludots.Raylib.Render
             }
 
             AnimatorPackedState animator = item.Animator;
-            RaylibSkinnedPlayback.ResolveFromAnimator(
+            RaylibSkinnedPlayback.ResolveRenderedPose(
                 in animator,
                 family.Animations,
                 family.AnimCount,
                 family.StateToClipMap,
+                VisualRenderPath.GpuSkinnedInstance,
+                PosePhaseBuckets,
                 out int clipIndex,
-                out int frameIndex);
-            int poseFrame = RaylibSkinnedPlayback.QuantizeFrameIndex(
-                frameIndex,
-                family.Animations[clipIndex].frameCount,
-                PosePhaseBuckets);
+                out int poseFrame);
 
             var key = new GpuSkinnedInstanceBatchKey(
                 item.MeshAssetId,
@@ -435,7 +430,7 @@ namespace Ludots.Raylib.Render
                 if (_poseRowByKey.Count >= capacity.MaxUniquePoses)
                 {
                     throw new InvalidOperationException(
-                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose row for meshAssetId={item.MeshAssetId}, clipIndex={clipIndex}, frameIndex={frameIndex}; configured maxUniquePoses={capacity.MaxUniquePoses}.");
+                        $"{nameof(RaylibGpuSkinnedBatchRenderer)} requires another pose row for meshAssetId={item.MeshAssetId}, clipIndex={clipIndex}, frameIndex={poseFrame}; configured maxUniquePoses={capacity.MaxUniquePoses}.");
                 }
 
                 poseRow = _poseRowByKey.Count;
@@ -529,6 +524,7 @@ namespace Ludots.Raylib.Render
                 }
 
                 Gl43.QueryCounter(_drawTimingQueries[1], Gl43.GL_TIMESTAMP);
+                _mainDrawTimingIssued = true;
                 LastMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
             }
 
@@ -657,6 +653,7 @@ namespace Ludots.Raylib.Render
             }
 
             Gl43.QueryCounter(_drawTimingQueries[3], Gl43.GL_TIMESTAMP);
+            _shadowDrawTimingIssued = true;
             LastShadowSubmitCpuMs += (Stopwatch.GetTimestamp() - shadowStart) * 1000d / Stopwatch.Frequency;
         }
 
@@ -922,12 +919,9 @@ namespace Ludots.Raylib.Render
             RaylibInstancedMaterialPipeline.RestoreOpaqueModelState();
             // 直绘前把 rlgl 立即批次落盘：原始 GL 调用不触发 raylib 批次状态机，先排空再裸绘。
             Rl.rlDrawRenderBatchActive();
-            int boneBaseMain = 0;
             for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
             {
                 Mesh mesh = model.meshes[meshIndex];
-                // boneBase 累计必须覆盖全部 mesh（与 EvaluatePosesOnGpu 一致），跳过绘制不跳过累计
-                int nextBoneBase = boneBaseMain + mesh.boneCount;
                 if (mesh.vertexCount > 0)
                 {
                     RaylibInstancedMaterialPipeline.RequireMeshNormals(in mesh, "GpuSkinnedInstance");
@@ -944,7 +938,6 @@ namespace Ludots.Raylib.Render
 
                         // SSBO 蒙皮：骨骼矩阵由 compute 写入姿势 SSBO，实例数据驻实例 SSBO——零逐实例上传
                         SetPoseStrideUniform();
-                        SetBoneBaseUniform(boneBaseMain);
                         for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                         {
                             int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -956,8 +949,6 @@ namespace Ludots.Raylib.Render
                         triangles = checked(triangles + meshSubmission.Triangles);
                     }
                 }
-
-                boneBaseMain = nextBoneBase;
             }
 
             return new GpuSkinnedMeshSubmission(drawCalls, triangles);
@@ -988,11 +979,9 @@ namespace Ludots.Raylib.Render
             int drawCalls = 0;
             long triangles = 0;
             {
-                int boneBase = 0;
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    int nextBoneBase = boneBase + mesh.boneCount;
                     if (mesh.vertexCount > 0)
                     {
                         GpuSkinnedMeshSubmission meshSubmission = CalculateMeshSubmission(
@@ -1006,15 +995,12 @@ namespace Ludots.Raylib.Render
                                 mesh,
                                 chunkCount,
                                 batch.GlobalInstanceBase + offset,
-                                boneBase,
                                 _ssbo.PoseStride);
                         }
 
                         drawCalls = checked(drawCalls + meshSubmission.DrawCalls);
                         triangles = checked(triangles + meshSubmission.Triangles);
                     }
-
-                    boneBase = nextBoneBase;
                 }
             }
 
@@ -1068,7 +1054,6 @@ namespace Ludots.Raylib.Render
             _skinningShader = RaylibShaderLoader.Load(baseDir, "skinning_instanced_ssbo.vs", "skinning_instanced.fs", "skinning_instanced");
 
             _locInstanceBase = Rl.GetShaderLocation(_skinningShader, "uInstanceBase");
-            _locBoneBase = Rl.GetShaderLocation(_skinningShader, "uBoneBase");
             _locPoseStride = Rl.GetShaderLocation(_skinningShader, "uPoseStride");
             _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
             _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
@@ -1082,7 +1067,7 @@ namespace Ludots.Raylib.Render
             int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_skinningShader, "vertexTexCoord");
             int locVertexNormal = Rl.GetShaderLocationAttrib(_skinningShader, "vertexNormal");
-            int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
+            _locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
             int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
             int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
             _locSkyZenith = RaylibShaderBindingGuard.RequireUniform(_skinningShader, "uSkyZenith", "skinning_instanced");
@@ -1102,7 +1087,7 @@ namespace Ludots.Raylib.Render
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
-            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = _locVertexColor;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = _locMvp;
@@ -1131,11 +1116,11 @@ namespace Ludots.Raylib.Render
 
             // SSBO skinning reads matrices and instance data from shader storage buffers.
             if (_locInstanceBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uInstanceBase' not found.");
-            if (_locBoneBase < 0) throw new InvalidOperationException("Skinning shader uniform 'uBoneBase' not found.");
             if (_locPoseStride < 0) throw new InvalidOperationException("Skinning shader uniform 'uPoseStride' not found.");
             if (_locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
             if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
             if (locVertexNormal < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexNormal' not found.");
+            if (_locVertexColor < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexColor' not found.");
             if (locBoneIds < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneIds' not found.");
             if (locBoneWeights < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneWeights' not found.");
             if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
@@ -1179,17 +1164,6 @@ namespace Ludots.Raylib.Render
             Rl.SetShaderValue(_skinningShader, _locInstanceBase, &value, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
-        private unsafe void SetBoneBaseUniform(int boneBase)
-        {
-            if (_locBoneBase < 0)
-            {
-                return;
-            }
-
-            float value = boneBase;
-            Rl.SetShaderValue(_skinningShader, _locBoneBase, &value, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-        }
-
         /// <summary>直接 GL 实例化绘制（零逐实例上传）：实例数据全驻 SSBO，
         /// mvp/纹理槽按 raylib DrawMeshInstanced 内部合同逐位复刻。VAO 只含逐顶点属性，
         /// 实例维由着色器经 gl_InstanceID 进 SSBO 取数——本路径既不需要也不允许
@@ -1204,13 +1178,19 @@ namespace Ludots.Raylib.Render
             }
 
             Gl43.UseProgram(material.shader.id);
-            Gl43.Disable(Gl43.GL_BLEND);
+            bool blendWasEnabled = Gl43.DisableBlendForOpaqueDraw();
             Color diffuseColor = material.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].color;
             Vector4 diffuse = new(diffuseColor.r / 255f, diffuseColor.g / 255f, diffuseColor.b / 255f, diffuseColor.a / 255f);
             Rl.SetShaderValue(_skinningShader, _locSkinningColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
             Rl.SetShaderValueMatrix(_skinningShader, _locMvp, RaylibNativeResources.ComputeDrawMvp());
             BindMaterialTextureSlotsDirect(in material);
             Gl43.BindVertexArray(mesh.vaoId);
+            if (mesh.colors == null)
+            {
+                // 关闭的顶点属性读的是上下文级常量值，谁最后设过就是谁的；raylib DrawMesh 每次绘制前设白色，直绘路径同样必须自己设
+                Gl43.VertexAttrib4f((uint)_locVertexColor, 1f, 1f, 1f, 1f);
+            }
+
             if (mesh.indices != null)
             {
                 int indexCount = checked(mesh.triangleCount * 3);
@@ -1223,6 +1203,7 @@ namespace Ludots.Raylib.Render
                 Gl43.DrawArraysInstanced(Gl43.GL_TRIANGLES, 0, mesh.vertexCount, count);
             }
             Gl43.UseProgram(0);
+            Gl43.RestoreBlend(blendWasEnabled);
         }
 
         private static void BindMaterialTextureSlotsDirect(in Material material)

@@ -789,6 +789,7 @@ namespace Ludots.Core.Systems
                 }
 
                 string contextId = ResolveMapEntityContextId(entityData);
+                entityData.TryResolvePlacementPositionCm(mapConfig.Id, contextId, out _, out _);
                 string rootTitleToken = ReadEntityInfoTitleToken(
                     entityData.EntityInfo,
                     $"Map '{mapConfig.Id}' entity '{contextId}'");
@@ -848,18 +849,7 @@ namespace Ludots.Core.Systems
                     }
                 }
 
-                // Placement position is the anchor of last resort: it lands only when
-                // neither the template nor an explicit override supplies WorldPositionCm.
-                if (entityData.PositionXCm.HasValue != entityData.PositionYCm.HasValue)
-                {
-                    throw new InvalidOperationException(
-                        $"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}' authors PositionXCm/PositionYCm partially; set both or neither.");
-                }
-
-                bool hasAuthoredWorldPosition =
-                    templates[entityData.Template].Components.ContainsKey("WorldPositionCm") ||
-                    (entityData.Overrides != null && entityData.Overrides.ContainsKey("WorldPositionCm"));
-                if (entityData.PositionXCm.HasValue && !hasAuthoredWorldPosition)
+                if (entityData.TryResolvePlacementPositionCm(mapConfig.Id, contextId, out int placementXCm, out int placementYCm))
                 {
                     builder.WithOverride(
                         "WorldPositionCm",
@@ -867,8 +857,8 @@ namespace Ludots.Core.Systems
                         {
                             ["Value"] = new JsonObject
                             {
-                                ["X"] = entityData.PositionXCm.Value,
-                                ["Y"] = entityData.PositionYCm.Value,
+                                ["X"] = placementXCm,
+                                ["Y"] = placementYCm,
                             },
                         });
                 }
@@ -1501,6 +1491,12 @@ namespace Ludots.Core.Systems
                         entityData.Overrides["FacingDirection"]);
                     hasFacing = true;
                 }
+            }
+
+            if (entityData.TryResolvePlacementPositionCm(mapId, ResolveMapEntityContextId(entityData), out int placementXCm, out int placementYCm))
+            {
+                worldPosition = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(placementXCm, placementYCm);
+                hasWorldPosition = true;
             }
 
             // Placement yaw stays FacingDirection. Per-instance Name / Team / PlayerOwner /
