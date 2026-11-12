@@ -86,11 +86,12 @@
 | `instanceChildren` / `instanceBehaviors` 的冲突校验漏查 | 已修 |
 | 静止父节点（带 `PresentationStaticTransform`）下，子定义自带的吸附偏移不生效，名牌贴在地上（S1） | 已修 |
 | A1 熔炉（`InstancedStaticMesh`）丢了位姿覆盖（S2） | 已修 |
-| 不配本地座位（`startupLocalSeats` + 地图 `Players`）时，Raylib 实机不做可见性裁剪，画面里一个外观都不画，也不报错 | 使用门槛，待评估是否该报错 |
-| 模板子件没有 `WorldPositionCm` 时不会有画面变换组件，`SourceHasVisualTransform` 条件把它静默跳过，子件不出外观 | 使用门槛，待评估是否该报错 |
-| 走批量摆放路径（D4 的 `PresenterParamOverrides` 只能走这条）时模板必须自带 `WorldPositionCm`，于是 `PositionXCm` 不生效，坐标只能写在 `Overrides.WorldPositionCm` | 使用门槛 |
-| 骑士身体的渲染路径写成 `SkinnedMesh` 时，身体按静止姿势画、不播动画，挂在手骨上的剑却跟着动画走，剑看起来离了手，也不报错。只有 `GpuSkinnedInstance` 会让身体播动画，本演示用它 | 待评估：`SkinnedMesh` 配了动画时该报错还是补上动画 |
-| 软件渲染（llvmpipe）下，场景里有 `GpuSkinnedInstance` 时整帧 3D 画面全黑，只剩名牌文字 | 环境限制；沙箱截图时临时把骑士改成 `SkinnedMesh`，所以截图里剑不在手上，B2 以自动化验收为准 |
+| 不配本地座位（`startupLocalSeats` + 地图 `Players`）时，Raylib 实机不做可见性裁剪，挂在实体上的外观都不画，也不报错 | 未修。裁剪按设计只跟座位的画面绑定走；没有座位时 Raylib 仍用权威相机出画面，但不拿它做裁剪。直接报错会波及大量自己不声明座位、靠输入 mod 运行中绑座位或自己写可见性的 mod，需要先逐个核对再定 |
+| 模板子件没有 `WorldPositionCm` 时不会有画面变换组件，`SourceHasVisualTransform` 条件把它静默跳过，子件不出外观 | 已修：挂到父实体上时补上画面变换组件，帐篷模板已去掉占位坐标 |
+| 走批量摆放路径（D4 的 `PresenterParamOverrides` 只能走这条）时 `PositionXCm` 不生效，坐标只能写在 `Overrides.WorldPositionCm` | 已修：摆放坐标在两条路径都盖过模板默认坐标，与 `Overrides.WorldPositionCm` 同写时加载报错；信标已改用 `PositionXCm` |
+| 骑士身体的渲染路径写成 `SkinnedMesh` 时，身体按静止姿势画、不播动画，挂在手骨上的剑却跟着动画走，剑看起来离了手，也不报错 | 已修：`SkinnedMesh` 按动画器的同一帧播放，和骨骼挂件对齐 |
+| 软件渲染（llvmpipe）下，场景里有 `GpuSkinnedInstance` 时整帧 3D 画面全黑，只剩名牌文字；修掉黑屏后骑士只剩一把剑，身体发黑 | 已修：根因在我们自己的绘制状态和着色器，不在驱动，Linux 软件渲染下骑士完整、按动画动 |
+| 带位姿覆盖或参数覆盖的子物体，从批量创建退回逐个创建 | 已修：覆盖直接进批量填充，只有实例子树覆盖还走逐个计划 |
 | 大块地面只按属主中心参与裁剪，近景时会被整块裁掉；核心层没有数据入口声明包围盒 | 本演示把地面拆成 12 块绕开 |
 | 地图上给某一座建筑里的某个外观子物体单独覆盖（E1）、按路径增删子件（D3）、`attach:false` 的独立实体（D5）、骨骼按名字引用 | 后续 |
 

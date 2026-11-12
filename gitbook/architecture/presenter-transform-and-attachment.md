@@ -320,8 +320,8 @@ public struct SplineConfig
 
 `mods/showcases/presenter_tree_override` 把本页的覆盖与吸附规则逐条摆成能看的展台，镜头自动巡游。设计、场景和已知边界见该目录下的 `showcase-design.md`，逐案例验收是 `PresenterTreeOverrideShowcaseAcceptanceTests`。
 
-搭类似场景时要注意的三个使用门槛：
+摆放与子件的位置规则：
 
-- Raylib 实机要有本地座位（`game.json` 的 `startupLocalSeats` 加地图的 `Teams` / `Players`），否则不做可见性裁剪，画面里不画任何外观。
-- 模板子件要带 `WorldPositionCm`，才会有画面变换组件；否则带 `SourceHasVisualTransform` 条件的生成规则不会给它建外观。
-- 地图摆放写 `PresenterParamOverrides` 只能走批量路径，这条路径要求模板自带 `WorldPositionCm`，坐标要写在 `Overrides.WorldPositionCm`，`PositionXCm` 不生效。
+- 地图摆放的 `PositionXCm` / `PositionYCm` 是这一份实例的位置，盖过模板里的默认 `WorldPositionCm`，单体摆放和批量摆放（`PresenterParamOverrides` 走的那条）一样生效；同时再写 `Overrides.WorldPositionCm` 会在加载时报错。
+- 模板子件不用自带 `WorldPositionCm`。挂到父实体上时会按父位姿算出世界坐标，同时补上画面变换组件，带 `SourceHasVisualTransform` 条件的生成规则照常给它建外观。
+- Raylib 实机仍然要有本地座位（`game.json` 的 `startupLocalSeats` 加地图的 `Teams` / `Players`）。可见性裁剪只跟座位的画面绑定走，没有座位时挂在实体上的外观一直不可见，目前不报错，见 `showcase-design.md` 第 5 节。
