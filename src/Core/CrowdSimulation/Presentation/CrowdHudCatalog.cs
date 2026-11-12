@@ -34,7 +34,9 @@ public sealed class CrowdHudCatalog
             Formations = formationLabels;
             DeployCount = new CrowdHudRange(playerView.DeployCountMin, playerView.DeployCountMax, playerView.DeployCountStep);
             ClickCount = new CrowdHudRange(playerView.ClickCountMin, playerView.ClickCountMax, playerView.ClickCountStep);
-            string[] templates = playerView.ClickTemplates;
+            string[] templates = playerView.ClickTemplates is { Length: > 0 }
+                ? playerView.ClickTemplates
+                : CrowdDeployment.ListTemplateIds(config);
             ClickTemplates = templates;
             var unitTypeIds = new string[templates.Length];
             var templateRadiusCm = new int[templates.Length];

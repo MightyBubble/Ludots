@@ -25,8 +25,8 @@ internal sealed class CrowdPlayerViewConfig
     [JsonRequired] public int ClickCountStep { get; init; }
     [JsonRequired] public int ClickCountMin { get; init; }
     [JsonRequired] public int ClickCountMax { get; init; }
-    [JsonRequired] public string ClickTemplate { get; init; } = "";
-    [JsonRequired] public string[] ClickTemplates { get; init; } = Array.Empty<string>();
+    public string ClickTemplate { get; init; } = "";
+    public string[] ClickTemplates { get; init; } = Array.Empty<string>();
     [JsonRequired] public int RippleMs { get; init; }
     [JsonRequired] public int RippleRadiusCm { get; init; }
     [JsonRequired] public int DashCm { get; init; }
@@ -80,20 +80,29 @@ internal sealed class CrowdPlayerViewConfig
             throw new InvalidOperationException($"{path}: clickCountStep 需为 ≥ 1 的整数。");
         if (ClickCountMin < 1 || ClickCountMax < ClickCountMin)
             throw new InvalidOperationException($"{path}: clickCountMin/Max 非法。");
-        if (ClickTemplates == null || ClickTemplates.Length == 0)
-            throw new InvalidOperationException($"{path}: clickTemplates 至少一条。");
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < ClickTemplates.Length; i++)
+        bool listed = ClickTemplates is { Length: > 0 };
+        bool named = !string.IsNullOrWhiteSpace(ClickTemplate);
+        if (listed != named)
         {
-            string id = ClickTemplates[i];
-            if (string.IsNullOrWhiteSpace(id))
-                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 不能为空。");
-            if (!seen.Add(id))
-                throw new InvalidOperationException($"{path}: clickTemplates[{i}] 重复。");
+            throw new InvalidOperationException(
+                $"{path}: clickTemplate 与 clickTemplates 要一起给出，或一起省略。省略时点选名单用这张图装上的单位模板。");
         }
 
-        if (string.IsNullOrWhiteSpace(ClickTemplate) || !seen.Contains(ClickTemplate))
-            throw new InvalidOperationException($"{path}: clickTemplate 必须是 clickTemplates 里的模板 id。");
+        if (listed)
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < ClickTemplates.Length; i++)
+            {
+                string id = ClickTemplates[i];
+                if (string.IsNullOrWhiteSpace(id))
+                    throw new InvalidOperationException($"{path}: clickTemplates[{i}] 不能为空。");
+                if (!seen.Add(id))
+                    throw new InvalidOperationException($"{path}: clickTemplates[{i}] 重复。");
+            }
+
+            if (!seen.Contains(ClickTemplate))
+                throw new InvalidOperationException($"{path}: clickTemplate 必须是 clickTemplates 里的模板 id。");
+        }
         if (RippleMs < 1)
             throw new InvalidOperationException($"{path}: rippleMs 需为 ≥ 1 的整数。");
         if (RippleRadiusCm < 1)

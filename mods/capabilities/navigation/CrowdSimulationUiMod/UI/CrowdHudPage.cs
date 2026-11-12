@@ -92,6 +92,7 @@ internal sealed partial class CrowdHudPage
     {
         _now = now;
         _sink.Update();
+        GateDeclaredActions();
         bool burst = _stepper.Active || now < _burstUntil;
         Mark(_wide.Set(viewportWidth >= WideViewportPx));
         TrackPanelKeys();

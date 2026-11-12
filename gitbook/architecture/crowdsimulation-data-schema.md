@@ -206,13 +206,15 @@
 | 职责 | 默认提供方 | 演示常见覆盖 |
 | --- | --- | --- |
 | 共用底色 `plan` / `ink` / `paper` | `CrowdSimulationUiMod` · `CrowdSimulationPresentationPalette.json` | 一般不改 |
-| 玩家 HUD 与点选玩法 | `CrowdSimulationUiMod` · `CrowdSimulationPlayerView.json` | 演示 Mod 换相机、座位、模板列表、`labels`、`shapeLabels` 等 |
+| 玩家 HUD 与点选玩法 | `CrowdSimulationUiMod` · `CrowdSimulationPlayerView.json` | 演示 Mod 换相机、座位、`shapeLabels`。点选名单默认不写，进图后用这张图装上的单位 |
 | 调试叠层与检视 | `CrowdSimulationUiMod` · `CrowdSimulationDebugView.json` | 演示 Mod 改默认叠层、检视 agentType 等 |
 | 调试工具条 / 脚本 / HUD 文案 | `CrowdSimulationUiMod` · `CrowdSimulationDebug.json`（`tools`、`rates`、`fuzz`） | 演示 Mod 的 `presentation`（`deploy` 或 `path` 二选一）、`session.script` |
 
 合同要点：
 
 - **阵型文案**：`CrowdSimulationPlayerView.json` 的 `shapeLabels` 以 `CrowdSimulationConfig.json` 里 `formations.<id>` 为键，必须全覆盖；`defaultShapeId` 必须是其中之一。HUD 用这些字符串，不在调试 JSON 里重复。
+- **点选名单**：`clickTemplate` 和 `clickTemplates` 要么一起写（默认项必须在名单里），要么一起不写。不写时，进图后的名单就是这张图实际装上的单位：按移动类型的顺序，同一种里半径从小到大。界面这份默认文件不写演示里的单位。
+- **共用按钮**：阵型、视线、乐观迷雾、路线、迷雾核对的动作登记在界面 Mod 的 `Input/default_input.json`。输入表里没有的按钮不画出来，点不到。
 - **调试视图文案**：`CrowdSimulationDebug.json` → `presentation.viewLabels` 按视图 id 写全（如 `terrain` / `walkable` / `navmesh`）；每个带 `presentation.deploy` 的演示自己写完整表，供 V 键巡回与 HUD 占位符 `{view}`。
 - **`presentation` 块**：根下恰好 `deploy` 或 `path` 之一（无 `kind`）。`deploy` 含 `palette`、`actions`、放置预览色等；`path` 用于路径演示。带 `deploy` 时必须同时有 `tools`、`rates`、`fuzz`。
 - **`fuzz.ops`**：字符串 id 数组，只列操作名（如 `spawn`、`order`、`place`、`remove`、`placePath`、`removePath`、`kill`）；字段含义见 `CrowdSimRegressCatalog`。
@@ -227,7 +229,7 @@
 
 严格 DTO。带 `presentation.deploy` 时须同时有 `tools`、`rates`、`fuzz`。
 
-- `tools`：`boomRadiusCm`、`ringScale` > 1、`impulse` ≥ 0、`spawnCount` ≥ 1、`spawnTemplate`（单位模板 id）、`placeEntry`（须在 `presentation.deploy.palette[].entry`）、`speedStepsPermille`（严格递增且含 1000）
+- `tools`：`boomRadiusCm`、`ringScale` > 1、`impulse` ≥ 0、`spawnCount` ≥ 1、`spawnTemplate`（可以不写；不写时生成用这张图第一种单位，写了就必须是这张图里的单位模板，对不上就报错）、`placeEntry`（须在 `presentation.deploy.palette[].entry`）、`speedStepsPermille`（严格递增且含 1000）
 - `rates`：`avoidHzMin` / `avoidHzMax`（0 < min ≤ max）、`avoidStep` > 0
 - `fuzz`：`sliceMs`、`opCount`、`stepsPerOp`、`placeTemplate`、`pathTemplate` / `pathWidthCm` / `pathLengthCm`（若 `ops` 含 `placePath`）、`ops`（字符串 id 列表）
 - `presentation`：恰好 `deploy` 或 `path` 之一（无 `kind` 字段）；`deploy.palette[]` 的 `entry`、`selectAction`（不重复）

@@ -1,0 +1,10 @@
+{
+  "actions": [
+    { "id": "CrowdSimulation.Player.SceneOutside", "name": "CrowdSimulation_Player_SceneOutside", "type": "Button" },
+    { "id": "CrowdSimulation.Player.SceneBehind", "name": "CrowdSimulation_Player_SceneBehind", "type": "Button" },
+    { "id": "CrowdSimulation.Player.ToggleLos", "name": "CrowdSimulation_Player_ToggleLos", "type": "Button" },
+    { "id": "CrowdSimulation.Player.ToggleRoute", "name": "CrowdSimulation_Player_ToggleRoute", "type": "Button" },
+    { "id": "CrowdSimulation.Player.ToggleOptimisticTerrain", "name": "CrowdSimulation_Player_ToggleOptimisticTerrain", "type": "Button" },
+    { "id": "CrowdSimulation.Player.CycleShape", "name": "CrowdSimulation_Player_CycleShape", "type": "Button" }
+  ]
+}

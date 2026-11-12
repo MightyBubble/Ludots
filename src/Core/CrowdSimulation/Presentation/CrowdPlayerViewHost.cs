@@ -214,14 +214,17 @@ internal sealed class CrowdPlayerViewHost
             }
         }
 
-        int templates = _config.ClickTemplates.Length;
-        _clickIds = new string[templates];
-        _clickUnit = new int[templates];
-        _clickRadiusOf = new int[templates];
+        bool explicitRoster = _config.ClickTemplates is { Length: > 0 };
+        string[] ids = explicitRoster
+            ? _config.ClickTemplates
+            : CrowdDeployment.ListTemplateIds(session.Config);
+        _clickIds = new string[ids.Length];
+        _clickUnit = new int[ids.Length];
+        _clickRadiusOf = new int[ids.Length];
         _clickHome = -1;
-        for (int i = 0; i < templates; i++)
+        for (int i = 0; i < ids.Length; i++)
         {
-            string id = _config.ClickTemplates[i];
+            string id = ids[i];
             var (unitType, radius) = CrowdDeployment.LocateTemplate(session.Config, id);
             if ((uint)unitType >= (uint)types || (uint)radius >= (uint)radii)
             {
@@ -231,13 +234,13 @@ internal sealed class CrowdPlayerViewHost
             _clickIds[i] = id;
             _clickUnit[i] = unitType;
             _clickRadiusOf[i] = radius;
-            if (string.Equals(id, _config.ClickTemplate, StringComparison.Ordinal))
-            {
-                _clickHome = i;
-            }
+            bool home = explicitRoster
+                ? string.Equals(id, _config.ClickTemplate, StringComparison.Ordinal)
+                : i == 0;
+            if (home) _clickHome = i;
         }
 
-        if (_clickHome < 0)
+        if (ids.Length > 0 && _clickHome < 0)
         {
             throw new InvalidOperationException($"玩家视图点选模板 {_config.ClickTemplate} 不在轮换表里。");
         }
@@ -270,7 +273,7 @@ internal sealed class CrowdPlayerViewHost
         _focus = 0;
         _deployCount = _config.DeployCount;
         _clickCount = _config.ClickCount;
-        _clickIndex = _clickHome;
+        _clickIndex = _clickHome >= 0 ? _clickHome : 0;
         _windowMin = 0;
         _windowMax = _clickIds.Length - 1;
         _layerId = session.Config.UnitTypes[_focus].Id;

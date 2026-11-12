@@ -1,4 +1,5 @@
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
 
@@ -41,7 +42,48 @@ internal sealed partial class CrowdHudPage
         _observeAvoid = () => AvoidIndex(_deploy.AvoidHz);
     }
 
+    private readonly Dictionary<UiElement, Action<UiActionContext>?> _declaredClicks = new();
+
     private CrowdHudActions Actions => _feed.Actions ?? throw new InvalidOperationException("群体 HUD 的数据口没有动作表。");
+
+    private void RememberClick(string id)
+    {
+        UiElement element = Find(id);
+        _declaredClicks[element] = element.ClickHandler;
+    }
+
+    /// <summary>输入表里没有的按钮不留下可点的控件。点下去仍走原来的按下，缺登记就报错，不改成空操作。</summary>
+    private void GateDeclaredActions()
+    {
+        CrowdHudActions.PlayerViewGroup? keys = _feed.Actions?.PlayerView;
+        _shapeDeclared = Declared(keys?.CycleShape);
+        Mark(_formations.Show(_shapeDeclared));
+        Gate(_losRow, keys?.ToggleLos);
+        Gate(_optimisticRow, keys?.ToggleOptimisticTerrain);
+        Gate(_routeRow, keys?.ToggleRoute);
+        bool outside = Gate(_sceneOutside, keys?.SceneOutside);
+        bool behind = Gate(_sceneBehind, keys?.SceneBehind);
+        Mark(_fogCheck.Show(outside || behind));
+    }
+
+    private bool Gate(CrowdHudClassSwitch visibility, string? actionId)
+    {
+        bool show = Declared(actionId);
+        UiElement element = visibility.Element;
+        if (!show)
+        {
+            element.ClickHandler = null;
+        }
+        else if (element.ClickHandler == null && _declaredClicks.TryGetValue(element, out Action<UiActionContext>? saved))
+        {
+            element.ClickHandler = saved;
+        }
+
+        Mark(visibility.Show(show));
+        return show;
+    }
+
+    private bool Declared(string? actionId) => !string.IsNullOrWhiteSpace(actionId) && _sink.HasAction(actionId);
 
     private CrowdHudActions.DeployGroup DeployKeys => Actions.Deploy;
 
