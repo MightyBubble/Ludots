@@ -21,6 +21,7 @@ TOGGLE_BUILD_ACTION=CrowdSimulation.S4.ToggleBuild
 SHOT_X=320
 SHOT_Y=360
 mkdir -p artifacts/acceptance/crowdsimulation-s1
+SHOT_STAMP=$(mktemp)
 LAUNCHER=
 
 rpc() { curl -s -m 5 -X POST "$BRIDGE/rpc" -H 'Content-Type: application/json' -d "$1"; }
@@ -194,4 +195,10 @@ for k in 1 2 3; do shot "f03b-build-b$k"; sleep 0.4; done
 echo "[shots] build x3 @crowd $(crowdtick)"
 
 kill_host
-ls -la artifacts/agent-bridge/shots/f03b-*-t*.png 2>/dev/null || echo "NO SHOTS"
+mapfile -t new_shots < <(find artifacts/agent-bridge/shots -name 'f03b-*-t*.png' -newer "$SHOT_STAMP" -print 2>/dev/null)
+rm -f "$SHOT_STAMP"
+if [ "${#new_shots[@]}" -eq 0 ]; then
+  echo "NO SHOTS" >&2
+  exit 1
+fi
+ls -la "${new_shots[@]}"

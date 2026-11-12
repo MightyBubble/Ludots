@@ -346,7 +346,7 @@ DeepObject 合并：`formations`、`structures.templates`、`traversal.json` 的
 
 50k 单位 tick 门（种子 1337、按 deploy.bases 生成 50000、四座基地各下一令远点行军、预热 40 tick、测量 200 tick，`CrowdKernel50KBenchmarkTests`）。Release，会话装迷雾（`EnableFog`）。计时是推进成功的 `session.Step`，含运动、迷雾刷新、认知同步和校验码。硬门只在优化构建上生效：P95 < 33 ms。Debug 记下数字，然后记为未测。并行工人 4，迷雾刷新 60 次。开测时读 1 分钟 load；高于核数就每 5 秒再读，最多等 180 秒，到期仍高也开测，不重跑。
 
-2026-10-12，4 核。开测 1 分钟 load 1.76，核数 4，等待 0 ms：平均 25.80 / P50 25.26 / P95 30.46 / 最大 31.86 ms。`CrowdKernel50KBenchmarkTests` 运行时把 trace 与报告写到测试工作目录（默认 `TestContext.WorkDirectory/crowd-kernel-50k-tick`；可用环境变量 `CROWD_50K_BENCHMARK_DIR` 覆盖），不再改写仓库 `artifacts/`。入库基线仍放在 `artifacts/benchmarks/crowd-kernel-50k-tick/`：在优化构建下跑通该测试后，把上述目录里的 `trace.jsonl` 与 `benchmark-report.md` 复制进仓库路径并提交。
+入库记录（`artifacts/benchmarks/crowd-kernel-50k-tick/trace.jsonl`）是另一次测量：4 核，开测 1 分钟 load 2.52，等待 0 ms，平均 21.2524 / P50 20.7179 / P95 24.4219 / 最大 29.4791 ms。更早一次 2026-10-12、load 1.76 的 25.80 / 25.26 / 30.46 / 31.86 没有对应的入库 trace，不拿来当这次的成绩。`CrowdKernel50KBenchmarkTests` 运行时把 trace 与报告写到测试工作目录（默认 `TestContext.WorkDirectory/crowd-kernel-50k-tick`；可用环境变量 `CROWD_50K_BENCHMARK_DIR` 覆盖），不再改写仓库 `artifacts/`。入库基线仍放在 `artifacts/benchmarks/crowd-kernel-50k-tick/`：在优化构建下跑通该测试后，把上述目录里的 `trace.jsonl` 与 `benchmark-report.md` 复制进仓库路径并提交。
 
 更早的 Debug、迷雾冻结、gather 改造对照：改造前平均 333.1 / P50 332.8 / P95 372.3 / 最大 447.2 ms，改造后平均 231.5 / P50 231.6 / P95 277.8 / 最大 319.6 ms。那组不是现在这道门。
 

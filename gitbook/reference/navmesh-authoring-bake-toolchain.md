@@ -101,7 +101,7 @@ Speed stays out of `AgentProfileRegistry`. MassNavigationFlow keeps movement spe
 | `profiles[].id` | profile id | `NavMeshProfileRegistry` | Capability profile. Agent profiles point here with `navProfileId` |
 | `profiles[].maxClimbCm` | cm | Recast `walkableClimb`; CDT/logic filtering target | Maximum step/climb height for this capability |
 | `profiles[].maxSlopeDeg` | degrees | Recast `walkableSlopeAngle`; target source for CDT slope filtering | Omit means unlimited. `0` and negative values are rejected at load. Recast bake requires a value `> 0` and `< 90` |
-| `profiles[].cellSizeCm` | cm | optional Recast column size | `0` or omitted means the baker derives it from the agent radius. A crowd session requires every capability it uses to share one positive value; that value is the nav cell size |
+| `profiles[].cellSizeCm` | cm | optional Recast column size | `0` or omitted means the baker derives it from the agent radius. Crowd nav cell size is `maps.<mapId>.navCellSizeCm`, not this field |
 | `profiles[].jump` | cm / nav cells / cost | optional | `upCm`, `downCm`, `rangeNavCells`, `cost`, each `> 0` |
 | `areas[].id` / `areaId` / `slopeFree` | name / 0..255 / bool | polygon area and crowd slope exemption | No `cost` on the area |
 | `layers[].id` | string | obstacle carve + artifact path | Semantic layer id, strict casing |
