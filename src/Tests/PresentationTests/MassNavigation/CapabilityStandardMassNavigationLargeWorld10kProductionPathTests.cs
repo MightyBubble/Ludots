@@ -136,6 +136,8 @@ namespace Ludots.Tests.Presentation
             string diagnostics = sample.Diagnostics;
 
             Assert.That(minimapRuntime.Visible, Is.True, diagnostics);
+            Assert.That(engine.MergedConfig.Presentation.Minimap.MaxMarkersPerFieldPixel, Is.EqualTo(1),
+                "10K crowd minimap must cap one marker per field pixel; the field is smaller than the agent set.");
             Assert.That(minimapRuntime.Preset, Is.EqualTo(MinimapPreset.RtsFullMap), diagnostics);
             Assert.That(sample.MinimapSnapshot.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic), diagnostics);
             Assert.That(minimapMarkers.Count, Is.GreaterThanOrEqualTo(expectedAgents), diagnostics);
@@ -1590,7 +1592,8 @@ namespace Ludots.Tests.Presentation
 
             int totalAgents = 0;
             int controllableAgents = 0;
-            int missingProjection = 0;
+            int missingTeam = 0;
+            int ownerMismatch = 0;
             var query = new QueryDescription().WithAll<MassNavigationAgent>();
             engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _) =>
             {
@@ -1601,9 +1604,14 @@ namespace Ludots.Tests.Presentation
                     controllableAgents++;
                 }
 
-                if (!engine.World.Has<PlayerOwner>(entity) || !engine.World.Has<Team>(entity))
+                if (!engine.World.Has<Team>(entity))
                 {
-                    missingProjection++;
+                    missingTeam++;
+                }
+
+                if (engine.World.Has<PlayerOwner>(entity) != controllable)
+                {
+                    ownerMismatch++;
                 }
             });
 
@@ -1612,10 +1620,11 @@ namespace Ludots.Tests.Presentation
                 controllableAgents,
                 Is.EqualTo(simulation.AgentsPerTeam),
                 "Exactly one scenario domain must be controllable by the startup player through ownership relationships.");
+            Assert.That(missingTeam, Is.Zero, "Every MassNavigation agent projects Team from its membership edge.");
             Assert.That(
-                missingProjection,
+                ownerMismatch,
                 Is.Zero,
-                "MassNavigation agents project PlayerOwner and Team from their ownership and membership edges.");
+                "Only agents of a team with a bound player project PlayerOwner; the startup player owns exactly the agents it controls.");
         }
 
         private static void AssertProjectedParticipant(GameEngine engine, Entity entity, Entity localPlayer, string diagnostics)

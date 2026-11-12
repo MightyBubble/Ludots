@@ -4,9 +4,11 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 
 namespace GasTests
@@ -151,6 +153,26 @@ namespace GasTests
             int countFinal = 0;
             _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => countFinal++);
             Assert.That(countFinal, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Cleanup_PresentationOwnedEntity_LeavesMapBeforeDeferredDestroy()
+        {
+            var session = CreateSessionWithBoard("map_a");
+            Entity presented = SpawnMapEntity(session, "map_a", 0, 0);
+            _world.Add(presented, new PresentationStableId { Value = 7 }, new Team { Id = 2 });
+
+            session.Cleanup(_world);
+
+            Assert.That(_world.IsAlive(presented), Is.True);
+            Assert.That(_world.Has<PresentationDestroyPending>(presented), Is.True);
+            Assert.That(_world.Has<MapEntity>(presented), Is.False);
+
+            var reopened = CreateSessionWithBoard("map_a");
+            int members = 0;
+            _world.Query(new QueryDescription().WithAll<MapEntity>(), (Entity _) => members++);
+            Assert.That(members, Is.Zero);
+            reopened.Cleanup(_world);
         }
     }
 }
