@@ -41,6 +41,78 @@ public sealed class DotNetToolchainArchitectureGuardTests
     }
 
     [Test]
+    public void OfflineFeedPinsDownlevelTargetingPacksAgainstFloatingSdk()
+    {
+        string repoRoot = FindRepoRoot();
+        string rootTargets = Path.Combine(repoRoot, "Directory.Build.targets");
+        XDocument document = XDocument.Load(rootTargets);
+        XElement pin = document
+            .Descendants("Target")
+            .Single(element => string.Equals(
+                (string?)element.Attribute("Name"),
+                "PinOfflineDownlevelTargetingPacks",
+                StringComparison.Ordinal));
+
+        string[] expectedVersions = ["net8.0=8.0.31", "net7.0=7.0.20", "net6.0=6.0.36"];
+        string[] packNames =
+        [
+            "Microsoft.NETCore.App",
+            "Microsoft.AspNetCore.App",
+            "Microsoft.WindowsDesktop.App"
+        ];
+
+        var pinned = pin
+            .Descendants("KnownFrameworkReference")
+            .Select(element => (
+                Name: (string?)element.Attribute("Update"),
+                Framework: (string?)element.Attribute("Condition"),
+                Version: element.Element("TargetingPackVersion")?.Value))
+            .ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((string?)pin.Attribute("BeforeTargets"), Is.EqualTo("ProcessFrameworkReferences"));
+            foreach (string packName in packNames)
+            {
+                foreach (string expected in expectedVersions)
+                {
+                    string[] parts = expected.Split('=');
+                    Assert.That(pinned, Has.Some.Matches<(string? Name, string? Framework, string? Version)>(entry =>
+                        entry.Name == packName &&
+                        entry.Framework != null &&
+                        entry.Framework.Contains($"'{parts[0]}'", StringComparison.Ordinal) &&
+                        entry.Version == parts[1]));
+                }
+            }
+        });
+
+        foreach (string version in new[] { "8.0.31", "7.0.20", "6.0.36" })
+        {
+            foreach (string packageId in new[]
+                     {
+                         "microsoft.netcore.app.ref",
+                         "microsoft.aspnetcore.app.ref",
+                         "microsoft.windowsdesktop.app.ref"
+                     })
+            {
+                string nupkg = Path.Combine(repoRoot, "external", "nuget", $"{packageId}.{version}.nupkg");
+                Assert.That(File.Exists(nupkg), Is.True, nupkg);
+            }
+        }
+
+        string[] shadowed = Directory
+            .EnumerateFiles(repoRoot, "Directory.Build.targets", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
+                           !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
+                           !string.Equals(path, rootTargets, StringComparison.Ordinal))
+            .ToArray();
+        Assert.That(shadowed, Is.Not.Empty);
+        Assert.That(
+            shadowed.Select(File.ReadAllText),
+            Has.All.Contains("GetPathOfFileAbove('Directory.Build.targets'"));
+    }
+
+    [Test]
     public void SvgGeneratorUsesVersionedAnalyzerDependencies()
     {
         string repoRoot = FindRepoRoot();

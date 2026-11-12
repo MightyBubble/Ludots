@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
+      - 'Directory.Build.targets'
       - '.gitattributes'
       - 'assets/**'
       - 'global.json'
@@ -25,6 +26,7 @@ on:
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - '.github/workflows/solution-verify.yml'
+      - 'Directory.Build.targets'
       - '.gitattributes'
       - 'assets/**'
       - 'global.json'
