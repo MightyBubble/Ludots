@@ -838,7 +838,7 @@ namespace Ludots.Core.Presentation.Config
                     childDefinition.PositionOffset != Vector3.Zero)
                 {
                     throw new InvalidOperationException(
-                        $"Presenter '{key}' {entryContext} declares overrides.transform.localPosition while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local position source. Remove one of them.");
+                        $"Presenter '{key}' {entryContext} declares overrides.transform while child definition '{childDefinition.Key}' declares anchor.offset; a child root accepts exactly one local transform source. Remove one of them.");
                 }
 
                 PresenterChildInstanceOverride? instanceOverride = child.InstanceOverride;
@@ -3019,8 +3019,7 @@ namespace Ludots.Core.Presentation.Config
                         slot.Attachment = ParseAttachment(
                             obj["attachment"],
                             $"{behaviorPath}.attachment",
-                            ownerKey,
-                            ReadBehaviorSlotName(obj));
+                            ownerKey);
                         break;
                     case BehaviorKind.Sound:
                         RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch", "trailMesh", "screenRect");
@@ -3641,7 +3640,7 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
-        private static AttachmentConfig ParseAttachment(JsonNode? node, string path, string definitionId, string slot)
+        private static AttachmentConfig ParseAttachment(JsonNode? node, string path, string ownerKey)
         {
             if (node is not JsonObject obj)
             {
@@ -3656,13 +3655,13 @@ namespace Ludots.Core.Presentation.Config
             if (wroteBoneId && target != AttachmentTarget.Bone)
             {
                 throw new InvalidOperationException(
-                    $"Presenter '{definitionId}' behavior slot '{slot}' writes boneId while target is '{target}'. 写了 boneId 时 target 必须是 Bone.");
+                    $"Presenter '{ownerKey}' {path} writes boneId while target is '{target}'. target must be Bone when boneId is present.");
             }
 
             if (target == AttachmentTarget.Bone && boneId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Presenter '{definitionId}' behavior slot '{slot}' sets target Bone without a boneId.");
+                    $"Presenter '{ownerKey}' {path} sets target Bone and requires a positive integer boneId (got {boneId}).");
             }
 
             return new AttachmentConfig
@@ -3673,18 +3672,6 @@ namespace Ludots.Core.Presentation.Config
                 RotationOffset = ParseQuaternion(obj["rotationOffset"]),
                 InheritScale = obj["inheritScale"]?.GetValue<bool>() ?? false,
             };
-        }
-
-        private static string ReadBehaviorSlotName(JsonObject obj)
-        {
-            if (obj["slot"] is JsonValue value &&
-                value.TryGetValue<string>(out string? slot) &&
-                !string.IsNullOrWhiteSpace(slot))
-            {
-                return slot;
-            }
-
-            return "unknown";
         }
 
         private static GroundingConfig ParseGrounding(JsonNode? node, string path)

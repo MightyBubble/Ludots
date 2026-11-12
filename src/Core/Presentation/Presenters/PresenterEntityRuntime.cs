@@ -604,8 +604,8 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
-            // 静止属主不会给定义里的父级吸附留 tick。创建时必须写成 AttachedToParent，
-            // 否则父级 bootstrap 按 InheritParent 传播时会把偏移抹掉。
+            // 定义里恰好一个活跃的 Parent 挂载、且父位姿已经可读时，创建当下就写成 AttachedToParent。
+            // 属主不进 tick 时错过这一次，父级 bootstrap 会按 InheritParent 把偏移抹掉。
             if (TryInitializeParentAttachment(presenter, in state, definition))
             {
                 return;

@@ -5180,7 +5180,7 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException omitted = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(omitted.Message, Does.Contain("bone_id_without_bone_target"));
             Assert.That(omitted.Message, Does.Contain("attachment"));
-            Assert.That(omitted.Message, Does.Contain("写了 boneId 时 target 必须是 Bone"));
+            Assert.That(omitted.Message, Does.Contain("target must be Bone when boneId is present"));
 
             WritePresenters(
                 """
@@ -5210,7 +5210,7 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException parentTarget = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(parentTarget.Message, Does.Contain("bone_id_with_parent_target"));
             Assert.That(parentTarget.Message, Does.Contain("attachment"));
-            Assert.That(parentTarget.Message, Does.Contain("写了 boneId 时 target 必须是 Bone"));
+            Assert.That(parentTarget.Message, Does.Contain("target must be Bone when boneId is present"));
         }
 
         [Test]
@@ -5243,9 +5243,9 @@ namespace Ludots.Tests.Presentation
             var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
             InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(missing.Message, Does.Contain("bone_target_missing_bone_id"));
-            Assert.That(missing.Message, Does.Contain("attachment"));
-            Assert.That(missing.Message, Does.Contain("boneId"));
-            Assert.That(missing.Message, Does.Contain("Bone"));
+            Assert.That(missing.Message, Does.Contain("presenters.json[bone_target_missing_bone_id].behaviors[0].attachment"));
+            Assert.That(missing.Message, Does.Contain("positive integer boneId"));
+            Assert.That(missing.Message, Does.Contain("got 0"));
 
             WritePresenters(
                 """
@@ -5274,8 +5274,8 @@ namespace Ludots.Tests.Presentation
             loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
             InvalidOperationException zero = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(zero.Message, Does.Contain("bone_target_zero_bone_id"));
-            Assert.That(zero.Message, Does.Contain("minimap"));
-            Assert.That(zero.Message, Does.Contain("boneId"));
+            Assert.That(zero.Message, Does.Contain("presenters.json[bone_target_zero_bone_id].behaviors[0].attachment"));
+            Assert.That(zero.Message, Does.Contain("positive integer boneId (got 0)"));
         }
 
         [Test]
@@ -5352,7 +5352,43 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("instanceChildren[0]"));
             Assert.That(ex.Message, Does.Contain("anchored_leaf"));
             Assert.That(ex.Message, Does.Contain("anchor.offset"));
-            Assert.That(ex.Message, Does.Contain("overrides.transform.localPosition"));
+            Assert.That(ex.Message, Does.Contain("overrides.transform"));
+            Assert.That(ex.Message, Does.Contain("one local transform source"));
+        }
+
+        [Test]
+        public void Load_RejectsAnchorOffsetCombinedWithScaleOnlyTransformOverride()
+        {
+            WriteCatalog();
+            WritePresenters(
+                """
+                [
+                  {
+                    "id": "anchored_scaled",
+                    "anchor": { "offset": [0, 1, 0] }
+                  },
+                  {
+                    "id": "root_scale_only",
+                    "children": [
+                      {
+                        "definitionId": "anchored_scaled",
+                        "overrides": {
+                          "transform": { "localScale": [2, 2, 2] }
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var loader = new PresenterDefinitionConfigLoader(pipeline, new PresenterDefinitionRegistry());
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("root_scale_only"));
+            Assert.That(ex.Message, Does.Contain("children[0]"));
+            Assert.That(ex.Message, Does.Contain("anchored_scaled"));
+            Assert.That(ex.Message, Does.Contain("overrides.transform"));
+            Assert.That(ex.Message, Does.Contain("one local transform source"));
         }
 
         [Test]
