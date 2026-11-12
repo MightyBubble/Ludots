@@ -12,7 +12,6 @@ layout(std430, binding = 3) readonly buffer InstanceBlock { vec4 instanceData[];
 
 uniform mat4 mvp;
 uniform float uInstanceBase;
-uniform float uBoneBase;
 uniform float uPoseStride;
 
 void main()
@@ -28,8 +27,9 @@ void main()
         vec4(transformC2.xyz, 0.0),
         vec4(transformC0.w, transformC1.w, transformC2.w, 1.0));
 
-    int poseRow = int(instance.x + 0.5);
-    int poseBase = poseRow * int(uPoseStride + 0.5) + int(uBoneBase);
+    // CPU 写入的是 ≤ 2^24-1 的精确整数，直接截断；+0.5 在 2^23 以上会按就近取偶进位（白色 0xFFFFFF 变成 2^24，三通道全成 0）
+    int poseRow = int(instance.x);
+    int poseBase = poseRow * int(uPoseStride + 0.5);
     mat4 skin = mat4(0.0);
     if (vertexBoneWeights.x > 0.0)
     {

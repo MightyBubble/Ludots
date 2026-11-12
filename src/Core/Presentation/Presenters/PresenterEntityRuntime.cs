@@ -84,6 +84,7 @@ namespace Ludots.Core.Presentation.Presenters
         public double LastChildBatchComponentFillMs { get; private set; }
         public double LastChildBatchIndexWriteMs { get; private set; }
         public double LastChildBatchStableIdMs { get; private set; }
+        public int LastChildBatchCreatedCount { get; private set; }
 
         public const int CreateTraceCapacity = 8192;
 
@@ -221,6 +222,7 @@ namespace Ludots.Core.Presentation.Presenters
             LastChildBatchComponentFillMs = 0d;
             LastChildBatchIndexWriteMs = 0d;
             LastChildBatchStableIdMs = 0d;
+            LastChildBatchCreatedCount = 0;
         }
 
         private static double ElapsedMs(long startTimestamp)
@@ -602,6 +604,20 @@ namespace Ludots.Core.Presentation.Presenters
             }
 
             ref readonly PresenterState state = ref _world.Get<PresenterState>(presenter);
+            // 定义里恰好一个活跃的 Parent 挂载、且父位姿已经可读时，创建当下就写成 AttachedToParent。
+            // 属主不进 tick 时错过这一次，父级 bootstrap 会按 InheritParent 把偏移抹掉。
+            if (TryInitializeParentAttachment(presenter, in state, definition))
+            {
+                return;
+            }
+
+            // 局部变换是单位、又没有子级的静止子物体不会进 bootstrap，父级也不再同步。
+            // 实例位姿覆盖只能在这次创建里叠进 InheritParent，否则会停在属主原点。
+            if (TryInitializeInheritedTransformOverride(presenter, in state, definition))
+            {
+                return;
+            }
+
             Entity owner = state.OwnerEntity;
             bool hasOwnerTransform = _world.IsAlive(owner) && _world.Has<VisualTransform>(owner);
             VisualTransform ownerTransform = hasOwnerTransform ? _world.Get<VisualTransform>(owner) : VisualTransform.Default;
@@ -628,6 +644,97 @@ namespace Ludots.Core.Presentation.Presenters
             {
                 _world.Get<PresenterWorldScale>(presenter).Value = scale;
             }
+        }
+
+        private bool TryInitializeParentAttachment(
+            Entity presenter,
+            in PresenterState state,
+            PresenterDefinition definition)
+        {
+            if (definition.Behaviors == null ||
+                !TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out _) ||
+                !TryReadParentWorldTransform(
+                    presenter,
+                    out Vector3 parentPosition,
+                    out Quaternion parentRotation,
+                    out PresenterWorldFacing parentFacing,
+                    out Vector3 parentScale))
+            {
+                return false;
+            }
+
+            ApplyParentAttachmentTransform(
+                presenter,
+                in state,
+                definition,
+                in parentPosition,
+                in parentRotation,
+                in parentFacing,
+                in parentScale);
+            return true;
+        }
+
+        private bool TryInitializeInheritedTransformOverride(
+            Entity presenter,
+            in PresenterState state,
+            PresenterDefinition definition)
+        {
+            if (!_world.Has<PresenterInstanceTransformOverride>(presenter) ||
+                !_world.Get<PresenterInstanceTransformOverride>(presenter).HasOverride)
+            {
+                return false;
+            }
+
+            if (!TryReadParentWorldTransform(
+                    presenter,
+                    out Vector3 parentPosition,
+                    out Quaternion parentRotation,
+                    out PresenterWorldFacing parentFacing,
+                    out Vector3 parentScale))
+            {
+                return false;
+            }
+
+            ApplyInheritedParentTransform(
+                presenter,
+                in state,
+                definition,
+                in parentPosition,
+                in parentRotation,
+                in parentFacing,
+                in parentScale);
+            return true;
+        }
+
+        private bool TryReadParentWorldTransform(
+            Entity presenter,
+            out Vector3 position,
+            out Quaternion rotation,
+            out PresenterWorldFacing facing,
+            out Vector3 scale)
+        {
+            position = default;
+            rotation = Quaternion.Identity;
+            facing = default;
+            scale = Vector3.One;
+            Entity parent = _world.Has<PresenterParent>(presenter)
+                ? _world.Get<PresenterParent>(presenter).Parent
+                : Entity.Null;
+            if (parent == Entity.Null ||
+                !_world.IsAlive(parent) ||
+                !_world.Has<PresenterWorldPosition>(parent) ||
+                !_world.Has<PresenterWorldRotation>(parent) ||
+                !_world.Has<PresenterWorldFacing>(parent) ||
+                !_world.Has<PresenterWorldScale>(parent))
+            {
+                return false;
+            }
+
+            position = _world.Get<PresenterWorldPosition>(parent).Value;
+            rotation = _world.Get<PresenterWorldRotation>(parent).Value;
+            facing = _world.Get<PresenterWorldFacing>(parent);
+            scale = _world.Get<PresenterWorldScale>(parent).Value;
+            return true;
         }
 
         public Entity Create(int defId, Entity owner, int scopeId)
@@ -2593,6 +2700,12 @@ namespace Ludots.Core.Presentation.Presenters
                     includeOwnerPayloadAttachedTransformSync,
                     includeAttachmentTick,
                     includeGroundingTick);
+                bool hasTransformOverride = node.TransformOverride.HasOverride;
+                if (hasTransformOverride)
+                {
+                    signature += Component<PresenterInstanceTransformOverride>.Signature;
+                }
+
                 LastChildBatchSetupMs += ElapsedMs(childSetupStart);
 
                 long childWorldCreateStart = Stopwatch.GetTimestamp();
@@ -2635,6 +2748,24 @@ namespace Ludots.Core.Presentation.Presenters
                     }
                 }
 
+                if (node.ParamOverrides != null && node.ParamOverrides.Length != 0)
+                {
+                    for (int i = 0; i < childScopeCount; i++)
+                    {
+                        ApplyParamOverrides(_childBatchCreated[i], node.ParamOverrides);
+                    }
+                }
+
+                if (hasTransformOverride)
+                {
+                    for (int i = 0; i < childScopeCount; i++)
+                    {
+                        Entity child = _childBatchCreated[i];
+                        _world.Get<PresenterInstanceTransformOverride>(child) = node.TransformOverride;
+                        InitializeTransform(child, childDefinition);
+                    }
+                }
+
                 for (int i = 0; i < childScopeCount; i++)
                 {
                     AppendCreateTrace(new PresenterCreateTraceEntry(
@@ -2644,6 +2775,7 @@ namespace Ludots.Core.Presentation.Presenters
 
                 _activeCount += childScopeCount;
                 _nonRootCount += childScopeCount;
+                LastChildBatchCreatedCount += childScopeCount;
                 _structureVersion++;
             }
         }
@@ -2721,7 +2853,8 @@ namespace Ludots.Core.Presentation.Presenters
             for (int i = 0; i < nodes.Length; i++)
             {
                 PresenterCreatePlanNode node = nodes[i];
-                if (node.ParentNodeIndex != -1 || node.HasOverridePayload)
+                // 实例子树覆盖会在子物体下面再长出一层节点和行为，只能逐个走完整计划。
+                if (node.ParentNodeIndex != -1 || node.InstanceOverride != null)
                 {
                     return false;
                 }
@@ -3910,14 +4043,19 @@ namespace Ludots.Core.Presentation.Presenters
 
             if (!_world.Has<CullState>(owner))
             {
-                ownerCullVisible = true;
+                ownerCullVisible = !HiddenByPresentation(owner);
                 ownerLod = LODLevel.High;
                 return;
             }
 
             ref readonly CullState cull = ref _world.Get<CullState>(owner);
-            ownerCullVisible = cull.IsVisible;
+            ownerCullVisible = cull.IsVisible && !HiddenByPresentation(owner);
             ownerLod = cull.LOD;
+        }
+
+        private bool HiddenByPresentation(Entity owner)
+        {
+            return _world.Has<PresentationHidden>(owner) && _world.Get<PresentationHidden>(owner).Hidden;
         }
 
         private void RemoveOwnerPayloadRef(Entity owner)
@@ -5041,13 +5179,17 @@ namespace Ludots.Core.Presentation.Presenters
                 WorldScale = parentScale,
                 WorldFacing = parentFacing,
             };
+            PresenterInstanceTransformOverride instanceOverride = _world.Has<PresenterInstanceTransformOverride>(child)
+                ? _world.Get<PresenterInstanceTransformOverride>(child)
+                : default;
             PresenterResolvedTransform resolved = PresenterGroundingUtility.ResolveTransform(
                 performerSnapshot,
                 parentSnapshot,
                 true,
                 default,
                 false,
-                default);
+                definition.PositionOffset,
+                instanceOverride);
             return ApplyResolvedTransform(
                 child,
                 ref position,
@@ -5078,13 +5220,27 @@ namespace Ludots.Core.Presentation.Presenters
                 ? normalizedParentScale * config.Offset
                 : config.Offset;
             Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            Quaternion nextRotation = VisualMath.NormalizeOrIdentity(
+                normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+            PresenterInstanceTransformOverride instanceOverride = _world.Has<PresenterInstanceTransformOverride>(child)
+                ? _world.Get<PresenterInstanceTransformOverride>(child)
+                : default;
+            if (instanceOverride.HasOverride)
+            {
+                PresenterGroundingUtility.ComposeAttachmentSpaceOverride(
+                    in instanceOverride,
+                    ref nextPosition,
+                    ref nextRotation,
+                    ref nextScale);
+            }
+
             PresenterResolvedTransform resolved = new PresenterResolvedTransform
             {
                 Position = nextPosition,
-                Rotation = VisualMath.NormalizeOrIdentity(
-                    normalizedParentRotation * VisualMath.NormalizeOrIdentity(config.RotationOffset)),
+                Rotation = nextRotation,
                 Facing = parentFacing,
-                Scale = config.InheritScale ? normalizedParentScale : Vector3.One,
+                Scale = nextScale,
             };
             ref PresenterWorldPosition position = ref _world.Get<PresenterWorldPosition>(child);
             ref PresenterWorldPlanePosition planePosition = ref _world.Get<PresenterWorldPlanePosition>(child);

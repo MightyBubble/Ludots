@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using ArchWorld = Arch.Core.World;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.Fog;
@@ -8,6 +9,7 @@ using Ludots.Core.CrowdSimulation.Movement;
 using Ludots.Core.CrowdSimulation.Nav;
 using Ludots.Core.CrowdSimulation.Structures;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.CrowdSimulation.Units;
 
@@ -16,7 +18,8 @@ namespace Ludots.Core.CrowdSimulation.Units;
 /// 指令簿(领队/阵型)、规划器与固定帧率推进。
 /// 引擎只有一个时钟(Engine/clock.json 的 FixedHz),会话的 tick 就是 FixedHz 的一步:
 /// 每步先冲刷到点指令，再落到点的路径答复，再推进运动内核。
-/// 未冻结时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync。TruthNavFrozen 跳过这两步。
+/// 装了迷雾(<see cref="EnableFog"/>)时，在散回单位之后、TickCount++ 之前做 Fog.Update 和 CrowdBeliefSync.Sync；
+/// 没装迷雾的会话规划直接走真相 nav。
 /// 答复未按生效帧返回时本 tick 停摆(固定生效帧语义,结果不降级)。
 /// </summary>
 public sealed class CrowdSimSession
@@ -37,12 +40,16 @@ public sealed class CrowdSimSession
         Groups = new CrowdNavGroupSet();
         Commands = new CrowdCommandQueue();
         Orders = new CrowdOrderBook();
+        MemberStamp = new int[Units.Capacity];
+        MemberCapture = new uint[Units.Capacity];
 
-        // 子步数取本图实际绑定模板的最大速度。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
+        // 子步数取本图实际绑定模板的最快可能速度。马达按格的速度除数缩放速度，除数小于 1 的区域会更快，
+        // 所以每个模板按其移动类型最小的可走除数折算。单步位移不超过 maxStepCells 格(封顶 maxSubSteps)。
         Fix64 maxSpeed = Fix64.Zero;
         for (int i = 0; i < config.Profiles.Count; i++)
         {
-            maxSpeed = Fix64.Max(maxSpeed, config.Profiles[i].SpeedCmPerSecond);
+            var profile = config.Profiles[i];
+            maxSpeed = Fix64.Max(maxSpeed, profile.SpeedCmPerSec / MinSpeedDivisor(config.AgentTypes[profile.AgentTypeIndex]));
         }
         Fix64 simDt = config.Sim.SimSecondsPerTickSecond / Fix64.FromInt(config.FixedHz);
         SimDt = simDt;
@@ -53,11 +60,27 @@ public sealed class CrowdSimSession
         SubSteps = Math.Clamp(unclamped, 1, cap);
         if (unclamped > cap) Telemetry.MarkSubStepClamped();
         SubStepDt = simDt / SubSteps;
+        RebakeSliceCount = config.Planning.RebakeSlices;
+    }
+
+    /// <summary>可走区域里最小的速度除数（不可走区域的除数为 0，不计）。</summary>
+    private static Fix64 MinSpeedDivisor(RuntimeAgentType agent)
+    {
+        Fix64 min = Fix64.MaxValue;
+        var divisors = agent.SpeedDivisorByArea;
+        for (int a = 0; a < divisors.Length; a++)
+        {
+            if (divisors[a] > Fix64.Zero && divisors[a] < min) min = divisors[a];
+        }
+
+        if (min == Fix64.MaxValue) throw new InvalidOperationException($"移动类型 {agent.Id} 没有可走区域。");
+        return min;
     }
 
     /// <summary>类型化遥测。事件点就地加计数;呈现只读。</summary>
     public CrowdSimulationTelemetry Telemetry { get; } = new();
 
+    /// <summary>运动质量采样用的航向变化阈值（弧度），由调试视图配置在启用移动前写入。</summary>
     public CrowdSimulationRuntimeConfig Config { get; }
     public ArchWorld World { get; }
     public CrowdSimUnits Units { get; }
@@ -65,7 +88,7 @@ public sealed class CrowdSimSession
     public CrowdCommandQueue Commands { get; }
     /// <summary>指令簿(S5):移动指令聚合与虚拟领队。</summary>
     public CrowdOrderBook Orders { get; }
-    /// <summary>呈现/交互接线(空选中属主的派生接线 = 回放:不投影、不镜像选中集合)。</summary>
+    /// <summary>呈现/交互接线。回放派生接线不持有集合写者,不改活集合。</summary>
     public CrowdSimPresentationWiring Presentation { get; }
     /// <summary>运动内核与规划器(S5;null = 纯部署会话,S4 形状)。</summary>
     public CrowdMovementKernel? Movement { get; private set; }
@@ -76,7 +99,7 @@ public sealed class CrowdSimSession
     /// 否则用宿主按地图阻挡物建的静态索引(null = 无阻挡碰撞)。</summary>
     public CrowdBlockerColliders? Blockers => Structures?.Colliders ?? _staticBlockers;
 
-    /// <summary>静态阻挡盒索引(无结构仓的会话用;S5 冻结口径)。</summary>
+    /// <summary>静态阻挡盒索引(无结构仓的会话用)。</summary>
     private CrowdBlockerColliders? _staticBlockers;
 
     /// <summary>无结构仓会话的静态阻挡盒装配入口(有仓时无效——仓是唯一真相)。</summary>
@@ -94,6 +117,8 @@ public sealed class CrowdSimSession
     internal readonly HashSet<int> RebakeUnionSeen = new(32);
     /// <summary>最近一次已完结的结构变更报告(遥测 / 对拍)。</summary>
     public CrowdRebakeReport? LastRebakeReport { get; set; }
+    /// <summary>最近一次 placeStructure 的判定。合法放置写成 None。</summary>
+    public Structures.CrowdPlacementReject LastPlacementReject { get; set; }
     /// <summary>最近一次挤离中无处安放的单位数(计数,进重烘报告)。</summary>
     public int EvictStuck { get; set; }
     /// <summary>调试开关:每次结构变更后跑增量 vs 全量一致性检查(对拍不跑,验收必跑)。</summary>
@@ -102,28 +127,76 @@ public sealed class CrowdSimSession
     public Fix64 SimDt { get; }
     public int SubSteps { get; }
     public Fix64 SubStepDt { get; }
+    /// <summary>结构变更摊到后续 tick 的切片数。初值是配置,rebakeSlices 指令改它,Reset 恢复配置。</summary>
+    public int RebakeSliceCount { get; set; }
+    /// <summary>创建内核时的避让步长。rates 只改当前步长,Reset 回到这里。</summary>
+    public int BaseStride { get; private set; }
+    /// <summary>当前避让频率。创建内核时取配置,rates 成功后改成指令值。</summary>
+    public Fix64 AvoidHz { get; private set; }
+    /// <summary>为真时冲刷队列里 tick 已到的指令，不推进运动，也不增加 TickCount。现场 Submit 不受影响。</summary>
+    public bool PlaybackHeld { get; set; }
+    public int ScatterSeq { get; set; }
+
+    internal void SetAvoidHz(Fix64 hz) => AvoidHz = hz;
+
+    /// <summary>执行当前 tick 及以前的到点指令,不推进仿真。</summary>
+    public void FlushDueCommands()
+    {
+        Commands.Flush(this, ExecCommand);
+        Units.MaterializePending();
+        Units.PlaybackStructuralChanges();
+        SyncKernelMirror();
+    }
+
+    /// <summary>
+    /// 运动内核的稠密表（状态、位置、玩家表序、空间哈希）在 tick 首收拢，tick 内是真相，tick 间供呈现按稠密下标读。
+    /// 指令改组号、释放空组、增删单位都写 ECS；在 tick 之外执行时稠密表还停在上一次收拢，置这个位。
+    /// </summary>
+    internal bool KernelMirrorStale { get; set; }
+
+    /// <summary>tick 之外执行过指令后，把稠密表和空间哈希按 ECS 重收一次，呈现读到的组号与下标才和组注册表、单位表一致。</summary>
+    internal void SyncKernelMirror()
+    {
+        if (!KernelMirrorStale) return;
+        KernelMirrorStale = false;
+        if (Movement == null) return;
+        Units.MaterializePending();
+        Movement.GatherUnits();
+        Movement.RebuildHash();
+    }
 
     public void EnableMovement(CrowdMovementKernel kernel, CrowdSimPlanner planner)
     {
         Movement = kernel;
         Planner = planner;
-        // EnableMovement 只有已有结构仓才建 Fog、Beliefs、Belief。没有结构仓的运动会话也不建。纯部署不调用这里。有迷雾就注入高度表。
-        if (Structures != null)
-        {
-            Fog = new CrowdFog(Config, Config.PairRules, Structures);
-            Fog.EnsureHeights(RebakeSources!.HeightS);
-            Beliefs = new CrowdBeliefNavs(this);
-            Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
-        }
+        kernel.OnStray = planner.NoteStray;
+        BaseStride = kernel.Stride;
+        AvoidHz = Config.Avoidance.RateHz;
     }
 
-    /// <summary>迷雾状态。null = 没有结构仓，或没有调用 EnableMovement。马达永远走真相，规划经认知槽。</summary>
+    /// <summary>
+    /// 装迷雾与认知。只能在 <see cref="EnableMovement"/> 之后、挂好结构仓与重烘源时调用一次；
+    /// 迷雾盖章写进传入的雾层注册表和雾场。不装迷雾的会话规划走真相 nav。
+    /// </summary>
+    public void EnableFog(FogLayerRegistry layers, FogFieldStore fields)
+    {
+        ArgumentNullException.ThrowIfNull(layers);
+        ArgumentNullException.ThrowIfNull(fields);
+        if (Movement == null) throw new InvalidOperationException("迷雾需要先启用运动。");
+        var structures = Structures ?? throw new InvalidOperationException("迷雾需要结构仓。");
+        var sources = RebakeSources ?? throw new InvalidOperationException("迷雾需要重烘源的高度表。");
+        if (Fog != null) throw new InvalidOperationException("迷雾已启用。");
+        Fog = new CrowdFog(Config, Config.PairRules, structures, layers, fields);
+        Fog.EnsureHeights(sources.HeightS);
+        Beliefs = new CrowdBeliefNavs(this);
+        Belief = CrowdBeliefState.Create(Fog.VisionGroupCount);
+    }
+
+    /// <summary>迷雾状态。null = 没有调用 <see cref="EnableFog"/>。马达永远走真相，规划经认知槽。</summary>
     public CrowdFog? Fog { get; private set; }
     public CrowdBeliefNavs? Beliefs { get; private set; }
     public CrowdBeliefState? Belief { get; private set; }
-    /// <summary>truth 冻结:跳过迷雾更新与认知同步,组停在真相槽。
-    /// 旧真值(S5/S7)在迷雾内核落地后仍要逐位相同;新场景不置。</summary>
-    public bool TruthNavFrozen { get; set; }
+    internal readonly CrowdDeploymentBuffers DeploymentBuffers = new();
 
     private readonly struct BeliefNavLookup
     {
@@ -177,22 +250,52 @@ public sealed class CrowdSimSession
     public int NavIdFor(int playerIndex, int layerIdx, int rIdx)
     {
         int truth = NavByLayerRadius[(layerIdx, rIdx)].Id;
-        if (Fog == null || Belief == null || TruthNavFrozen) return truth;
+        if (Fog == null || Belief == null) return truth;
         int slot = Belief.Slot[Fog.GroupOf[playerIndex]];
         return slot == 0 ? truth : slot * CrowdBeliefNavs.BeliefStride + truth;
     }
 
     /// <summary>组的规划句柄挂到其玩家视野组当前槽(生成时与槽切换时;马达句柄 BodyNavId 恒真相)。</summary>
-    public void AttachGroupNav(CrowdNavGroupSet.Group g) => g.NavId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
+    public void AttachGroupNav(CrowdNavGroupSet.Group g)
+    {
+        int navId = NavIdFor(g.Player, g.LayerIdx, g.RIdx);
+        g.NavId = navId;
+        g.Nav = PinNavContext(navId);
+    }
+
+    private NavContext PinNavContext(int navId)
+    {
+        if (navId < CrowdBeliefNavs.BeliefStride) return Navs[navId];
+        return ResolveNavContext(navId);
+    }
     public IReadOnlyDictionary<int, NavContext> Navs { get; private set; }
     /// <summary>(移动类型, 半径级) → 导航上下文(deploy / spawnAt 的取上下文入口)。</summary>
-    public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; }
+    public IReadOnlyDictionary<(int Layer, int R), NavContext> NavByLayerRadius { get; private set; }
 
-    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。</summary>
-    public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs) => Navs = navs;
+    /// <summary>回放会话换装全新烘焙的导航上下文。结构 op 会改写共享上下文，带着已生效的变更从头跑会分歧。
+    /// 层半径表也换成新上下文：部署读的是这张表，不是 <see cref="Navs"/> 的查找。</summary>
+    public void ReplaceNavs(IReadOnlyDictionary<int, NavContext> navs)
+    {
+        Navs = navs;
+        var rebound = new Dictionary<(int Layer, int R), NavContext>(NavByLayerRadius.Count);
+        foreach (var kv in NavByLayerRadius)
+        {
+            if (!navs.TryGetValue(kv.Value.Id, out var nav))
+            {
+                throw new InvalidOperationException($"回放导航缺少层半径上下文 {kv.Value.Id}。");
+            }
 
-    // 选中镜像、下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
-    internal readonly List<Arch.Core.Entity> SelectionMembers = new();
+            rebound[kv.Key] = nav;
+        }
+
+        NavByLayerRadius = rebound;
+    }
+
+    // 下令重组、阵型排槽的复用缓冲。挂在会话上:回放会话各自一份,不跨线程共享。
+    // MemberStamp 用世代标记本条指令的成员槽。
+    internal readonly int[] MemberStamp;
+    internal readonly uint[] MemberCapture;
+    internal int MemberEpoch;
     internal readonly Dictionary<int, CrowdNavGroupSet.Group> IssueGroups = new(16);
     internal readonly List<CrowdNavGroupSet.Group> IssueGroupOrder = new(16);
     internal readonly Dictionary<int, (Fix64 XCm, Fix64 YCm, int Count)> IssueLayerSums = new(8);
@@ -215,12 +318,22 @@ public sealed class CrowdSimSession
     }
 
     public int TickCount { get; private set; }
+
+    /// <summary>本 tick 的分区摘要。只在 <see cref="Step"/> 返回 true 时更新。</summary>
+    public CrowdSimStateDigest LastDigest { get; private set; }
+
+    /// <summary>
+    /// 诊断分区（groups / link / commands）。默认关，这三个词为 0，不进 <see cref="CrowdSimStateDigest.Total"/>。
+    /// 打开后每 tick 用各自的 Mix 计算。自动回放武装时运行时从第一 tick 打开，回放会话复制同一开关。
+    /// </summary>
+    public bool DiagnosticDigest { get; set; }
     public int SpawnSeq { get; set; }
-    public int SelectedCount { get; private set; }
     public int SpawnSkippedTotal { get; private set; }
+    /// <summary>执行时该玩家没有单位、因而没有改任何组的全体己方下令条数。</summary>
+    public int EmptyOrderSelectionTotal { get; private set; }
 
     /// <summary>会话事件(spawnSkip 等,演示层显示用;不进校验)。</summary>
-    public event Action<string>? Notified;
+    public event Action<CrowdSimNotice>? Notified;
 
     /// <summary>结构变更重烘报告发布(遥测日志:rebake 报告与缓存命中计数,真机冒烟的重量证据)。</summary>
     public event Action<CrowdRebakeReport>? RebakeReported;
@@ -266,6 +379,7 @@ public sealed class CrowdSimSession
             Refreshes = report.Refreshes,
             Evicted = report.Evicted,
             Stuck = report.Stuck,
+            ElapsedTicks = report.ElapsedTicks,
             Bbox = report.Bbox,
             ContextResults = rows,
             UnionTiles = new List<int>(report.UnionTiles),
@@ -277,56 +391,96 @@ public sealed class CrowdSimSession
     /// <summary>
     /// 推进一个 tick:冲到点指令(指令内含结构 op 与其重烘阶段 0)→ 重烘切片推进 →
     /// 寿命到期拆除 → 落到点路径答复(未回则停摆,tick 不动)→ 运动内核子步进
-    /// (领队→意图→马达)× SubSteps → 散回单位 → 未冻结时 Fog.Update 然后 CrowdBeliefSync.Sync
-    /// → tickCount+1 → 流场刷新排队 → 校验码。TruthNavFrozen 跳过迷雾和认知同步。
+    /// (领队→意图→马达)× SubSteps → 散回单位 → 装了迷雾时 Fog.Update 然后 CrowdBeliefSync.Sync
+    /// → tickCount+1 → 流场刷新排队 → 校验码。
     /// 返回 false = 本 tick 停摆(调用方下一帧重试同一 tick;回放对停摆逐帧同构),
-    /// checksum 仅在 true 时有效——tick 路径零字符串分配。
+    /// checksum 与 <see cref="LastDigest"/> 仅在 true 时有效。
     /// </summary>
     public bool Step(out ulong checksum)
     {
-        Commands.Flush(this, ExecCommand);
-        if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
-        if (Structures != null) CrowdStructureOps.ExpireStructures(this);
-        if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
+        var telemetry = Telemetry;
+        telemetry.BeginPhaseFrame();
+        long mark = Stopwatch.GetTimestamp();
+        try
         {
-            // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
-            if (Units.Count != _stateHistogramMembers) RecountUnitStates();
-            Telemetry.MarkPathWait();
+            Commands.Flush(this, ExecCommand);
+            Units.MaterializePending();
+            Units.PlaybackStructuralChanges();
+
+            telemetry.AddCommandTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            if (RebakeJob != null) CrowdStructureOps.StepRebake(this, all: false);
+            if (Structures != null) CrowdStructureOps.ExpireStructures(this);
+            telemetry.AddRebakeTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            if (Planner != null && !Planner.ApplyDue(TickCount, BlockOnDueReplies))
+            {
+                telemetry.AddPlanTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                // Flush 可能改了成员,scatter 还没跑;成员数没变就留着上一份直方。
+                if (Units.Count != _stateHistogramMembers) RecountUnitStates();
+                SyncKernelMirror();
+                Telemetry.MarkPathWait();
+                checksum = 0;
+                return false;
+            }
+
+            telemetry.AddPlanTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+
+            if (Movement != null)
+            {
+                Movement.BeginMotionTick();
+                if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
+                Movement.GatherUnits();
+                KernelMirrorStale = false;
+                telemetry.AddGatherTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                for (int s = 0; s < SubSteps; s++)
+                {
+                    // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
+                    Movement.RebuildHash();
+                    telemetry.AddHashTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                    Movement.SolveSeparation();
+                    telemetry.AddSeparationTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                    Movement.Step(SubStepDt);
+                    Movement.SampleMotion();
+                    mark = Stopwatch.GetTimestamp();
+                }
+
+                Movement.ScatterUnits();
+                telemetry.AddScatterTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                _stateHistogramMembers = Units.Count;
+            }
+
+            if (Fog != null)
+            {
+                Fog.Update(TickCount, this);
+                telemetry.AddFogTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+                CrowdBeliefSync.Sync(this);
+                telemetry.AddBeliefTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            }
+
+            TickCount++;
+            Movement?.PublishMotion();
+            Planner?.ProcessRefreshes(TickCount);
+            telemetry.AddRefreshTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            LastDigest = CrowdSimChecksum.Compute(this);
+            checksum = LastDigest.Total;
+            telemetry.AddChecksumTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
+            return true;
+        }
+        catch (Nav.Pathing.PathServiceFaultException) when (!BlockOnDueReplies)
+        {
+            // 现场会话停摆,故障文案留给呈现。阻塞会话仍把异常抛出去。两条路都不在主线程补算。
+            SyncKernelMirror();
+            telemetry.MarkPathWait();
             checksum = 0;
             return false;
         }
-
-        if (Movement != null)
+        finally
         {
-            if (Movement.Contacts.Length > 0) Array.Clear(Movement.Contacts);
-            Movement.GatherUnits();
-            for (int s = 0; s < SubSteps; s++)
-            {
-                // 子步序：哈希重建，分离求解（含相位前移），领队，意图，马达。
-                Movement.RebuildHash();
-                Movement.SolveSeparation();
-                Movement.Step(SubStepDt);
-            }
-
-            Movement.ScatterUnits();
-            _stateHistogramMembers = Units.Count;
+            telemetry.CommitPhaseFrame();
         }
-
-        // 运动之后、TickCount++ 之前做迷雾更新和认知同步。truth 冻结时跳过两者。
-        if (Fog != null && !TruthNavFrozen)
-        {
-            Fog.Update(TickCount, this);
-            CrowdBeliefSync.Sync(this);
-        }
-
-        TickCount++;
-        Planner?.ProcessRefreshes(TickCount);
-        checksum = CrowdSimChecksum.ComputeValue(this);
-        return true;
     }
 
     /// <summary>快进到目标 tick(停摆不推进;服务故障时抛错而不是死循环)。</summary>
-    public void Advance(int ticks, List<ulong>? checksums = null)
+    public void Advance(int ticks, List<ulong>? checksums = null, List<CrowdSimStateDigest>? digests = null)
     {
         int guard = ticks * CrowdSimulationLimits.AdvanceStallGuardFactor + CrowdSimulationLimits.AdvanceStallGuardFactor;
         int ran = 0;
@@ -336,6 +490,7 @@ public sealed class CrowdSimSession
             if (!Step(out var h)) continue;
             ran++;
             checksums?.Add(h);
+            digests?.Add(LastDigest);
         }
     }
 
@@ -350,20 +505,86 @@ public sealed class CrowdSimSession
         RebakeJob = null;
         TickCount = 0;
         SpawnSeq = 0;
-        SelectedCount = 0;
+        ScatterSeq = 0;
+        PlaybackHeld = false;
+        RebakeSliceCount = Config.Planning.RebakeSlices;
+        if (Movement != null)
+        {
+            Movement.Stride = BaseStride;
+            Movement.Phase = 0;
+            AvoidHz = Config.Avoidance.RateHz;
+        }
+
         SpawnSkippedTotal = 0;
+        EmptyOrderSelectionTotal = 0;
         _stateHistogramMembers = 0;
+        Movement?.ClearMotionMemory();
         Telemetry.SetUnitStates(0, 0, 0, 0, 0);
+        Telemetry.SetMotion(0, 0, 0, 0);
+    }
+
+    /// <summary>
+    /// 把成员句柄收成槽位世代标记。空集、失效句柄、重复句柄、玩家不符都在这里拒收,不改写成员集。
+    /// </summary>
+    internal void BindMemberSet(ReadOnlySpan<uint> members, int player)
+    {
+        if (members.IsEmpty)
+        {
+            throw new InvalidOperationException("order: 成员集为空。");
+        }
+
+        if (MemberEpoch == int.MaxValue)
+        {
+            Array.Clear(MemberStamp);
+            MemberEpoch = 0;
+        }
+
+        int epoch = ++MemberEpoch;
+        for (int i = 0; i < members.Length; i++)
+        {
+            if (!Units.TryResolveHandle(members[i], out int dense))
+            {
+                throw new InvalidOperationException("order: 成员句柄无效。");
+            }
+
+            var entity = Units.EntityAt(dense);
+            if (World.Get<Gameplay.Components.PlayerOwner>(entity).PlayerId != player)
+            {
+                throw new InvalidOperationException("order: 成员不属于该玩家。");
+            }
+
+            int slot = Units.SlotAt(dense);
+            if (MemberStamp[slot] == epoch)
+            {
+                throw new InvalidOperationException("order: 成员句柄重复。");
+            }
+
+            MemberStamp[slot] = epoch;
+        }
+    }
+
+    /// <summary>玩家代表 selected 集合的成员数。没有接线或还没写过集合时为 0,不扫描单位。</summary>
+    public int SelectedCollectionCount(int playerId)
+    {
+        var reps = Presentation.PlayerReps;
+        if (reps == null || (uint)playerId >= (uint)reps.Length) return 0;
+        var rep = reps[playerId];
+        if (rep == Arch.Core.Entity.Null || !World.IsAlive(rep)) return 0;
+        if (!Presentation.Collections.TryGet(rep, Presentation.SelectedCollectionKeyId, out var handle)) return 0;
+        return Presentation.Collections.TryGetView(handle, out var view) ? view.Count : 0;
     }
 
     public void NotifySpawnSkip(int skipped, int requested)
     {
         SpawnSkippedTotal += skipped;
-        Notified?.Invoke($"spawnSkip: 请求 {requested} 个,该玩家没有可用的类型×半径组合,跳过 {skipped} 个");
+        Notified?.Invoke(new CrowdSimNotice(CrowdSimNoticeKind.SpawnSkip, TickCount, player: -1, skipped, requested));
     }
 
-    public void SetSelectedCount(int count) => SelectedCount = count;
-
+    internal void NotifyEmptyOrderSelection(int player)
+    {
+        EmptyOrderSelectionTotal++;
+        Notified?.Invoke(new CrowdSimNotice(CrowdSimNoticeKind.EmptyOrderSelection, TickCount, player, skipped: 0, requested: 0));
+    }
     /// <summary>把本 tick 的接触读数交给遥测。停摆帧传 0,不把上一成功帧再写一遍。</summary>
     internal void PublishTelemetryFrame(bool stalled, double tickMs)
     {
@@ -377,7 +598,7 @@ public sealed class CrowdSimSession
 
     private void RecountUnitStates()
     {
-        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, traversing = 0;
         int n = Units.Count;
         for (int i = 0; i < n; i++)
         {
@@ -387,11 +608,11 @@ public sealed class CrowdSimSession
                 case (byte)CrowdUnitState.Moving: moving++; break;
                 case (byte)CrowdUnitState.Arrived: arrived++; break;
                 case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                case (byte)CrowdUnitState.Jump: jumping++; break;
+                case (byte)CrowdUnitState.Traversing: traversing++; break;
             }
         }
 
-        Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
+        Telemetry.SetUnitStates(idle, moving, arrived, unreachable, traversing);
         _stateHistogramMembers = n;
     }
 }

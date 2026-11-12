@@ -57,6 +57,7 @@ namespace Ludots.Raylib.Render
         private int _locNavWalkabilityBounds = -1;
         private int _locNavWalkabilityMap = -1;
         private int _locNavWalkabilityBlend = -1;
+        private int _locNavWalkabilityTopRowIsMaxY = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private IContinuousHeightmap? _stampHeightSampleSource;
@@ -73,6 +74,8 @@ namespace Ludots.Raylib.Render
         private Vector4 _navWalkabilityBoundsCm;
         private string? _navWalkabilityTextureUri;
         private float _navWalkabilityBlendStrength = DefaultNavWalkabilityBlendStrength;
+        // 图片文件首行是北边(最大 Y)；场纹理与地形类型叠层按格行写，首行是最小 Y。
+        private bool _navWalkabilityTopRowIsMaxY;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -342,6 +345,7 @@ namespace Ludots.Raylib.Render
             UnloadNavWalkabilityTexture();
             _navWalkabilityTexture = loaded;
             _navWalkabilityTextureUri = textureUri;
+            _navWalkabilityTopRowIsMaxY = true;
             _navWalkabilityBoundsCm = boundsCm;
             _navWalkabilityEnabled = true;
             ApplyNavWalkabilityMaterialMap();
@@ -396,6 +400,7 @@ namespace Ludots.Raylib.Render
 
             _navWalkabilityTexture = texture;
             _navWalkabilityTextureUri = null;
+            _navWalkabilityTopRowIsMaxY = false;
             _navWalkabilityBoundsCm = boundsCm;
             _navWalkabilityBlendStrength = blendStrength;
             _navWalkabilityEnabled = true;
@@ -695,6 +700,7 @@ namespace Ludots.Raylib.Render
             _locNavWalkabilityBounds = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBounds");
             _locNavWalkabilityMap = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityMap");
             _locNavWalkabilityBlend = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityBlend");
+            _locNavWalkabilityTopRowIsMaxY = Rl.GetShaderLocation(_terrainShader, "uNavWalkabilityTopRowIsMaxY");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
@@ -709,13 +715,14 @@ namespace Ludots.Raylib.Render
                 _locNavWalkabilityBounds < 0 ||
                 _locNavWalkabilityMap < 0 ||
                 _locNavWalkabilityBlend < 0 ||
+                _locNavWalkabilityTopRowIsMaxY < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/uNavWalkabilityBlend/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo/nav uniforms or samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/uUseNavWalkability/uNavWalkabilityBounds/uNavWalkabilityMap/uNavWalkabilityBlend/uNavWalkabilityTopRowIsMaxY/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
@@ -873,6 +880,7 @@ namespace Ludots.Raylib.Render
             int useNavWalkability = _navWalkabilityEnabled ? 1 : 0;
             Vector4 bounds = _navWalkabilityBoundsCm;
             float blendStrength = _navWalkabilityBlendStrength;
+            int topRowIsMaxY = _navWalkabilityTopRowIsMaxY ? 1 : 0;
             Rl.SetShaderValue(
                 _terrainShader,
                 _locUseNavWalkability,
@@ -888,6 +896,11 @@ namespace Ludots.Raylib.Render
                 _locNavWalkabilityBlend,
                 &blendStrength,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locNavWalkabilityTopRowIsMaxY,
+                &topRowIsMaxY,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
         }
 
         private void ApplyNavWalkabilityMaterialMap()

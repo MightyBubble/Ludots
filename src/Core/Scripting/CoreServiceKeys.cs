@@ -302,6 +302,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DynamicParticipantVisibilityPublisher> DynamicParticipantVisibilityPublisher = new("DynamicParticipantVisibilityPublisher");
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<ISeatVisionScope> SeatVisionScope = new("Presentation.SeatVisionScope");
+        public static readonly ServiceKey<FogDecalPalette> FogDecalPalette = new("Presentation.FogDecalPalette");
         public static readonly ServiceKey<InfluenceFieldRegistry> InfluenceFieldRegistry = new("Fields.InfluenceFieldRegistry");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
         public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
@@ -318,6 +320,7 @@ namespace Ludots.Core.Scripting
 
         // --- GAS Input / Command Sources / Orders ---
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
+        public static readonly ServiceKey<RuntimeEntitySpawnSystem> RuntimeEntitySpawnSystem = new("RuntimeEntitySpawnSystem");
         public static readonly ServiceKey<RuntimeEntityLifecycleQueue> RuntimeEntityLifecycleQueue = new("RuntimeEntityLifecycleQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleReceiptQueue> RuntimeEntityLifecycleReceiptQueue = new("RuntimeEntityLifecycleReceiptQueue");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");
@@ -443,6 +446,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CameraCullingDebugState> CameraCullingDebugState = new("CameraCullingDebugState");
         public static readonly ServiceKey<PresentationTimingDiagnostics> PresentationTimingDiagnostics = new("PresentationTimingDiagnostics");
         public static readonly ServiceKey<PresentationFrameSetupSystem> PresentationFrameSetup = new("PresentationFrameSetup");
+        public static readonly ServiceKey<IPresentationAlphaHold> PresentationAlphaHold = new("PresentationAlphaHold");
         public static readonly ServiceKey<IBenchmarkSceneController> BenchmarkSceneController = new("BenchmarkSceneController");
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");

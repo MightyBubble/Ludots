@@ -7,6 +7,7 @@ using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -40,8 +41,10 @@ internal sealed class ScriptedFogSourceSystem : ISystem<float>
         if (catalog == null || !catalog.TryGet(ScriptedFogSource.CatalogPath, out var entry)) return;
         var node = engine.ConfigPipeline.MergeDeepObjectFromCatalog(in entry, engine.ConfigConflictReport)
             ?? throw new InvalidOperationException($"{ScriptedFogSource.CatalogPath} 存在目录登记但合并为空。");
+        ScriptedFogSource source = ScriptedFogSource.Parse(node);
+        engine.SetService(CoreServiceKeys.FogDecalPalette, source.Palette);
         engine.RegisterSystem(
-            new ScriptedFogSourceSystem(engine, ScriptedFogSource.Parse(node)),
+            new ScriptedFogSourceSystem(engine, source),
             SystemGroup.PostMovement);
     }
 
@@ -149,6 +152,7 @@ internal sealed class ScriptedFogSource
     public float BorderWidth { get; init; }
     public Vector4 Fill { get; init; }
     public Vector4 Border { get; init; }
+    public required FogDecalPalette Palette { get; init; }
 
     public (float X, float Y) PositionAt(float elapsedSeconds)
     {
@@ -208,6 +212,7 @@ internal sealed class ScriptedFogSource
             BorderWidth = dto.BorderWidth,
             Fill = Color(dto.Fill, "fill"),
             Border = Color(dto.Border, "border"),
+            Palette = PaletteOf(dto.FogDecal),
         };
     }
 
@@ -216,6 +221,38 @@ internal sealed class ScriptedFogSource
         if (value == null || value.Length != 4)
             throw new InvalidOperationException($"{CatalogPath} {name} 需要 4 个分量。");
         return new Vector4(value[0], value[1], value[2], value[3]);
+    }
+
+    private static FogDecalPalette PaletteOf(FogDecalDto? colors)
+    {
+        if (colors == null)
+        {
+            throw new InvalidOperationException($"{CatalogPath} 缺少 fogDecal。");
+        }
+
+        return new FogDecalPalette(
+            Channel(colors.Unseen, "unseen"),
+            Channel(colors.Explored, "explored"),
+            Channel(colors.Visible, "visible"),
+            Channel(colors.Denied, "denied"));
+    }
+
+    private static FogDecalColor Channel(int[]? rgba, string name)
+    {
+        if (rgba == null || rgba.Length != 4)
+        {
+            throw new InvalidOperationException($"{CatalogPath} fogDecal.{name} 需要 4 个 0..255 的整数。");
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            if ((uint)rgba[i] > 255)
+            {
+                throw new InvalidOperationException($"{CatalogPath} fogDecal.{name}[{i}] 超出 0..255。");
+            }
+        }
+
+        return new FogDecalColor((byte)rgba[0], (byte)rgba[1], (byte)rgba[2], (byte)rgba[3]);
     }
 }
 
@@ -263,6 +300,15 @@ internal sealed class ScriptedFogSourceDto
     [JsonRequired] public float BorderWidth { get; set; }
     [JsonRequired] public float[] Fill { get; set; } = Array.Empty<float>();
     [JsonRequired] public float[] Border { get; set; } = Array.Empty<float>();
+    [JsonRequired] public FogDecalDto FogDecal { get; set; } = new();
+}
+
+internal sealed class FogDecalDto
+{
+    [JsonRequired] public int[] Unseen { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Explored { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Visible { get; set; } = Array.Empty<int>();
+    [JsonRequired] public int[] Denied { get; set; } = Array.Empty<int>();
 }
 
 internal sealed class FogSeedCellDto

@@ -25,23 +25,26 @@ public class S7RebakeSmokeTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // S7 冒烟走 S7 真值同款冻结口径(结构 op 会岔认知)
         session.VerifyIncrementalNav = true;
 
         // 脚本(与 S7 真值同构同尺寸:格距 62.5m,足迹中心落在格心):部署 → 行军 →
         // 建筑挡路 → 拆除 → 寿命路障(s7barrier 4 秒,simDt=1/3s → +12 tick 到期)→ 道路(仅代价)
         (int Tick, string Json)[] entries =
         {
-            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"unitType":0,"rIdx":0}"""),
+            (0, """{"type":"spawnAt","xCm":480000,"yCm":560000,"count":120,"player":1,"template":"crowd_simulation.unit.infantry.r100"}"""),
             (2, """{"type":"order","xCm":1200000,"yCm":800000,"player":1,"shape":"box"}"""),
             (30, """{"type":"placeStructure","template":"building","xCm":503125,"yCm":565625,"sizeCm":14000}"""),
             (60, """{"type":"removeStructureAt","xCm":503125,"yCm":565625}"""),
             (90, """{"type":"placeStructure","template":"s7barrier","xCm":521875,"yCm":571875,"sizeCm":7000}"""),
             (120, """{"type":"placeStructure","template":"road","xCm":496875,"yCm":565625,"sizeCm":3000,"toXCm":521875,"toYCm":565625}"""),
         };
-        var script = new List<CrowdCommand>();
-        foreach (var (tick, json) in entries) script.Add(new CrowdCommand(tick, CrowdSimCommand.Parse(Cmd(json))));
-        session.Commands.Schedule(session, script);
+        var scriptJson = new JsonArray();
+        foreach (var (tick, json) in entries)
+        {
+            scriptJson.Add(new JsonObject { ["tick"] = tick, ["cmd"] = JsonNode.Parse(json)!.AsObject() });
+        }
+
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
 
         int rebakes = 0;
         int dirtyTiles = 0;
@@ -51,7 +54,7 @@ public class S7RebakeSmokeTests
             dirtyTiles += r.Tiles;
         };
         var first = new List<ulong>();
-        session.Advance(240, first);
+        script.Advance(session, 240, first);
         Assert.That(rebakes, Is.GreaterThanOrEqualTo(5), $"重烘报告次数 {rebakes}:建筑放置/拆除 + 路障放置/到期 + 道路");
         Assert.That(dirtyTiles, Is.GreaterThan(0), $"重烘焙到的脏 tile 累计 {dirtyTiles}:足迹必须真实盖住格心");
         // 建筑拆除后原阻挡格必须解封(该点后被道路覆盖,EntityAt 非空是对的,查阻挡栅格)
@@ -63,8 +66,15 @@ public class S7RebakeSmokeTests
         using var service2 = new PathQueryService(session2.Navs, runtime2, 1, TimeSpan.FromSeconds(30), session2.ResolveNavContext);
         session2.EnableMovement(CrowdMovementKernel.Create(session2), new CrowdSimPlanner(session2, service2));
         session2.BlockOnDueReplies = true;
-        session2.TruthNavFrozen = true; // 回放侧同款冻结
-        session2.Commands.Schedule(session2, script);
+        var log = session.Commands.Log;
+        var replay = new CrowdCommand[log.Count];
+        for (int i = 0; i < log.Count; i++)
+        {
+            var entry = log[i];
+            replay[i] = new CrowdCommand(entry.Tick, entry.Cmd);
+        }
+
+        session2.Commands.Schedule(session2, replay);
         var second = new List<ulong>();
         session2.Advance(240, second);
         Assert.That(second, Is.EqualTo(first).AsCollection, "同脚本回放校验码不一致(结构 op 管线非确定)");
@@ -74,9 +84,12 @@ public class S7RebakeSmokeTests
     public void LayeredTemplatePlace_IsRejected()
     {
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
-        Assert.Throws<InvalidOperationException>(() =>
-            Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
-                session, "bridge", Fix64Cm(500000), Fix64Cm(500000), Fix64Cm(400), Fix64Cm(600000), Fix64Cm(500000)));
+        int before = session.Structures!.EntityIds.Count;
+        var report = Ludots.Core.CrowdSimulation.Structures.CrowdStructureOps.PlaceStructure(
+            session, "bridge", Fix64Cm(500000), Fix64Cm(500000), Fix64Cm(400), Fix64Cm(600000), Fix64Cm(500000));
+        Assert.That(report, Is.Null);
+        Assert.That(session.LastPlacementReject, Is.EqualTo(Ludots.Core.CrowdSimulation.Structures.CrowdPlacementReject.EndpointArea));
+        Assert.That(session.Structures.EntityIds.Count, Is.EqualTo(before));
     }
 
     private static System.Text.Json.Nodes.JsonNode Cmd(string json) =>

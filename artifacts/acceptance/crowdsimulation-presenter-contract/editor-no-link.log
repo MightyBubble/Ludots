@@ -1,0 +1,5 @@
+presenter section: 
+presenter error: CrowdSimulation 会话绑定的单位模板缺表现。
+单位模板 "crowd_minimal.unit"（CrowdSimulationMinimalMod:assets/Entities/templates.json）生成时没有表现：Presentation/presenters.json 里没有 EntitySpawned 键为 "crowd_minimal.unit" 或 "*" 的 CreatePresenter 规则，也没有表现定义用 bindSpawn.template 指向它。
+Presentation/presenters.json 合并顺序: LudotsCoreMod:assets/Presentation/presenters.json | CrowdSimulationMod:assets/Presentation/presenters.json | CrowdSimulationMinimalMod:assets/Presentation/presenters.json
+CrowdSimulationMinimalMod CrowdSimulationMinimalMod:assets/Entities/templates.json

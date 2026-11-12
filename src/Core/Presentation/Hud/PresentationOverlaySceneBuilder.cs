@@ -375,7 +375,7 @@ namespace Ludots.Core.Presentation.Hud
                             if (!string.IsNullOrEmpty(text))
                             {
                                 scene.TryAddText(
-                                    PresentationOverlayLayer.TopMost,
+                                    item.Layer,
                                     item.X,
                                     item.Y,
                                     text,
@@ -390,7 +390,7 @@ namespace Ludots.Core.Presentation.Hud
 
                         case ScreenOverlayItemKind.Rect:
                             scene.TryAddRect(
-                                PresentationOverlayLayer.TopMost,
+                                item.Layer,
                                 item.X,
                                 item.Y,
                                 item.Width,
@@ -404,7 +404,7 @@ namespace Ludots.Core.Presentation.Hud
 
                         case ScreenOverlayItemKind.Line:
                             scene.TryAddLine(
-                                PresentationOverlayLayer.TopMost,
+                                item.Layer,
                                 item.X,
                                 item.Y,
                                 item.Width,

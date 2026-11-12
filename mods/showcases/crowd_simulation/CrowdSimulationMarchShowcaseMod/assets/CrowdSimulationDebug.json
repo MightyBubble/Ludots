@@ -1,0 +1,43 @@
+{
+  "session": {
+    "scriptAsset": "assets/CrowdSimulation/showcase/formation-120.json",
+    "script": [
+      {
+        "tick": 0,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 928125,
+          "yCm": 803125,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 450,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 1178125,
+          "yCm": 790625,
+          "shape": "box",
+          "auto": false
+        }
+      },
+      {
+        "tick": 480,
+        "cmd": {
+          "type": "order",
+          "player": 1,
+          "xCm": 1046875,
+          "yCm": 990625,
+          "shape": "box",
+          "auto": false
+        }
+      }
+    ]
+  },
+  "presentation": {
+    "title": "CrowdSimulation 演示 · 行军（120 人方块集结后长途行军，途中约 60° 转向）"
+  }
+}

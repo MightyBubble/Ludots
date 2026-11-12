@@ -1,0 +1,18 @@
+{
+  "name": "CrowdSimulationUiMod",
+  "version": "1.0.0",
+  "description": "CrowdSimulation 演示 HUD，照 Web 沙盒原型的 HTML/CSS 搬成 Markup 文档：assets/CrowdSimulationUi/hud.html 是结构，hud.css 是布局与配色，hud.json 是各面板采样节奏与告警阈值。左栏调试视图，右栏遥测，顶部居中玩家条与鼠标操作说明，右上指令单，底部指令坞。按钮点下去走演示已有的输入动作；数据只读 CrowdSimulationRuntime.HudFeed，仿真 tick 不碰界面，没打开的面板不采样。",
+  "main": "bin/net9.0/CrowdSimulationUiMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "navigation",
+    "crowd-simulation",
+    "ui",
+    "hud"
+  ]
+}

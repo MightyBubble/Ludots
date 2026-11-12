@@ -49,6 +49,157 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Algorithm, Is.EqualTo("recast"));
         }
 
+        [TestCase("navmesh", "logicTerrainAsset")]
+        [TestCase("navmesh", "terrainAreas")]
+        [TestCase("mass-navigation", "linkCandidateBake")]
+        [TestCase("mass-navigation", "logicTerrainAsset")]
+        [TestCase("crowd-simulation", "navProfiles")]
+        public void NavMeshBakeConfigLoader_MapKeysAreWhitelistedPerSolver(string solver, string foreignKey)
+        {
+            JsonObject probeMap = new JsonObject
+            {
+                ["solver"] = solver,
+                [foreignKey] = new JsonArray(),
+            };
+            if (string.Equals(solver, NavSolverDeclaration.CrowdSimulation, StringComparison.Ordinal))
+            {
+                probeMap["navCellSizeCm"] = 100;
+                probeMap["terrainTypes"] = new JsonArray("land");
+            }
+
+            JsonObject navmesh = string.Equals(solver, NavSolverDeclaration.CrowdSimulation, StringComparison.Ordinal)
+                ? new JsonObject { ["maps"] = new JsonObject { ["probe"] = probeMap } }
+                : CoreNavmeshJson();
+            if (!string.Equals(solver, NavSolverDeclaration.CrowdSimulation, StringComparison.Ordinal))
+            {
+                navmesh["maps"] = new JsonObject { ["probe"] = probeMap };
+            }
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()));
+            Assert.That(ex!.Message, Does.Contain($"solver {solver}").And.Contain($"unknown property '{foreignKey}'"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_EachSolverAcceptsItsOwnMapKeys()
+        {
+            foreach (string solver in new[] { NavSolverDeclaration.NavMesh, NavSolverDeclaration.MassNavigation, NavSolverDeclaration.CrowdSimulation })
+            {
+                Assert.That(NavSolverDeclaration.OptionalMapKeys(solver), Does.Contain("boards"), solver);
+            }
+
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.CrowdSimulation), Does.Not.Contain("navProfiles"));
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.MassNavigation), Does.Not.Contain("logicTerrainAsset"));
+            Assert.That(NavSolverDeclaration.OptionalMapKeys(NavSolverDeclaration.NavMesh), Does.Not.Contain("linkCandidateBake"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_CrowdSimulationOnlyRoot_AcceptsMapsWithoutDotRecastKeys()
+        {
+            JsonObject navmesh = JsonNode.Parse("""
+                {
+                  "maps": {
+                    "crowd_minimal": {
+                      "solver": "crowd-simulation",
+                      "navCellSizeCm": 6250,
+                      "terrainTypes": ["land", "water"]
+                    }
+                  }
+                }
+                """)!.AsObject();
+
+            NavMeshBakeConfig config = NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles());
+            Assert.That(config.Maps.ContainsKey("crowd_minimal"), Is.True);
+            Assert.That(config.Profiles, Is.Null.Or.Empty);
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_CrowdSimulationOnlyRoot_PartialDotRecastRoot_IsRejected()
+        {
+            JsonObject navmesh = JsonNode.Parse("""
+                {
+                  "mode": "offline",
+                  "maps": {
+                    "crowd_minimal": {
+                      "solver": "crowd-simulation",
+                      "navCellSizeCm": 6250,
+                      "terrainTypes": ["land"]
+                    }
+                  }
+                }
+                """)!.AsObject();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()))!;
+            Assert.That(ex.Message, Does.Contain("algorithm"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_CrowdSimulationOnlyRoot_RequiresCrowdMapKeys()
+        {
+            JsonObject navmesh = JsonNode.Parse("""
+                {
+                  "maps": {
+                    "crowd_minimal": {
+                      "solver": "crowd-simulation",
+                      "navCellSizeCm": 6250
+                    }
+                  }
+                }
+                """)!.AsObject();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()))!;
+            Assert.That(ex.Message, Does.Contain("terrainTypes"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_NavMeshMap_RequiresDotRecastRootKeys()
+        {
+            JsonObject navmesh = new JsonObject
+            {
+                ["maps"] = new JsonObject
+                {
+                    ["probe"] = new JsonObject
+                    {
+                        ["solver"] = NavSolverDeclaration.NavMesh,
+                        ["navProfiles"] = new JsonArray("Small"),
+                        ["navAreas"] = new JsonArray("Default"),
+                    },
+                },
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()))!;
+            Assert.That(ex.Message, Does.Contain("mode"));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_NavMeshMap_RejectsCrowdOnlyMapKeys()
+        {
+            JsonObject navmesh = CoreNavmeshJson();
+            navmesh["maps"] = new JsonObject
+            {
+                ["probe"] = new JsonObject
+                {
+                    ["solver"] = NavSolverDeclaration.NavMesh,
+                    ["logicTerrainAsset"] = "terrain/demo.map_data.bin",
+                },
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavMeshBakeConfigLoader.Parse(navmesh, CoreAgentProfiles()))!;
+            Assert.That(ex.Message, Does.Contain("logicTerrainAsset"));
+        }
+
+        private static JsonObject CoreNavmeshJson()
+            => JsonNode.Parse(File.ReadAllText(Path.Combine(FindRepoRoot(), "assets", NavMeshConfigPaths.BakeConfigPath)))!.AsObject();
+
+        private static AgentProfileRegistry CoreAgentProfiles()
+            => new(System.Text.Json.JsonSerializer.Deserialize<List<AgentProfileConfig>>(
+                File.ReadAllText(Path.Combine(FindRepoRoot(), "assets", "Navigation", "agent_profiles.json")),
+                StrictJsonOptions.CreateCamelCase())!);
+
         [Test]
         public void NavTileGranularity_MixedSizesAcrossBoardsAreRejected()
         {
@@ -180,7 +331,7 @@ namespace Ludots.Tests.Architecture
                 var pipeline = new ConfigPipeline(vfs, modLoader: null!);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException ex = Assert.Throws<ConfigLoadException>(
                     () => new AgentProfileConfigLoader(pipeline).Load(catalog))!;
                 Assert.That(ex.Message, Does.Contain("speedCmPerSecond"));
             }
@@ -341,11 +492,11 @@ namespace Ludots.Tests.Architecture
                 var pipeline = new ConfigPipeline(vfs, modLoader: null!);
                 var catalog = ConfigCatalogLoader.Load(pipeline);
 
-                InvalidOperationException navmeshEx = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException navmeshEx = Assert.Throws<ConfigLoadException>(
                     () => new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog))!;
                 Assert.That(navmeshEx.Message, Does.Contain("radiusCm"));
 
-                InvalidOperationException pathingEx = Assert.Throws<InvalidOperationException>(
+                ConfigLoadException pathingEx = Assert.Throws<ConfigLoadException>(
                     () => new PathingConfigLoader(pipeline).Load(catalog))!;
                 Assert.That(pathingEx.Message, Does.Contain("layer"));
             }
@@ -440,6 +591,7 @@ namespace Ludots.Tests.Architecture
             navmesh["maps"] = mapsNode;
             var mapNode = new System.Text.Json.Nodes.JsonObject
             {
+                ["solver"] = "navmesh",
                 ["navProfiles"] = new System.Text.Json.Nodes.JsonArray(
                     System.Text.Json.Nodes.JsonValue.Create("Small"),
                     System.Text.Json.Nodes.JsonValue.Create("Medium"),

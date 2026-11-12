@@ -52,6 +52,10 @@ public sealed class CrowdSpatialHash
     public CrowdSpatialHash(int worldSizeCm, Fix64 hashCellSizeCm, int capacity, int rings, Fix64 reachCm)
     {
         CellSizeCm = hashCellSizeCm;
+        long cellRaw = hashCellSizeCm.RawValue;
+        _cellSizeInt = cellRaw > 0 && (cellRaw & ((1L << Fix64.FractionalBits) - 1)) == 0
+            ? (int)(cellRaw >> Fix64.FractionalBits)
+            : 0;
         _rings = rings;
         _reachCm = reachCm;
         _dim = (int)Fix64.Ceiling(Fix64.FromInt(worldSizeCm) / hashCellSizeCm).ToLong();
@@ -96,10 +100,17 @@ public sealed class CrowdSpatialHash
         return (ox.ToArray(), oy.ToArray(), ringEnd.ToArray());
     }
 
+    /// <summary>把 stamp 代推到给定值。下一次 Build 先加一，加一溢出时会清 stamp。</summary>
+    internal void PrimeStampGeneration(uint generation) => _generation = generation;
+
+    private readonly int _cellSizeInt;
+
     private int CellAtCm(Fix64 vCm)
     {
-        // (v / cell).ToLong() 是算术右移,负值向下取整。随后负格钳到 0,所以负坐标的格号仍是 0。
-        int c = (int)(vCm / CellSizeCm).ToLong();
+        // 格长是正整数时走 raw 整数除（向零）。否则走定点除法。负坐标的商再钳到 0，所以负格号仍是 0。
+        int c = _cellSizeInt != 0
+            ? (int)Fix64.DivPositiveInt(vCm, _cellSizeInt).ToLong()
+            : (int)(vCm / CellSizeCm).ToLong();
         return c < 0 ? 0 : c >= _dim ? _dim - 1 : c;
     }
 
@@ -196,5 +207,41 @@ public sealed class CrowdSpatialHash
             Items[p] = i;
             ItemRing[p] = UnitRing[i];
         }
+    }
+
+    public void CellRect(Fix64 minX, Fix64 minY, Fix64 maxX, Fix64 maxY, out int x0, out int y0, out int x1, out int y1)
+    {
+        x0 = CellAtCm(minX);
+        y0 = CellAtCm(minY);
+        x1 = CellAtCm(maxX) + 1;
+        y1 = CellAtCm(maxY) + 1;
+        if (x1 > _dim) x1 = _dim;
+        if (y1 > _dim) y1 = _dim;
+    }
+
+    /// <summary>过期格的计数在重建前仍留着，只认本代戳。</summary>
+    public int CopyItemsInRect(int x0, int y0, int x1, int y1, int[] dest)
+    {
+        if (x0 < 0) x0 = 0;
+        if (y0 < 0) y0 = 0;
+        if (x1 > _dim) x1 = _dim;
+        if (y1 > _dim) y1 = _dim;
+        int written = 0;
+        uint generation = _generation;
+        for (int y = y0; y < y1 && written < dest.Length; y++)
+        {
+            int row = y * _dim;
+            for (int x = x0; x < x1 && written < dest.Length; x++)
+            {
+                int cell = row + x;
+                if (_stamp[cell] != generation || _count[cell] == 0) continue;
+                int start = _start[cell];
+                int n = _count[cell];
+                for (int i = 0; i < n && written < dest.Length; i++)
+                    dest[written++] = Items[start + i];
+            }
+        }
+
+        return written;
     }
 }

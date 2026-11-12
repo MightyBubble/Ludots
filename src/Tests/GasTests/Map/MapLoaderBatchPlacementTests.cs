@@ -109,6 +109,56 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadEntities_PlacementPosition_WinsOverTemplateDefaultOnBothPaths()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            EntitySpawnData batchPlacement = CreateSpawn(null);
+            batchPlacement.PositionXCm = 3600;
+            batchPlacement.PositionYCm = 4300;
+            map.Entities.Add(batchPlacement);
+            EntitySpawnData componentPathPlacement = CreateSpawn(new Dictionary<string, JsonNode>
+            {
+                ["Health"] = JsonNode.Parse(@"{ ""Current"": 7, ""Max"": 11 }")!,
+            });
+            componentPathPlacement.PositionXCm = -1200;
+            componentPathPlacement.PositionYCm = 800;
+            map.Entities.Add(componentPathPlacement);
+
+            That(InvokeTryBuildBatchRequest(batchPlacement, out object request), Is.True);
+            That(GetRequestBool(request, "HasWorldPosition"), Is.True);
+            That(InvokeTryBuildBatchRequest(componentPathPlacement, out _), Is.False);
+
+            loader.LoadEntities(map);
+
+            var entities = FindTemplateEntities(world);
+            That(entities.Count, Is.EqualTo(2));
+            AssertPlacement(world, entities[0], 3600, 4300, 0.5f);
+            AssertPlacement(world, entities[1], -1200, 800, 0.5f);
+        }
+
+        [Test]
+        public void LoadEntities_PlacementPositionAndWorldPositionOverride_FailAtLoad()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            EntitySpawnData spawn = CreateSpawn(new Dictionary<string, JsonNode>
+            {
+                ["WorldPositionCm"] = WorldPosition(1000, 2000),
+            });
+            spawn.InstanceId = "conflict.beacon";
+            spawn.PositionXCm = 3600;
+            spawn.PositionYCm = 4300;
+            map.Entities.Add(spawn);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("conflict.beacon"));
+            That(ex.Message, Does.Contain("both PositionXCm/PositionYCm and Overrides.WorldPositionCm"));
+        }
+
+        [Test]
         public void LoadEntities_UnsupportedExtraOverride_StaysOnComponentApplicationPath()
         {
             using var world = World.Create();
@@ -799,9 +849,10 @@ namespace GasTests
                 CreateClassificationTemplate(),
                 new MapEntity { MapId = new MapId(MapId) },
                 null!,
+                null!,
             };
             bool result = (bool)method.Invoke(null, args)!;
-            request = args[4];
+            request = args[5];
             return result;
         }
 

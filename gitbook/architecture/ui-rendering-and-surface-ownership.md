@@ -169,6 +169,8 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 
 GPU UnderUi HUD（血条/名字等世界批）→ Skia 面板层 → TopMost。铁匠铺左侧操作条挂上后，**不得**因为 `hasUiLayer` 就把世界 HUD 踢回整窗 raster。
 
+`ScreenOverlayBuffer` 的每一项都要写明层：跟着世界走的标记（调试着色、选中轮廓）写 `PresentationOverlayLayer.UnderUi`，面板挂上后会盖住它们；窗口锚定的面板、宿主诊断字和框选矩形写 `TopMost`。`PresentationOverlaySceneBuilder` 按项上的层分道，没有默认层。
+
 **按写法选构建器：**
 
 - **Compose / Reactive**：构造 `UiElementBuilder` 或 `ReactivePage`，用 `UiSurfaceContribution.FromBuilder(...)` / `FromReactivePage(page)`。

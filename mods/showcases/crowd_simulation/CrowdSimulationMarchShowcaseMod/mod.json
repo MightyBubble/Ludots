@@ -1,0 +1,22 @@
+{
+  "name": "CrowdSimulationMarchShowcaseMod",
+  "version": "0.1.0",
+  "description": "行军演示：图中心 120 个步兵方块先集结到东边 20 格处，再向东行军 40 格，出发 30 tick 后改令到东北方，转向约 60°。转向后背离新目标的单位-tick 占比和行进 UAT 用同一阈值。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c02",
+    "march"
+  ]
+}

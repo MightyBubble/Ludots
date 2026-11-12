@@ -188,6 +188,9 @@ namespace DualSeatPanelsShowcaseMod.Runtime
                 return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, height, height);
             }
 
+            public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+                => new UiTextSize(text.Length * Math.Max(1f, style.FontSize) * 0.55f, Math.Max(1f, style.FontSize));
+
             public float MeasureWidth(string? text, UiStyle style)
             {
                 int length = string.IsNullOrEmpty(text) ? 0 : text.Length;

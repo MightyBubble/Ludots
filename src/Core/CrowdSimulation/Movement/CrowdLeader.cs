@@ -16,11 +16,13 @@ public sealed class CrowdLeader
     private Fix64Vec2[] _path;
     private int _count;
     private Fix64 _lookAheadCm;
+    private readonly HashSet<int> _wall;
 
-    /// <summary>路径缓冲在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
+    /// <summary>路径缓冲与基线墙格集在构造时一次留够。活前缀是 <see cref="PathCount"/>，尾部不参与步进。</summary>
     internal CrowdLeader(int pathCapacity)
     {
         _path = new Fix64Vec2[pathCapacity];
+        _wall = new HashSet<int>(pathCapacity);
         PaceCmPerSecond = Fix64.OneValue;
         Nav = null!;
     }
@@ -43,6 +45,7 @@ public sealed class CrowdLeader
 
         _count = pathCm.Count;
         for (int i = 0; i < _count; i++) _path[i] = pathCm[i];
+        _wall.Clear();
         PaceCmPerSecond = paceCmPerSecond;
         LayerIdx = layerIdx;
         Nav = nav;
@@ -84,8 +87,46 @@ public sealed class CrowdLeader
     public bool Done { get; private set; }
     /// <summary>反转后原地掉头:行序镜像,旧前排不必穿过队伍再到前面。</summary>
     public bool Mirror { get; private set; }
+    /// <summary>槽位世界坐标 = 领队位置 + 槽位偏移(横向, 向后)旋进领队朝向系。</summary>
+    public Fix64Vec2 SlotWorldCm(Fix64Vec2 slotOffsetCm)
+    {
+        Fix64 lat = slotOffsetCm.X, back = slotOffsetCm.Y;
+        return new Fix64Vec2(XCm - Hy * lat - Hx * back, YCm + Hx * lat - Hy * back);
+    }
+
     internal int PathCount => _count;
     internal Fix64Vec2 PathAt(int index) => _path[index];
+    internal bool IsWall(int cell) => _wall.Contains(cell);
+
+    /// <summary>
+    /// 规划时路线已贴靠或穿越的不可通行格（墙角、链接）记为基线，阻挡判定只认基线之外的新阻挡；
+    /// 否则任何无关的结构变化都会让沿墙角拉直的路线被判为受阻而重新规划。路径定稿（起点覆写）之后调用。
+    /// </summary>
+    internal void RecordWalls(NavContext nav, int navCellSizeCm, int navCellsPerSide)
+    {
+        _wall.Clear();
+        Fix64 step = Fix64.FromInt(navCellSizeCm) / 2, e = Fix64.FromInt(navCellSizeCm) / 4;
+        var pass = nav.Passable;
+        var up = nav.UpPass;
+        for (int k = 1; k < _count; k++)
+        {
+            Fix64 ax = _path[k - 1].X, ay = _path[k - 1].Y, bx = _path[k].X, by = _path[k].Y;
+            int m = Math.Max(1, (int)Fix64.Ceiling(CrowdFix.Hypot(bx - ax, by - ay) / step).ToLong());
+            for (int s = 0; s <= m; s++)
+            {
+                Fix64 x = ax + (bx - ax) * s / m, y = ay + (by - ay) * s / m;
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x - e, y - e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x + e, y - e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x - e, y + e, navCellSizeCm, navCellsPerSide));
+                AddWall(pass, up, CrowdSimulationSpace.CellAt(x + e, y + e, navCellSizeCm, navCellsPerSide));
+            }
+        }
+    }
+
+    private void AddWall(byte[] pass, byte[] up, int cell)
+    {
+        if (pass[cell] == 0 && up[cell] == 0) _wall.Add(cell);
+    }
 
     /// <summary>起点覆写到当前质心(请求时刻的起点格只作 8 邻域参照)。</summary>
     public void SetStart(Fix64 xCm, Fix64 yCm)
@@ -164,7 +205,7 @@ public sealed class CrowdLeader
         return (ax, ay, false);
     }
 
-    /// <summary>步进一个子步(dt 秒;pace = leaderSpeed;turnK = min(1, dt×leaderTurnRate);faceStep = 拖线朝向的转角步长)。</summary>
+    /// <summary>步进一个子步(dt 秒;pace = leaderSpeedRatio;turnK = min(1, dt×leaderTurnRate);faceStep = 拖线朝向的转角步长)。</summary>
     public void Step(Fix64 speedCmPerSecond, Fix64 pace, Fix64 turnK, Fix64 faceStep, Fix64 dt, int navCellSizeCm, int navCellsPerSide)
     {
         if (Done)
@@ -176,10 +217,13 @@ public sealed class CrowdLeader
 
         int n = _count;
         Fix64 ox = XCm, oy = YCm;
-        // 桥面层:地面不可走但桥面可走时,步速吃桥面代价而不是水下代价
+        // 上层:底层不可走但上层可走时,步速吃上层代价而不是底层代价
         int cell = CrowdSimulationSpace.CellAt(XCm, YCm, navCellSizeCm, navCellsPerSide);
-        Fix64 div = Nav.Passable[cell] != 0 ? Nav.SpeedDivisor[cell] : Nav.UpPass[cell] != 0 ? Nav.UpSpeedDivisor[cell] : Fix64.OneValue;
-        Fix64 rem = (speedCmPerSecond / (div == Fix64.Zero ? Fix64.OneValue : div)) * pace * dt;
+        // 路线只在链接缝和墙角上经过两层都不可走的格。那里没有这一行的格参数，步速不按底层缩放。
+        Fix64 cellSpeed = Nav.Passable[cell] != 0 ? speedCmPerSecond / Nav.SpeedDivisor[cell]
+            : Nav.UpPass[cell] != 0 ? speedCmPerSecond / Nav.UpSpeedDivisor[cell]
+            : speedCmPerSecond;
+        Fix64 rem = cellSpeed * pace * dt;
         while (rem > Fix64.Zero && Seg < n)
         {
             Fix64 tx = _path[Seg].X - XCm, ty = _path[Seg].Y - YCm;

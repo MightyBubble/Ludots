@@ -1,7 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Ludots.UI;
+using Ludots.UI.Compose;
 using Ludots.UI.HtmlEngine.Markup;
+using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Runtime.Events;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 
 namespace Ludots.Tests.UiShowcase;
@@ -72,6 +77,74 @@ public sealed class UiLayoutAllocationTests
 
 		Assert.That(allocated, Is.LessThan(512 * 1024),
 			$"dirty resolve+layout allocated {allocated} bytes over 30 passes; match/cascade buffers should be pooled");
+	}
+
+	[Test]
+	public void UiScene_AdvanceTime_AfterTransitionSettles_AllocatesNothing()
+	{
+		const string html = """
+			<div class="root">
+			  <div id="probe" class="probe">x</div>
+			  <div class="item">A</div>
+			  <div class="item">B</div>
+			</div>
+			""";
+		const string css = """
+			.root { display: flex; flex-direction: column; width: 200px; height: 200px; }
+			.probe { width: 80px; height: 40px; background-color: #202020; transition: background-color 0.2s linear, transform 0.2s linear; transform: rotate(0deg); }
+			.probe:hover { background-color: #40a040; transform: rotate(20deg); }
+			.item { height: 20px; color: #fff; }
+			""";
+		UiScene scene = new UiMarkupLoader().LoadScene(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), html, css);
+		scene.Layout(640f, 360f);
+		UiNode probe = scene.FindByElementId("probe")!;
+		scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, 0, probe.LayoutRect.X + 2, probe.LayoutRect.Y + 2, probe.Id));
+		scene.Layout(640f, 360f);
+		Assert.That(scene.AdvanceTime(0.1f), Is.True, "hover should start the transition");
+		for (int i = 0; i < 8; i++)
+		{
+			scene.AdvanceTime(0.1f);
+		}
+		Assert.That(scene.AdvanceTime(0.016f), Is.False, "transition should have settled");
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		for (int i = 0; i < 64; i++)
+		{
+			scene.AdvanceTime(0.016f);
+		}
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.That(allocated, Is.EqualTo(0L), $"idle AdvanceTime allocated {allocated} bytes over 64 frames");
+	}
+
+	[Test]
+	public void UiSurfaceHost_IdleFrames_WithReactivePages_AllocateNothing()
+	{
+		var root = new UIRoot(new NullUiRenderer());
+		root.Resize(640f, 360f);
+		var host = new UiSurfaceHost(root, new ConstantTextMeasurer(), new ConstantImageSizeProvider());
+		var hud = new ReactivePage<int>(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), 0,
+			context => Ui.Column(Ui.Text("hud").Id("idle-hud")).Width(200f).Height(80f));
+		var debug = new ReactivePage<int>(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), 0,
+			context => Ui.Column(Ui.Text("debug").Id("idle-debug")).Width(200f).Height(80f));
+		host.Publish(host.Acquire(new UiSurfaceLeaseRequest("idle.hud", UiSurfaceSegment.Overlay, priority: 10)), UiSurfaceContribution.FromReactivePage(hud));
+		host.Publish(host.Acquire(new UiSurfaceLeaseRequest("idle.debug", UiSurfaceSegment.Debug, priority: 10)), UiSurfaceContribution.FromReactivePage(debug));
+		for (int i = 0; i < 4; i++)
+		{
+			root.Update(0.016f);
+			root.Render();
+		}
+
+		long before = GC.GetAllocatedBytesForCurrentThread();
+		for (int i = 0; i < 64; i++)
+		{
+			root.Update(0.016f);
+			root.Render();
+		}
+		long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+		Assert.That(root.Scene!.FindByElementId("idle-hud"), Is.Not.Null);
+		Assert.That(allocated, Is.EqualTo(0L), $"idle surface host frames allocated {allocated} bytes over 64 frames");
 	}
 
 	private static void WarmupLayout(UiScene scene)
@@ -175,6 +248,16 @@ public sealed class UiLayoutAllocationTests
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+
+		public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+			=> new UiTextSize(text.Length * style.FontSize * 0.5f, style.FontSize * 1.4f);
+	}
+
+	private sealed class NullUiRenderer : IUiRenderer
+	{
+		public void Render(UiScene scene, float width, float height)
+		{
+		}
 	}
 
 	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider

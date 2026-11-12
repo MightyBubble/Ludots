@@ -17,7 +17,8 @@ public sealed class CrowdSimulationTelemetryChannelContractTests
         Assert.That(tick, Does.Not.Contain("BlackboardFloatBuffer"));
         Assert.That(tick, Does.Not.Contain("ConfigKeyRegistry"));
         Assert.That(tick, Does.Not.Contain("BuildActiveDefinitionSummary"));
-        Assert.That(tick, Does.Not.Contain("CrowdSimChecksum.Format"));
+        // FormatDiagnostic 和 Format 共用前缀。括号只拦住十六进制合计。
+        Assert.That(tick, Does.Not.Contain("CrowdSimChecksum.Format("));
         Assert.That(source, Does.Not.Contain("crowd_simulation.session."));
     }
 

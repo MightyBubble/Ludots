@@ -12,6 +12,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Movement;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -276,7 +277,7 @@ namespace Ludots.Tests.GAS.Production
 
         private void WriteArtifacts(string repoRoot)
         {
-            string directory = Path.Combine(repoRoot, "artifacts", "acceptance", "entity-attachment");
+            string directory = CommittedTestArtifacts.Resolve("artifacts/acceptance/entity-attachment");
             Directory.CreateDirectory(directory);
             File.WriteAllLines(Path.Combine(directory, "battle-report.md"), _battleLog, Encoding.UTF8);
             File.WriteAllLines(Path.Combine(directory, "trace.jsonl"), _trace, Encoding.UTF8);

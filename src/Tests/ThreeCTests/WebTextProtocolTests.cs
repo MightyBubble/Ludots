@@ -252,7 +252,7 @@ namespace Ludots.Tests.ThreeC
             var strings = CreateWorldHudStrings("READY {0}");
             var packet = PresentationTextPacket.FromToken(1);
             packet.SetArg(0, PresentationTextArg.FromInt32(7));
-            overlay.AddText(12, 24, in packet, 18, new Vector4(1f, 1f, 1f, 1f));
+            overlay.AddText(PresentationOverlayLayer.TopMost, 12, 24, in packet, 18, new Vector4(1f, 1f, 1f, 1f));
 
             var encoder = new BinaryFrameEncoder();
             var camera = new CameraRenderState3D(Vector3.Zero, Vector3.UnitZ, Vector3.UnitY, 60f);

@@ -32,7 +32,7 @@ namespace CrowdSimulationTests.Parity;
 /// 与 S5 首个分歧(tick 11 马达停车线骑线)同源:双算术体系在离散判定点翻转离散事件。
 /// 每次结构 op 的重烘焙报告逐字段硬门(执行 tick / 类别 / 报告 tick / tiles / contexts /
 /// costOnly / hits / misses / orders / refreshes / evicted / stuck / 受影响 tile 并集升序)。
-/// 口径:参考端以 __S7_TRUTH_NAV__ 镜像补丁冻结迷雾,
+/// 口径:会话不装迷雾,
 /// 组全程停在 truth 导航,队伍反应 = reactRebake 真值直反应;增量 vs 全量一致性
 /// 检查(VerifyIncrementalNav)在每次 op 后随路运行。
 /// </summary>
@@ -65,25 +65,22 @@ public sealed class S7RebakeTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // S7 真值在 __S7_TRUTH_NAV__ 冻结口径下录制,同构置位
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7-rebake-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
+        var scriptJson = meta["script"]!.AsArray();
+        var script = CrowdReferenceScript.Load(scriptJson, session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
-        session.Commands.Schedule(session, script);
 
         var reports = new List<CrowdRebakeReport>();
         session.RebakeReported += reports.Add;
 
         // 阻挡格停留门的豁免集:放置 op 落格当帧,仓内单位要等下一 tick 的重烘
         // 阶段 1 才被挤离(evicted/stuck 由 ops 报告硬门钉住)
-        var placeExecTicks = script
-            .Where(c => c.Cmd.Kind == CrowdSimCommandKind.PlaceStructure)
-            .Select(c => c.Tick).ToHashSet();
+        var placeExecTicks = scriptJson
+            .Where(e => e!["cmd"]!["type"]!.GetValue<string>() == "placeStructure")
+            .Select(e => e!["tick"]!.GetValue<int>()).ToHashSet();
         var store = session.Structures!;
         int gridN = store.NavCellsPerSide, cellSize = store.NavCellSizeCm;
         byte[] blockedGrid = store.Blocked;
@@ -106,10 +103,10 @@ public sealed class S7RebakeTruthTests
         string? firstModeMismatch = null, firstContactMismatch = null, firstStructuralMismatch = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
@@ -179,7 +176,7 @@ public sealed class S7RebakeTruthTests
                 if (!placeExecTicks.Contains(t))
                 {
                     int cx = (int)(pos.X.ToDouble() / cellSize), cy = (int)(pos.Y.ToDouble() / cellSize);
-                    if (st.State != (byte)CrowdUnitState.Jump && st.Level == 0 &&
+                    if (st.State != (byte)CrowdUnitState.Traversing && st.Level == 0 &&
                         cx >= 0 && cy >= 0 && cx < gridN && cy < gridN && blockedGrid[cy * gridN + cx] != 0)
                     {
                         dwellMine++;
@@ -187,7 +184,7 @@ public sealed class S7RebakeTruthTests
                     }
 
                     int tcx = (int)(txCm / cellSize), tcy = (int)(tyCm / cellSize);
-                    if (tState != (byte)CrowdUnitState.Jump && tLevel == 0 &&
+                    if (tState != (byte)CrowdUnitState.Traversing && tLevel == 0 &&
                         tcx >= 0 && tcy >= 0 && tcx < gridN && tcy < gridN && blockedGrid[tcy * gridN + tcx] != 0)
                     {
                         dwellTruth++;

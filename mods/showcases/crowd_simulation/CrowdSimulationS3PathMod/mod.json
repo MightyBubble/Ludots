@@ -1,12 +1,14 @@
 {
   "name": "CrowdSimulationS3PathMod",
   "version": "0.1.0",
-  "description": "CrowdSimulation S3 两点路径演示(种子 1337,交互版):左键起点/右键终点/Q 体型/T 线程 1/2/4/G 后台变慢,显示折线 + 方向贴花 + 请求帧 / 生效帧 / 等待次数。",
+  "description": "S3 两点路径交互演示（种子 1337）：在地图上设起点/终点并观察路径查询与贴花。操作说明见 gitbook/architecture/crowdsimulation-showcases.md 的「S3 路径演示」。",
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
     "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
     "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
   },
   "author": "Ludots Team",

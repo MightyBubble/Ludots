@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using Ludots.Platform.Abstractions;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -222,8 +223,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(heroStableId, Is.GreaterThan(0));
             Assert.That(heroControllerId, Is.GreaterThan(0));
 
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "presentation-skinned-runtime-contract");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/presentation-skinned-runtime-contract");
             Directory.CreateDirectory(artifactDir);
 
             string tracePath = Path.Combine(artifactDir, "trace.jsonl");

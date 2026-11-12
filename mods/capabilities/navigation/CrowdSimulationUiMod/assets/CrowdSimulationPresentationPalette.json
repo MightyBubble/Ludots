@@ -1,0 +1,5 @@
+{
+  "plan": { "red": 150, "green": 42, "blue": 72, "alpha": 180 },
+  "ink": { "red": 24, "green": 18, "blue": 28, "alpha": 210 },
+  "paper": { "red": 236, "green": 230, "blue": 214, "alpha": 48 }
+}

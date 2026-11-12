@@ -124,12 +124,12 @@ namespace AuditPlaygroundMod.Systems
             var text = new Vector4(0.8f, 0.95f, 0.8f, 1f);
             var hint = new Vector4(0.72f, 0.88f, 0.72f, 0.95f);
 
-            overlay.AddRect(x, y, w, h, bg, border);
-            overlay.AddText(x + 10, y + 8, "Audit Playground", 16, title);
-            overlay.AddText(x + 10, y + 30, $"Global={global}  Scoped={scoped}  Named={named}", 14, text);
-            overlay.AddText(x + 10, y + 50, $"Anchor={anchor}  FactoryActivation={factory}", 14, text);
-            overlay.AddText(x + 10, y + 76, "I PushInner  |  O PopInner  |  P ReloadOuter", 13, hint);
-            overlay.AddText(x + 10, y + 96, "Counters come from trigger/decorator pipeline.", 13, hint);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, w, h, bg, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 8, "Audit Playground", 16, title);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 30, $"Global={global}  Scoped={scoped}  Named={named}", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 50, $"Anchor={anchor}  FactoryActivation={factory}", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 76, "I PushInner  |  O PopInner  |  P ReloadOuter", 13, hint);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 96, "Counters come from trigger/decorator pipeline.", 13, hint);
         }
     }
 }

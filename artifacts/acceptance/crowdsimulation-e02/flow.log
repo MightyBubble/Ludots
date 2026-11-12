@@ -1,0 +1,15 @@
+opened: speed=1400 personal=900 radius=150
+speed source: CrowdSimulationMinimalMod · assets/Entities/templates.json
+presenters: crowd_minimal.unit · 规则在 crowd_minimal.units.bootstrap · CrowdSimulationMinimalMod · assets/Presentation/presenters.json
+screenshot 01-inspector-opened.png
+invalid speed hint: Entities/templates.json: 模板 "crowd_minimal.unit" 的 CrowdSimulationAgent.speedCmPerSecond 需为 > 0 的数值。 | CrowdSimulationMinimalMod CrowdSimulationMinimalMod:assets/Entities/templates.json
+screenshot 02-invalid-speed-error.png
+save while invalid: 校验没有通过，没有写文件，也没有重建。
+files unchanged after invalid save: true
+radius without personal radius: Entities/templates.json: 模板 "crowd_minimal.unit" 的 personalRadiusCm 与半径 × agents.avoidanceRadiusScale 不一致。 | CrowdSimulationMinimalMod CrowdSimulationMinimalMod:assets/Entities/templates.json
+screenshot 03-radius-mismatch-error.png
+after personalRadiusCm=960: 校验通过
+save: 已写入 CrowdSimulationMinimalMod/assets/Entities/templates.json、CrowdSimulationMinimalMod/assets/Navigation/agent_profiles.json。没有运行中的桥，所以没有当场生效。
+screenshot 04-saved.png
+after reload: speed=1600 personal=960 radius=160
+screenshot 05-reloaded-persisted.png

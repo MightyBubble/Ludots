@@ -48,7 +48,14 @@ public sealed class PanelPresentationSystem : ISystem<float>
     private readonly PanelTipOverlay? _tipOverlay;
     private readonly PanelLayoutComposer _layoutComposer = new();
 
-    private readonly Dictionary<string, MountedPanel> _mounted = new(StringComparer.Ordinal);
+    private readonly Dictionary<MountKey, MountedPanel> _mounted = new();
+    private readonly List<PanelHostInstanceInfo> _instances = new();
+    private readonly List<(string SeatId, PresentBinding Binding)> _bindings = new();
+    private readonly HashSet<MountKey> _liveKeys = new();
+    private readonly Dictionary<(string Anchor, string? SeatId), int> _anchorStack = new();
+    private readonly Dictionary<string, string> _normalizedAnchors = new(StringComparer.Ordinal);
+    private readonly List<PanelSeatSurface> _seatSurfaces = new();
+    private readonly List<MountKey> _staleKeys = new();
     private bool _disposed;
 
     public PanelPresentationSystem(
@@ -103,15 +110,19 @@ public sealed class PanelPresentationSystem : ISystem<float>
         List<(string SeatId, PresentBinding Binding)>? bindings = null;
         if (_seats is { PresentBindingCount: > 0 })
         {
-            bindings = new List<(string SeatId, PresentBinding Binding)>();
+            bindings = _bindings;
             _seats.CopyPresentBindings(bindings);
         }
 
-        var liveKeys = new List<string>();
-        var anchorStack = new Dictionary<string, int>(StringComparer.Ordinal);
-        var seatSurfaces = new List<PanelSeatSurface>();
-        foreach (PanelHostInstanceInfo info in _panelHost.SnapshotInstances())
+        HashSet<MountKey> liveKeys = _liveKeys;
+        Dictionary<(string Anchor, string? SeatId), int> anchorStack = _anchorStack;
+        List<PanelSeatSurface> seatSurfaces = _seatSurfaces;
+        liveKeys.Clear();
+        anchorStack.Clear();
+        _panelHost.CopyInstancesTo(_instances);
+        for (int instanceIndex = 0; instanceIndex < _instances.Count; instanceIndex++)
         {
+            PanelHostInstanceInfo info = _instances[instanceIndex];
             if (!_activation.IsVisible(info.TemplateId))
             {
                 continue;
@@ -166,25 +177,23 @@ public sealed class PanelPresentationSystem : ISystem<float>
             }
         }
 
-        List<string>? staleKeys = null;
-        foreach (KeyValuePair<string, MountedPanel> entry in _mounted)
+        List<MountKey> staleKeys = _staleKeys;
+        staleKeys.Clear();
+        foreach (KeyValuePair<MountKey, MountedPanel> entry in _mounted)
         {
-            if (liveKeys.Contains(entry.Key))
+            if (!liveKeys.Contains(entry.Key))
             {
-                continue;
-            }
-
-            (staleKeys ??= new List<string>()).Add(entry.Key);
-        }
-
-        if (staleKeys != null)
-        {
-            foreach (string key in staleKeys)
-            {
-                _surfaceHost.Release(_mounted[key].Lease);
-                _mounted.Remove(key);
+                staleKeys.Add(entry.Key);
             }
         }
+
+        for (int i = 0; i < staleKeys.Count; i++)
+        {
+            MountKey key = staleKeys[i];
+            _surfaceHost.Release(_mounted[key].Lease);
+            _mounted.Remove(key);
+        }
+        staleKeys.Clear();
     }
 
     private void MountInstance(
@@ -196,17 +205,15 @@ public sealed class PanelPresentationSystem : ISystem<float>
         float surfaceY,
         float surfaceWidth,
         float surfaceHeight,
-        Dictionary<string, int> anchorStack,
-        List<string> liveKeys)
+        Dictionary<(string Anchor, string? SeatId), int> anchorStack,
+        HashSet<MountKey> liveKeys)
     {
-        string anchorKey = NormalizeAnchor(info.Anchor);
-        string stackKey = seatId == null ? anchorKey : $"{anchorKey}@{seatId}";
+        string anchorKey = NormalizedAnchor(info.Anchor);
+        var stackKey = (anchorKey, seatId);
         int stackIndex = anchorStack.TryGetValue(stackKey, out int count) ? count : 0;
         anchorStack[stackKey] = stackIndex + 1;
 
-        string key = seatId == null
-            ? $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}"
-            : $"{info.TemplateId}#{info.Handle.Id}:{info.Handle.Generation}@{seatId}";
+        var key = new MountKey(info.TemplateId, info.Handle.Id, info.Handle.Generation, seatId);
         bool declaredLayout = template.Layout != null;
         bool virtualized = PanelListProjector.TemplateUsesVirtualizedList(template);
         UiRect rect = ResolvePanelRect(
@@ -221,31 +228,26 @@ public sealed class PanelPresentationSystem : ISystem<float>
         if (!_mounted.TryGetValue(key, out MountedPanel? mounted))
         {
             UiSurfaceLeaseHandle lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
-                $"panel-skin:{key}",
+                key.OwnerId(),
                 UiSurfaceSegment.Main,
                 priority: info.ZOrder));
             if (virtualized)
             {
                 var page = CreateVirtualListPage(info.Handle, rect, skin, info.Revision, seatId);
                 _surfaceHost.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
-                mounted = new MountedPanel(lease, declaredLayout, page, info.Revision);
+                mounted = new MountedPanel(lease, declaredLayout, page, info.Revision, rect, skin);
             }
             else
             {
-                _surfaceHost.Publish(lease, UiSurfaceContribution.FromBuilder(
-                    () => BuildPanel(info.Handle, rect, skin, seatId: seatId),
-                    styleSheets: _styleSheets));
-                mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision);
+                _surfaceHost.Publish(lease, BuilderContribution(info.Handle, rect, skin, seatId));
+                mounted = new MountedPanel(lease, declaredLayout, page: null, info.Revision, rect, skin);
             }
 
             _mounted[key] = mounted;
         }
         else if (mounted.Page != null)
         {
-            PanelSkinDescriptor skinCapture = skin;
-            PanelInstanceHandle handleCapture = info.Handle;
-            uint revisionCapture = info.Revision;
-            mounted.Page.SetState(_ => new PanelUiState(handleCapture, rect, skinCapture, revisionCapture));
+            mounted.Page.SetState(PanelStateUpdate(info.Handle, rect, skin, info.Revision));
             _surfaceHost.Publish(
                 mounted.Lease,
                 UiSurfaceContribution.FromReactivePage(mounted.Page));
@@ -253,16 +255,33 @@ public sealed class PanelPresentationSystem : ISystem<float>
         }
         else if (mounted.DeclaredLayout)
         {
-            _surfaceHost.Publish(mounted.Lease, UiSurfaceContribution.FromBuilder(
-                () => BuildPanel(info.Handle, rect, skin, seatId: seatId),
-                styleSheets: _styleSheets));
+            _surfaceHost.Publish(mounted.Lease, BuilderContribution(info.Handle, rect, skin, seatId));
         }
-        else
+        else if (rect != mounted.LastRect || skin != mounted.LastSkin)
+        {
+            _surfaceHost.Publish(mounted.Lease, BuilderContribution(info.Handle, rect, skin, seatId));
+            mounted.LastRect = rect;
+            mounted.LastSkin = skin;
+            mounted.LastRevision = info.Revision;
+        }
+        else if (info.Revision != mounted.LastRevision)
         {
             _surfaceHost.Invalidate(mounted.Lease);
+            mounted.LastRevision = info.Revision;
         }
 
         liveKeys.Add(key);
+    }
+
+    // Lambdas live in their own methods: capturing MountInstance locals would allocate the closure on every frame.
+    private UiSurfaceContribution BuilderContribution(PanelInstanceHandle handle, UiRect rect, PanelSkinDescriptor skin, string? seatId)
+    {
+        return UiSurfaceContribution.FromBuilder(() => BuildPanel(handle, rect, skin, seatId: seatId), styleSheets: _styleSheets);
+    }
+
+    private static Func<PanelUiState, PanelUiState> PanelStateUpdate(PanelInstanceHandle handle, UiRect rect, PanelSkinDescriptor skin, uint revision)
+    {
+        return _ => new PanelUiState(handle, rect, skin, revision);
     }
 
     public void Dispose()
@@ -816,6 +835,17 @@ public sealed class PanelPresentationSystem : ISystem<float>
         return title.ToString();
     }
 
+    private string NormalizedAnchor(string anchor)
+    {
+        if (!_normalizedAnchors.TryGetValue(anchor, out string? normalized))
+        {
+            normalized = NormalizeAnchor(anchor);
+            _normalizedAnchors.Add(anchor, normalized);
+        }
+
+        return normalized;
+    }
+
     private static string NormalizeAnchor(string anchor)
     {
         string trimmed = anchor.Trim();
@@ -913,18 +943,31 @@ public sealed class PanelPresentationSystem : ISystem<float>
             UiSurfaceLeaseHandle lease,
             bool declaredLayout,
             ReactivePage<PanelUiState>? page,
-            uint lastRevision)
+            uint lastRevision,
+            UiRect lastRect,
+            PanelSkinDescriptor lastSkin)
         {
             Lease = lease;
             DeclaredLayout = declaredLayout;
             Page = page;
             LastRevision = lastRevision;
+            LastRect = lastRect;
+            LastSkin = lastSkin;
         }
 
         public UiSurfaceLeaseHandle Lease { get; }
         public bool DeclaredLayout { get; }
         public ReactivePage<PanelUiState>? Page { get; }
         public uint LastRevision { get; set; }
+        public UiRect LastRect { get; set; }
+        public PanelSkinDescriptor LastSkin { get; set; }
+    }
+
+    private readonly record struct MountKey(string TemplateId, int HandleId, int Generation, string? SeatId)
+    {
+        public string OwnerId() => SeatId == null
+            ? $"panel-skin:{TemplateId}#{HandleId}:{Generation}"
+            : $"panel-skin:{TemplateId}#{HandleId}:{Generation}@{SeatId}";
     }
 
     private sealed class PanelUiState
@@ -951,6 +994,9 @@ public sealed class PanelPresentationSystem : ISystem<float>
             float height = Math.Max(1f, style.FontSize);
             return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, height, height);
         }
+
+        public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+            => new UiTextSize(text.Length * Math.Max(1f, style.FontSize) * 0.55f, Math.Max(1f, style.FontSize));
 
         public float MeasureWidth(string? text, UiStyle style)
         {

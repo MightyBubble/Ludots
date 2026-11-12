@@ -33,6 +33,7 @@
   },
   "maps": {
     "nav_gate_valley": {
+      "solver": "navmesh",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,

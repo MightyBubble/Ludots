@@ -11,7 +11,8 @@ on:
       - 'launcher.config.json'
       - 'launcher.presets.json'
       - 'mods/**'
-      - 'NuGet.config'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
@@ -31,7 +32,8 @@ on:
       - 'launcher.config.json'
       - 'launcher.presets.json'
       - 'mods/**'
-      - 'NuGet.config'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
       - 'scripts/acceptance/assert-portable-evidence.ps1'
       - 'scripts/acceptance/run-mass-navigation-large-world-uat.ps1'
@@ -49,6 +51,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Check graph-op gallery generator has no drift
         shell: pwsh
@@ -74,8 +78,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            9.0.x
+          global-json-file: global.json
 
       - name: Build maintained test project graphs
         shell: pwsh
@@ -108,6 +111,7 @@ jobs:
         run: |
           $guardFilter = @(
             'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~CrowdSimulationCommentHygieneTests',
             'FullyQualifiedName~S14LayeringRatchetTests',
             'FullyQualifiedName~GasRuntimeStateContractTests',
             'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
@@ -214,4 +218,30 @@ jobs:
           dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj -c Debug --no-build --filter "TestCategory=raylib-field" -v minimal
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
+          }
+
+      - name: Run CrowdSimulation authoring acceptance slice
+        shell: pwsh
+        run: |
+          dotnet build mods/LudotsCoreMod/LudotsCoreMod.csproj -c Release -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          dotnet test src/Tests/CrowdSimulationTests/CrowdSimulationTests.csproj -c Debug --no-build --filter "TestCategory=crowd-authoring" -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Graph-op gallery generation above already fails if it drifts. Test output
+      # stays in the NUnit work directory unless LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1,
+      # which this job does not set. A dirty tree here means a test wrote a tracked path.
+      - name: Reject dirty worktree after tests
+        shell: pwsh
+        run: |
+          $porcelain = git status --porcelain
+          if ($porcelain) {
+            Write-Host "Tests changed the worktree. Committed evidence is written only when LUDOTS_UPDATE_COMMITTED_TEST_ARTIFACTS=1."
+            Write-Host $porcelain
+            exit 1
           }

@@ -1,0 +1,16 @@
+{
+  "name": "CrowdSimulationDemoContentMod",
+  "version": "1.0.0",
+  "description": "群体模拟演示内容：S1 种子、S3、S4 共用的 5 种移动类型 × 4 个半径级单位模板、表现和网格，以及演示用的部署、桥锚地形和结构模板。新地图不依赖它。",
+  "priority": 0,
+  "dependencies": {
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "demo-content"
+  ]
+}

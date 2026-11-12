@@ -13,8 +13,8 @@ namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// 迷雾/认知对拍(脚本:部署 → 行军 → 未知建筑 → 发现改道 → 拆除残影 → 再见遗忘 →
-/// reveal/obscure/forget → fogShare 并组 → fogTerrain 开关对照):迷雾开启口径,不置
-/// TruthNavFrozen(参考端 S7-b 块不置 __S7_TRUTH_NAV__,与 S7 冻结块并存)。
+/// reveal/obscure/forget → fogShare 并组 → fogTerrain 开关对照):会话装迷雾,
+/// 规划经认知槽。
 /// 迷雾 digest 主门:每组每 tick visible/explored/belief/tiles 计数、beliefKey、
 /// 槽号、entRev/rev 计数器 + 全局槽账(seq/switches/entry/dormant/beliefCount)——整数/集合态,
 /// 逐位硬门,无带宽口径(哈希碰撞藏不住变更:计数器与 key 双轨)。
@@ -50,16 +50,14 @@ public sealed class S7FogTruthTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         session.VerifyIncrementalNav = true;
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s7fog-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
+        var script = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
         var truthExecTicks = meta["opExecTicks"]!.AsArray().Select(v => v!.GetValue<int>()).ToArray();
-        session.Commands.Schedule(session, script);
 
         var reports = new List<CrowdRebakeReport>();
         session.RebakeReported += reports.Add;
@@ -81,10 +79,10 @@ public sealed class S7FogTruthTests
         string? firstDigestMismatch = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }
@@ -149,7 +147,6 @@ public sealed class S7FogTruthTests
             }
 
             // ── 迷雾 digest:逐位硬门(整数/集合态) ──
-            int f2 = fog.FogCellsPerSide * fog.FogCellsPerSide;
             for (int g = 0; g < groups; g++)
             {
                 int tVis = BitConverter.ToInt32(bin, cursor); cursor += 4;
@@ -161,12 +158,8 @@ public sealed class S7FogTruthTests
                 int tEntRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
                 int tRev = BitConverter.ToInt32(bin, cursor); cursor += 4;
 
-                int vis = 0, exp = 0;
-                for (int c = g * f2, end = (g + 1) * f2; c < end; c++)
-                {
-                    if (fog.Visible[c] != 0) vis++;
-                    if (fog.Explored[c] != 0) exp++;
-                }
+                int vis = fog.VisibleCountOf(g);
+                int exp = fog.ExploredCountOf(g);
 
                 firstDigestMismatch ??= Mismatch(
                     ("visible", vis, tVis), ("explored", exp, tExp), ("belief", fog.Belief[g].Count, tBel),

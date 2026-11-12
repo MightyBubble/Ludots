@@ -1,6 +1,7 @@
 {
   "maps": {
     "capability_standard_participant_views": {
+      "solver": "navmesh",
       "navProfiles": [
         "Small"
       ],

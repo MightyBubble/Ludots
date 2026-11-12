@@ -240,6 +240,25 @@ namespace Ludots.Core.Association
             return removed;
         }
 
+        public bool HasUnexpired(int currentTick)
+        {
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                int expiry = _expiryTicks[slot];
+                if (expiry <= 0 || currentTick < expiry)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public int Expire(int currentTick)
         {
             int expired = 0;

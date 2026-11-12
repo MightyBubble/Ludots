@@ -659,6 +659,22 @@ namespace SkiaSharp
 			DrawText (blob, x, y, paint);
 		}
 
+		// DrawText (span)
+
+		public void DrawText (ReadOnlySpan<char> text, float x, float y, SKFont font, SKPaint paint)
+		{
+			if (font == null)
+				throw new ArgumentNullException (nameof (font));
+			if (paint == null)
+				throw new ArgumentNullException (nameof (paint));
+			if (text.IsEmpty)
+				return;
+
+			fixed (char* t = text) {
+				SkiaApi.sk_canvas_draw_simple_text (Handle, t, (IntPtr)(text.Length * 2), SKTextEncoding.Utf16, x, y, font.Handle, paint.Handle);
+			}
+		}
+
 		// DrawTextOnPath
 
 		[Obsolete ("Use DrawTextOnPath(string text, SKPath path, float hOffset, float vOffset, SKTextAlign textAlign, SKFont font, SKPaint paint) instead.")]

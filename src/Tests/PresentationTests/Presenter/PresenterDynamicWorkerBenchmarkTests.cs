@@ -27,6 +27,7 @@ using PresenterBlacksmithShowcaseMod.Runtime;
 using SkiaSharp;
 using Ludots.Platform.Abstractions;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -54,11 +55,7 @@ namespace Ludots.Tests.Presentation
                 results[i] = RunScenario(Counts[i]);
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "presenter-dynamic-worker-production-path");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/presenter-dynamic-worker-production-path");
             Directory.CreateDirectory(artifactDir);
 
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
@@ -569,11 +566,7 @@ namespace Ludots.Tests.Presentation
                 droppedScreenMarkerCounts,
                 allocatedBytes);
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "benchmarks",
-                "minimap-marker-large-world-hotpath");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/minimap-marker-large-world-hotpath");
             Directory.CreateDirectory(artifactDir);
             string reportPath = Path.Combine(artifactDir, "benchmark-report.md");
             File.WriteAllText(reportPath, BuildMinimapHotPathReport(result));

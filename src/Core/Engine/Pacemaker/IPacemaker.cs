@@ -10,6 +10,14 @@ namespace Ludots.Core.Engine.Pacemaker
     }
 
     /// <summary>
+    /// 呈现插值钉在当前拍。暂停或路径答复未回时，视觉不再停在上一拍与当前拍之间。
+    /// </summary>
+    public interface IPresentationAlphaHold
+    {
+        bool HoldAtCurrent { get; }
+    }
+
+    /// <summary>
     /// Controls the "heartbeat" of the simulation logic (GAS, Physics, AI).
     /// Decouples wall-clock time from simulation time.
     /// </summary>

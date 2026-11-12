@@ -86,6 +86,8 @@ namespace Raylib_cs
         KEY_X = 88,
         KEY_Y = 89,
         KEY_Z = 90,
+        KEY_LEFT_BRACKET = 91,
+        KEY_RIGHT_BRACKET = 93,
         KEY_SPACE = 32,
         KEY_ESCAPE = 256,
         KEY_ENTER = 257,

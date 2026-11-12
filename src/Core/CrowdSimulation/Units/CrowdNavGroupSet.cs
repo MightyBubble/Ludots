@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 
+using Ludots.Core.CrowdSimulation.Nav;
+
 namespace Ludots.Core.CrowdSimulation.Units;
 
 /// <summary>
@@ -18,6 +20,8 @@ public sealed class CrowdNavGroupSet
         /// <summary>当前规划句柄(双句柄之"认知"):真相号或认知变体号(槽切换时重挂)。
         /// 意图/领队/规划读它;马达物理读 BodyNavId(永远真相)。</summary>
         public int NavId { get; set; }
+        /// <summary>槽切换时在 tick 边界钉住的规划导航(热路径读它,不再进路径服务锁)。</summary>
+        internal NavContext? Nav { get; set; }
         /// <summary>真相句柄(双句柄之"身体"):生成时定,不再变。</summary>
         public int BodyNavId { get; set; }
         public int Count { get; set; }
@@ -32,15 +36,20 @@ public sealed class CrowdNavGroupSet
         public int GoalComp { get; set; } = -2;
         /// <summary>路径答复在途(重发指令途中单位保持当前速度,不刹车)。</summary>
         public bool Planning { get; set; }
+        /// <summary>流场刷新或走廊扩展答复在途。在途时组不再搭新的刷新,也不另提扩展。</summary>
+        public bool Extending { get; set; }
         /// <summary>槽位视线全员判定(规划器在阵型落定帧置位一次,意图层读后清零)。</summary>
         public bool LosAll { get; set; }
         /// <summary>上一任未完成的领队(重发指令时供反转/朝向继承;答复落帧后清空)。</summary>
         public Movement.CrowdLeader? PrevLeader { get; set; }
-        /// <summary>组状态序:每次规划 / 流场刷新提交时 +1;到点答复按它判陈旧(被更新请求取代的静默丢弃)。</summary>
+        /// <summary>组状态序:每次规划,或反应取代在途刷新时 +1;到点答复按它判陈旧(被取代的静默丢弃)。</summary>
         public int StateSeq { get; set; }
     }
 
-    private const int MaxGroups = 4096;
+    internal const int MaxGroups = 4096;
+
+    /// <summary>空组释放时交给规划器:放回流场、丢掉走失记录。流场只由规划器挂上，所以持有流场的组必然有这个入口。</summary>
+    internal Action<Group>? OnRelease { get; set; }
 
     private readonly List<Group?> _groups = new();
     private readonly Stack<int> _free = new();
@@ -72,6 +81,7 @@ public sealed class CrowdNavGroupSet
         g.RIdx = rIdx;
         g.NavId = navId;
         g.BodyNavId = navId;
+        g.Nav = null;
         g.Count = 0;
         g.OrderId = 0;
         g.Leader = null;
@@ -79,6 +89,7 @@ public sealed class CrowdNavGroupSet
         g.Goal = -1;
         g.GoalComp = -2;
         g.Planning = false;
+        g.Extending = false;
         g.LosAll = false;
         g.PrevLeader = null;
         g.StateSeq = 0;
@@ -94,11 +105,8 @@ public sealed class CrowdNavGroupSet
         {
             if (_groups[i] is { Count: 0 } empty)
             {
-                if (empty.Flow is { } flow)
-                {
-                    flow.OriginPool?.Give(flow);
-                    empty.Flow = null;
-                }
+                if (OnRelease != null) OnRelease(empty);
+                else if (empty.Flow != null) throw new InvalidOperationException("组持有流场但没有接上规划器的换场入口。");
 
                 _groups[i] = null;
                 _free.Push(i);

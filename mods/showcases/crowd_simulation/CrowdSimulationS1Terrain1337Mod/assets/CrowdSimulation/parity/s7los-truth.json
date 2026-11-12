@@ -4,7 +4,7 @@
   "seed": 1337,
   "fogCellsPerSide": 64,
   "eyeCm": 1000,
-  "note": "L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 全 0 除指定格;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。",
+  "note": "L52 LOS 恰等阈值咬合:工程化高度表(hAvg 全 0,hAvg[to]=40;hMax 按 case,raw=格值×2^32),opaque 缺省表示无不透明格、数值表示不透明格索引;直调引擎 sight(定点树)。C# 侧同表反射注入 CrowdFog.Sight。",
   "fromFogCell": [
     10,
     10
@@ -20,7 +20,6 @@
       "hMaxRaw": {
         "651": 64424509439
       },
-      "opaque": 0,
       "expect": false,
       "got": false
     },
@@ -29,7 +28,6 @@
       "hMaxRaw": {
         "651": 64424509440
       },
-      "opaque": 0,
       "expect": false,
       "got": false
     },
@@ -38,14 +36,12 @@
       "hMaxRaw": {
         "651": 62277025792
       },
-      "opaque": 0,
       "expect": true,
       "got": true
     },
     {
       "name": "clearLos",
       "hMaxRaw": {},
-      "opaque": 0,
       "expect": true,
       "got": true
     },

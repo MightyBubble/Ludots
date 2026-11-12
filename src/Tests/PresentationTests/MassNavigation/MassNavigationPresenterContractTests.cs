@@ -593,10 +593,22 @@ namespace Ludots.Tests.Presentation
             var report = new Ludots.Core.Config.ConfigConflictReport();
             var config = new MassNavigationConfigLoader(pipeline).Load(catalog, report);
 
-            Assert.That(config.MapId, Is.EqualTo("mass_navigation"));
+            JsonObject navmesh = ReadObject(Path.Combine(modRoot, "assets", "Navigation", "navmesh.json"));
+            Assert.That(navmesh["maps"]!["mass_navigation"]!["solver"]!.GetValue<string>(), Is.EqualTo("mass-navigation"));
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+        }
+
+        [Test]
+        public void MapId_IsARetiredKey()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            config["mapId"] = "mass_navigation";
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => MassNavigationConfig.Load(config))!;
+            Assert.That(ex.Message, Does.Contain("已删除 mapId"));
+            Assert.That(ex.Message, Does.Contain("mass-navigation"));
         }
 
         [Test]

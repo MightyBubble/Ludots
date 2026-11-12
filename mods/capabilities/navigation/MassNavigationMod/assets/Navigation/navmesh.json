@@ -1,6 +1,7 @@
 {
   "maps": {
     "mass_navigation": {
+      "solver": "mass-navigation",
       "navProfiles": [
         "Small"
       ],

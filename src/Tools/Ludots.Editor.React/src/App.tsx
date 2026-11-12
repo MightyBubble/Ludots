@@ -7,6 +7,8 @@ import { StoryAuthoringPage } from "@/pages/StoryAuthoringPage";
 import { TextBankPage } from "@/pages/text-bank/TextBankPage";
 import { AuthoringShell } from "@/pages/authoring-studio/AuthoringShell";
 import { AuthoringStudioHome } from "@/pages/authoring-studio/AuthoringStudioHome";
+import { ConfigProvenancePage } from "@/pages/ConfigProvenancePage";
+import { CrowdConfigEditorPage } from "@/pages/CrowdConfigEditorPage";
 
 export default function App() {
   return (
@@ -22,6 +24,8 @@ export default function App() {
           <Route path="/text-bank" element={<TextBankPage />} />
           <Route path="/timeline" element={<StoryAuthoringPage tool="timeline" />} />
           <Route path="/story-authoring" element={<StoryAuthoringPage />} />
+          <Route path="/config-provenance" element={<ConfigProvenancePage />} />
+          <Route path="/crowd-config" element={<CrowdConfigEditorPage />} />
         </Route>
         <Route path="/map" element={<EditorLayout />} />
         <Route path="/ui-panel-authoring" element={<UiPanelAuthoringPage />} />

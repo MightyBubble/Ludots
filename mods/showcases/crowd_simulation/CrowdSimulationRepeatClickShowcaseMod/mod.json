@@ -1,0 +1,22 @@
+{
+  "name": "CrowdSimulationRepeatClickShowcaseMod",
+  "version": "0.1.0",
+  "description": "连点演示：图中心 120 个步兵方块集结到东边 20 格处，站定后每 10 tick 对同一目标再点一次，共 8 次。连点期间单位不后退、不在到达和行进之间来回翻转，阈值和行进 UAT 相同。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c02",
+    "repeat_click"
+  ]
+}

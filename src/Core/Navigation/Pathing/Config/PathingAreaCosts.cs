@@ -6,15 +6,13 @@ namespace Ludots.Core.Navigation.Pathing.Config
 {
     public readonly struct ResolvedPathingAreaCost
     {
-        public ResolvedPathingAreaCost(double cost, double speedDivisor, bool passable)
+        public ResolvedPathingAreaCost(double cost, bool passable)
         {
             Cost = cost;
-            SpeedDivisor = speedDivisor;
             Passable = passable;
         }
 
         public double Cost { get; }
-        public double SpeedDivisor { get; }
         public bool Passable { get; }
     }
 
@@ -34,13 +32,7 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 throw new InvalidOperationException($"Invalid pathing cost for areaId={area.AreaId}");
             }
 
-            double speedDivisor = area.SpeedDivisor ?? area.Cost;
-            if (speedDivisor <= 0d || double.IsNaN(speedDivisor))
-            {
-                throw new InvalidOperationException($"Invalid pathing speedDivisor for areaId={area.AreaId}");
-            }
-
-            return new ResolvedPathingAreaCost(area.Cost, speedDivisor, area.Passable != false);
+            return new ResolvedPathingAreaCost(area.Cost, area.Passable);
         }
 
         public static void RequireComplete(PathingAgentTypeConfig agent, IReadOnlyList<NavMeshAreaConfig> areas)

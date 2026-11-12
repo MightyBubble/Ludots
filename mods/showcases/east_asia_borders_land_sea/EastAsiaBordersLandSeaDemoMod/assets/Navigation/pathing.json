@@ -13,7 +13,8 @@
         "areaCosts": [
           {
             "areaId": 0,
-            "cost": 1.0
+            "cost": 1.0,
+            "passable": true
           }
         ]
       },
@@ -38,7 +39,8 @@
         "areaCosts": [
           {
             "areaId": 0,
-            "cost": 1.0
+            "cost": 1.0,
+            "passable": true
           }
         ]
       },

@@ -784,6 +784,7 @@ namespace Ludots.Adapter.Raylib
         {
             _navMeshPresentationRenderer.Draw(_navMeshPresentationBuffer);
             _screenOverlayBuffer?.AddText(
+                PresentationOverlayLayer.TopMost,
                 10,
                 40,
                 _navMeshPresentationBuffer.FormatMetadataLine(),

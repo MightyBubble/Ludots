@@ -9,13 +9,13 @@ namespace Ludots.Core.CrowdSimulation.Presentation;
 
 /// <summary>
 /// 可走区域层 → 全场视觉缓冲的投影器(S2 视图的场叠加版):
-/// 不可走 = 红罩,桥面 = 棕,桥头 portal = 黄;配色即 S2 校验图的语义。
+/// 不可走 = 红罩,上层 = 棕,入口 portal = 黄;配色即 S2 校验图的语义。
 /// 值是 Vector4 直接 RGBA(渲染端不再映射,见 Walkable 场契约)。
 /// </summary>
 public sealed class CrowdWalkableVisualProjector : IGlobalFieldVisualProjector
 {
     private static readonly Vector4 BlockedRed = new(0.63f, 0.12f, 0.12f, 0.5f);
-    private static readonly Vector4 DeckBrown = new(0.59f, 0.43f, 0.27f, 0.85f);
+    private static readonly Vector4 UpperLayerBrown = new(0.59f, 0.43f, 0.27f, 0.85f);
     private static readonly Vector4 PortalYellow = new(1f, 0.84f, 0.31f, 0.9f);
 
     private readonly CrowdFlowFieldVisualSource _source;
@@ -43,7 +43,7 @@ public sealed class CrowdWalkableVisualProjector : IGlobalFieldVisualProjector
         {
             Vector4 color;
             if (nav.Portal[c] != 0 && nav.UpPass[c] != 0) color = PortalYellow;
-            else if (nav.UpPass[c] != 0) color = DeckBrown;
+            else if (nav.UpPass[c] != 0) color = UpperLayerBrown;
             else if (nav.Passable[c] == 0) color = BlockedRed;
             else continue;
             _cells[count++] = new GlobalFieldVisualCell(new Ludots.Core.Fields.FieldCell2D(c % navCellsPerSide, c / navCellsPerSide), color);

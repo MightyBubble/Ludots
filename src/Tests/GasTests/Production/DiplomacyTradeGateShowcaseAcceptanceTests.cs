@@ -13,6 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -36,7 +37,7 @@ public sealed class DiplomacyTradeGateShowcaseAcceptanceTests
     public void DiplomacyTradeGateShowcase_RelationshipControlsExchangeSettlement()
     {
         string repoRoot = FindRepoRoot();
-        string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "diplomacy-trade-gate-showcase");
+        string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/diplomacy-trade-gate-showcase");
         string screensDir = Path.Combine(artifactDir, "screens");
         AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 

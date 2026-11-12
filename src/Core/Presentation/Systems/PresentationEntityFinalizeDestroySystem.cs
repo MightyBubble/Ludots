@@ -1,6 +1,7 @@
-using Arch.Buffer;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Systems
@@ -13,38 +14,55 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly QueryDescription _query = new QueryDescription()
             .WithAll<PresentationDestroyPending, PresentationDestroyEventPublished>();
-        private readonly CommandBuffer _commandBuffer = new();
+        private readonly List<Entity> _finalizeScratch = new();
 
         public PresentationEntityFinalizeDestroySystem(World world)
             : base(world)
         {
+            PresentationLifecycleConsumption.InstallConsumer(world);
         }
 
         public override void Update(in float dt)
         {
+            _finalizeScratch.Clear();
             var query = World.Query(in _query);
             foreach (var chunk in query)
             {
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    Entity entity = chunk.Entity(i);
-                    if (World.IsAlive(entity))
-                    {
-                        _commandBuffer.Destroy(in entity);
-                    }
+                    _finalizeScratch.Add(chunk.Entity(i));
                 }
             }
 
-            if (_commandBuffer.Size > 0)
+            for (int i = 0; i < _finalizeScratch.Count; i++)
             {
-                _commandBuffer.Playback(World);
+                FinalizePublished(World, _finalizeScratch[i]);
             }
         }
 
-        public override void Dispose()
+        public static void FinalizePublished(World world, Entity entity)
         {
-            _commandBuffer.Dispose();
-            base.Dispose();
+            if (world.IsAlive(entity)
+                && world.Has<PresentationDestroyPending>(entity)
+                && world.Has<PresentationDestroyEventPublished>(entity))
+            {
+                world.Destroy(entity);
+            }
+        }
+
+        public static void FinalizeWithoutConsumer(World world, Entity entity)
+        {
+            if (!world.IsAlive(entity) || !world.Has<PresentationDestroyPending>(entity))
+            {
+                return;
+            }
+
+            if (!world.Has<PresentationDestroyEventPublished>(entity))
+            {
+                world.Add(entity, new PresentationDestroyEventPublished());
+            }
+
+            FinalizePublished(world, entity);
         }
     }
 }

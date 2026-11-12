@@ -66,6 +66,12 @@ namespace Ludots.Core.Input.Config
 
         public List<InputModifierDef> Processors { get; set; } = new List<InputModifierDef>();
         public List<InputModifierDef> Interactions { get; set; } = new List<InputModifierDef>();
+
+        /// <summary>
+        /// 后到的片段用同一绑定键（动作 + 路径，或动作 + 复合）声明移除。
+        /// 移除不是一条新绑定：目标必须已经存在，结果里不保留这个条目。
+        /// </summary>
+        public bool Removed { get; set; }
     }
 
     /// <summary>

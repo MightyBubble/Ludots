@@ -65,6 +65,11 @@ namespace Ludots.Core.Knowledge
             return _records.Expire(currentTick);
         }
 
+        public bool HasUnexpired(int currentTick)
+        {
+            return _records.HasUnexpired(currentTick);
+        }
+
         public int Compact()
         {
             return _records.Compact();

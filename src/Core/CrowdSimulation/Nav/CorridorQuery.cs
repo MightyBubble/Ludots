@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -7,13 +8,20 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 
 /// <summary>
 /// 走廊查询:
-/// 无跳跃链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
+/// 无链接的上下文先走 tile 寻址 NavMesh A* + 漏斗;有链接直接 HPA*
 /// (链接是抽象边,NavMesh 上没有);NavMesh 失败也回落 HPA*。命中的 tile 标进走廊掩码。
-/// 桥面起点:先沿桥面 BFS 到最近的桥头 portal,再从那里查地面图,
-/// 途经的桥面 tile 并入走廊。
+/// 上层起点:先沿上层 BFS 到最近的入口 portal,再从那里查底层图,
+/// 途经的上层 tile 并入走廊。
 /// </summary>
 public static class CorridorQuery
 {
+    /// <summary>一次走廊查询里 NavMesh 与 HPA* 各自的秒表 tick。上层 BFS 不计入。</summary>
+    public struct CorridorStageTicks
+    {
+        public long NavMesh;
+        public long Hpa;
+    }
+
     public enum Branch : byte
     {
         None = 0,
@@ -49,8 +57,8 @@ public static class CorridorQuery
 
         public TilePathQuery.Scratch Tile { get; }
         public HpaQuery.Scratch Hpa { get; }
-        public Dictionary<int, int> DeckPrev { get; } = new();
-        public List<int> DeckQueue { get; } = new();
+        public Dictionary<int, int> UpperLayerPrev { get; } = new();
+        public List<int> UpperLayerQueue { get; } = new();
         public Fix64[] PointBuf { get; private set; } = new Fix64[4096];
         public int[] LayerBuf { get; private set; } = new int[2048];
         public List<int> Trace = new(4096);
@@ -95,11 +103,25 @@ public static class CorridorQuery
         int level,
         Scratch s)
     {
+        var unused = default(CorridorStageTicks);
+        return CorridorTo(nav, config, from, to, mask, level, s, ref unused);
+    }
+
+    public static Result CorridorTo(
+        NavContext nav,
+        CrowdSimulationRuntimeConfig config,
+        int from,
+        int to,
+        byte[] mask,
+        int level,
+        Scratch s,
+        ref CorridorStageTicks stages)
+    {
         if (level != 0)
         {
-            int exit = DeckExit(nav, from, mask, s);
+            int exit = UpperLayerExit(nav, from, mask, s);
             if (exit < 0) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
-            var sub = CorridorTo(nav, config, exit, to, mask, 0, s);
+            var sub = CorridorTo(nav, config, exit, to, mask, 0, s, ref stages);
             if (sub.Points == null) return s.Publish(sub.Kind, 0, null, 0, null, null, 0, default);
             s.EnsurePoints(sub.PointCount + 2);
             Array.Copy(s.PointBuf, 0, s.PointBuf, 2, sub.PointCount);
@@ -111,7 +133,9 @@ public static class CorridorQuery
         TilePathQuery.Result? r = null;
         if (nav.Links == null)
         {
+            long navMark = Stopwatch.GetTimestamp();
             r = TilePathQuery.FindTilePath(nav, config, from, to, layers: true, s.Tile);
+            stages.NavMesh += Stopwatch.GetTimestamp() - navMark;
         }
 
         if (r != null)
@@ -122,7 +146,9 @@ public static class CorridorQuery
             return s.Publish(Branch.Tile, r.PointCount, r.Polys, r.PolyCount, null, null, 0, r.Cost);
         }
 
+        long hpaMark = Stopwatch.GetTimestamp();
         var p = HpaQuery.FindPath(nav, from, to, s.Hpa);
+        stages.Hpa += Stopwatch.GetTimestamp() - hpaMark;
         if (p == null) return s.Publish(Branch.None, 0, null, 0, null, null, 0, default);
         for (int i = 0; i < p.TileCount; i++) mask[p.TileIds[i]] = 1;
         int navCellsPerSide = nav.NavCellsPerSide;
@@ -136,13 +162,13 @@ public static class CorridorQuery
         return s.Publish(Branch.Hpa, p.CellCount * 2, null, 0, p.TileIds, p.Cells, p.CellCount, p.Cost);
     }
 
-    // 桥面 BFS 到最近的桥头 portal(双层可走),途经 tile 并入走廊
-    private static int DeckExit(NavContext nav, int from, byte[] mask, Scratch s)
+    // 上层 BFS 到最近的入口 portal(双层可走),途经 tile 并入走廊
+    private static int UpperLayerExit(NavContext nav, int from, byte[] mask, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide;
         int navCellsPerTile = nav.Hpa!.NavCellsPerTile, cc = nav.Hpa.NavTilesPerSide;
-        var prev = s.DeckPrev;
-        var q = s.DeckQueue;
+        var prev = s.UpperLayerPrev;
+        var q = s.UpperLayerQueue;
         prev.Clear(); q.Clear();
         prev[from] = -1; q.Add(from);
         for (int h = 0; h < q.Count; h++)
@@ -155,16 +181,16 @@ public static class CorridorQuery
             }
 
             int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
-            TryDeck(nav, prev, q, cell, navCellsPerSide, x + 1, y);
-            TryDeck(nav, prev, q, cell, navCellsPerSide, x - 1, y);
-            TryDeck(nav, prev, q, cell, navCellsPerSide, x, y + 1);
-            TryDeck(nav, prev, q, cell, navCellsPerSide, x, y - 1);
+            TryUpperLayer(nav, prev, q, cell, navCellsPerSide, x + 1, y);
+            TryUpperLayer(nav, prev, q, cell, navCellsPerSide, x - 1, y);
+            TryUpperLayer(nav, prev, q, cell, navCellsPerSide, x, y + 1);
+            TryUpperLayer(nav, prev, q, cell, navCellsPerSide, x, y - 1);
         }
 
         return -1;
     }
 
-    private static void TryDeck(NavContext nav, Dictionary<int, int> prev, List<int> q, int cell, int navCellsPerSide, int nx, int ny)
+    private static void TryUpperLayer(NavContext nav, Dictionary<int, int> prev, List<int> q, int cell, int navCellsPerSide, int nx, int ny)
     {
         if (nx < 0 || ny < 0 || nx >= navCellsPerSide || ny >= navCellsPerSide) return;
         int v = ny * navCellsPerSide + nx;
@@ -202,16 +228,16 @@ public static class CorridorQuery
         if (cells.Count < 4) return null;
         s.EnsurePoints(cells.Count * 2);
         s.EnsureLayers(cells.Count);
-        bool anyDeck = false;
+        bool anyUpperLayer = false;
         for (int i = 0; i < cells.Count; i++)
         {
             int k = cells[i], c = k % n2;
             s.PointBuf[i * 2] = Fix64.FromInt(c % n) + Fix64.HalfValue;
             s.PointBuf[i * 2 + 1] = Fix64.FromInt(c / n) + Fix64.HalfValue;
             s.LayerBuf[i] = k / n2;
-            anyDeck |= s.LayerBuf[i] != 0;
+            anyUpperLayer |= s.LayerBuf[i] != 0;
         }
 
-        return (s.PointBuf, cells.Count * 2, anyDeck ? s.LayerBuf : null, anyDeck ? cells.Count : 0);
+        return (s.PointBuf, cells.Count * 2, anyUpperLayer ? s.LayerBuf : null, anyUpperLayer ? cells.Count : 0);
     }
 }

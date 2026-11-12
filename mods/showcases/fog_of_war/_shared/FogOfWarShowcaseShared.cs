@@ -1,6 +1,9 @@
 using System;
 using System.Numerics;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Ludots.Core.Client;
+using Ludots.Core.Modding;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -73,9 +76,78 @@ public readonly struct FogShowcaseScenario
     }
 }
 
+public readonly struct FogShowcaseLayerSpec
+{
+    public FogShowcaseLayerSpec(string id, string key, int cellSizeCm, int updateHz)
+    {
+        Id = id;
+        Key = key;
+        CellSizeCm = cellSizeCm;
+        UpdateHz = updateHz;
+    }
+
+    public string Id { get; }
+    public string Key { get; }
+    public int CellSizeCm { get; }
+    public int UpdateHz { get; }
+}
+
+public static class FogShowcaseLayerFile
+{
+    public static (FogShowcaseLayerSpec[] Layers, FogDecalPalette Palette) Read(Stream stream)
+    {
+        using JsonDocument doc = JsonDocument.Parse(stream);
+        if (!doc.RootElement.TryGetProperty("layers", out JsonElement layers) || layers.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("WarFog/showcase.json 需要 layers。");
+        }
+
+        var specs = new FogShowcaseLayerSpec[layers.GetArrayLength()];
+        int i = 0;
+        foreach (JsonElement layer in layers.EnumerateArray())
+        {
+            string id = RequireString(layer, "id");
+            string key = RequireString(layer, "key");
+            int cellSizeCm = RequirePositive(layer, "cellSizeCm");
+            int updateHz = RequirePositive(layer, "updateHz");
+            specs[i++] = new FogShowcaseLayerSpec(id, key, cellSizeCm, updateHz);
+        }
+
+        return (specs, FogDecalPalette.Read(doc.RootElement, "WarFog/showcase.json"));
+    }
+
+    private static string RequireString(JsonElement layer, string name)
+    {
+        if (!layer.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidOperationException($"WarFog/showcase.json layers 缺少 {name}。");
+        }
+
+        string text = value.GetString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            throw new InvalidOperationException($"WarFog/showcase.json layers.{name} 为空。");
+        }
+
+        return text;
+    }
+
+    private static int RequirePositive(JsonElement layer, string name)
+    {
+        if (!layer.TryGetProperty(name, out JsonElement value) || !value.TryGetInt32(out int number) || number <= 0)
+        {
+            throw new InvalidOperationException($"WarFog/showcase.json layers.{name} 需要正整数。");
+        }
+
+        return number;
+    }
+}
+
 public sealed class FogShowcaseRuntime
 {
     private readonly FogShowcaseScenario _scenario;
+    private readonly FogShowcaseLayerSpec[] _authoredLayers;
+    private readonly FogDecalPalette _palette;
     private Entity _viewer = Entity.Null;
     private readonly Entity[] _occupants = new Entity[4];
     private FogLayerId _groundLayer;
@@ -86,9 +158,23 @@ public sealed class FogShowcaseRuntime
     private uint _detectionMask;
     private int _tick;
 
-    public FogShowcaseRuntime(FogShowcaseScenario scenario)
+    public FogShowcaseRuntime(FogShowcaseScenario scenario, FogShowcaseLayerSpec[] authoredLayers, FogDecalPalette palette)
     {
+        if (authoredLayers == null || authoredLayers.Length == 0)
+        {
+            throw new ArgumentException("WarFog/showcase.json 需要 layers。", nameof(authoredLayers));
+        }
+
         _scenario = scenario;
+        _authoredLayers = authoredLayers;
+        _palette = palette ?? throw new ArgumentNullException(nameof(palette));
+    }
+
+    public static FogShowcaseRuntime Load(IModContext context, FogShowcaseKind kind, string modName)
+    {
+        using Stream layers = context.GetResource($"{modName}:assets/WarFog/showcase.json");
+        (FogShowcaseLayerSpec[] specs, FogDecalPalette palette) = FogShowcaseLayerFile.Read(layers);
+        return new FogShowcaseRuntime(FogShowcaseScenario.Create(kind, modName), specs, palette);
     }
 
     public FogShowcaseScenario Scenario => _scenario;
@@ -203,9 +289,16 @@ public sealed class FogShowcaseRuntime
         FogCellMap cellMap = engine.GetService(CoreServiceKeys.VisionFogCellMap)
             ?? throw new InvalidOperationException($"{_scenario.ModName} requires VisionFogCellMap.");
 
-        _groundLayer = EnsureLayer(layers, "war-fog-ground", cellSizeCm: 500, updateHz: 10);
-        _airLayer = EnsureLayer(layers, "war-fog-air", cellSizeCm: 750, updateHz: 5);
-        _detectionLayer = EnsureLayer(layers, "war-fog-detection", cellSizeCm: 500, updateHz: 10);
+        engine.SetService(CoreServiceKeys.FogDecalPalette, _palette);
+        _groundLayer = RegisterAuthored(layers, "ground");
+        _airLayer = RegisterAuthored(layers, "air");
+        _detectionLayer = RegisterAuthored(layers, "detection");
+
+        if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
+            seats != null)
+        {
+            engine.SetService(CoreServiceKeys.SeatVisionScope, new FogShowcaseSeatVisionScope(seats, _scenario.ScopeKeyId));
+        }
         _groundMask = layers.ToMask(_groundLayer);
         _airMask = layers.ToMask(_airLayer);
         _detectionMask = layers.ToMask(_detectionLayer);
@@ -385,10 +478,53 @@ public sealed class FogShowcaseRuntime
         }
     }
 
+    private FogLayerId RegisterAuthored(FogLayerRegistry layers, string id)
+    {
+        foreach (FogShowcaseLayerSpec spec in _authoredLayers)
+        {
+            if (spec.Id == id)
+            {
+                return EnsureLayer(layers, spec.Key, spec.CellSizeCm, spec.UpdateHz);
+            }
+        }
+
+        throw new InvalidOperationException($"WarFog/showcase.json 缺少层 {id}。");
+    }
+
     private static FogLayerId EnsureLayer(FogLayerRegistry registry, string key, int cellSizeCm, int updateHz)
     {
         FogLayerId existing = registry.GetId(key);
-        return existing.Value > 0 ? existing : registry.Register(key, cellSizeCm, updateHz);
+        if (existing.Value <= 0)
+        {
+            return registry.Register(key, cellSizeCm, updateHz);
+        }
+
+        FogLayerDefinition definition = registry.Get(existing);
+        if (definition.CellSizeCm != cellSizeCm || definition.UpdateHz != updateHz)
+        {
+            throw new InvalidOperationException(
+                $"雾层 {key} 已登记为 {definition.CellSizeCm} cm / {definition.UpdateHz} Hz，文件要求 {cellSizeCm} cm / {updateHz} Hz。");
+        }
+
+        return existing;
+    }
+}
+
+sealed class FogShowcaseSeatVisionScope : ISeatVisionScope
+{
+    private readonly ClientLocalSeatRegistry _seats;
+    private readonly int _scopeKeyId;
+
+    public FogShowcaseSeatVisionScope(ClientLocalSeatRegistry seats, int scopeKeyId)
+    {
+        _seats = seats;
+        _scopeKeyId = scopeKeyId;
+    }
+
+    public bool TryGetScopeKeyId(string seatId, out int scopeKeyId)
+    {
+        scopeKeyId = _scopeKeyId;
+        return _seats.TryGet(seatId, out ClientLocalSeat seat) && seat.HasPossession && _scopeKeyId > 0;
     }
 }
 

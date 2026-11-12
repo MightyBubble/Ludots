@@ -1,0 +1,20 @@
+{
+  "name": "CrowdSimulationShowcaseStageMod",
+  "version": "0.1.0",
+  "description": "CrowdSimulation 演示场景的共用舞台：沿用 S4 部署演示的框选、右键下令、HUD 和玩家视图，关掉开局部署、S4 的演示脚本和自动回放，玩家视图按本方视野隐藏敌方。各场景 Mod 只写自己的脚本、标题和镜头。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationS4DeployMod": "^0.4.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "crowd_simulation",
+    "showcase_stage"
+  ]
+}

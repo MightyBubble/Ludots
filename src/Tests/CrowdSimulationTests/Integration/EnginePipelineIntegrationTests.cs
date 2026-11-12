@@ -17,7 +17,7 @@ namespace CrowdSimulationTests.Integration;
 using CrowdSimulationTests.Parity;
 
 /// <summary>
-/// 真实系统组集成门:真引擎装载 crowd 地图(临时资产 mod 携带 autostart + spawn/order
+/// 真实系统组集成门:真引擎装载 crowd 地图(临时资产 mod 携带 spawn/order
 /// 脚本),会话由引擎自身的 CrowdSimulationRuntime 在图聚焦时激活、由系统组 FixedHz 驱动
 /// (不经无头直调),单位行军跨格;断言每个单位的 SpatialCellRef 恒等于当前位置所在格。
 /// 步进若注册在帧末组(晚于 SpatialPartitionUpdateSystem),跨格当帧成员格落后一拍、
@@ -29,8 +29,8 @@ public class EnginePipelineIntegrationTests
     public void SessionStepRunsBeforeSpatialPartitionSync_ThroughRealSystemGroups()
     {
         string repoRoot = FindRepoRoot();
-        // 临时资产 mod 只带 CrowdSimulationDebug.json(autostart + spawn/order 脚本):
-        // 会话脚本即测试输入,不依赖任何演示 mod 的入口代码。
+        // 临时资产 mod 带 spawn/order 脚本，并把 initialUnits 写成 0。
+        // 会话脚本即测试输入。开局部署关掉，脚本里的 spawn 仍是唯一一次生成。
         string probeModRoot = Path.Combine(Path.GetTempPath(), "Ludots_SessionStepOrderingProbeMod_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(probeModRoot, "assets"));
         try
@@ -45,11 +45,14 @@ public class EnginePipelineIntegrationTests
   { "Path": "CrowdSimulationDebug.json", "Policy": "DeepObject" }
 ]
 """);
+            File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationConfig.json"), """
+{
+  "deploy": { "initialUnits": 0 }
+}
+""");
             File.WriteAllText(Path.Combine(probeModRoot, "assets", "CrowdSimulationDebug.json"), """
 {
-  "worker": { "planTimeoutMs": 5000 },
   "session": {
-    "autostart": true,
     "script": [
       { "tick": 0, "cmd": { "type": "spawn", "count": 24 } },
       { "tick": 2, "cmd": { "type": "order", "player": 1, "xCm": 1200000, "yCm": 800000, "shape": "box" } }
@@ -64,6 +67,7 @@ public class EnginePipelineIntegrationTests
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
                 probeModRoot,
             }, Path.Combine(repoRoot, "assets"));

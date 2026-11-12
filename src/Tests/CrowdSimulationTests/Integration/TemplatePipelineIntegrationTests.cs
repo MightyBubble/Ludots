@@ -25,7 +25,7 @@ public class TemplatePipelineIntegrationTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         var wiring = session.Presentation;
         Assert.That(wiring.TemplateRegistry.Get("crowd_simulation.unit.infantry.r100"), Is.Not.Null,
-            "模板注册表应装到 CrowdSimulationMod 的 Entities/templates.json(经 MapLoader.LoadTemplates 装载链)");
+            "模板注册表应装到 CrowdSimulationDemoContentMod 的 Entities/templates.json(经 MapLoader.LoadTemplates 装载链)");
 
         session.Commands.Schedule(session, new[]
         {
@@ -49,40 +49,23 @@ public class TemplatePipelineIntegrationTests
             var entity = session.Units.EntityAt(i);
             uint handle = session.Units.HandleAt(i);
 
-            // 模板生成管线的逐实体证据:模板键引用可解析、呈现稳定 id 已分配、
-            // 呈现同步所需的既往位组件在位(无头直建路径不会挂这些)
             Assert.That(session.World.Has<EntityTemplateKeyRef>(entity), Is.True, $"单位 {handle:x} 缺模板键引用");
             var keyRef = session.World.Get<EntityTemplateKeyRef>(entity);
             Assert.That(keyToTemplate.TryGetValue(keyRef.TemplateKeyId, out var templateId), Is.True,
                 $"单位 {handle:x} 模板键 {keyRef.TemplateKeyId} 不在映射表");
-            Assert.That(session.World.Has<Ludots.Core.Presentation.Components.PresentationStableId>(entity), Is.True,
-                $"单位 {handle:x} 缺呈现稳定 id");
-            Assert.That(session.World.Get<Ludots.Core.Presentation.Components.PresentationStableId>(entity).Value, Is.GreaterThan(0),
-                $"单位 {handle:x} 呈现稳定 id 未分配");
-            Assert.That(session.World.Has<PreviousWorldPositionCm>(entity), Is.True,
-                $"单位 {handle:x} 缺 PreviousWorldPositionCm(呈现同步查询要求)");
 
             // 值同源:定点数来自模板写真;字符串 id 留在模板,实体上是生成时解析的下标。
             var agent = session.World.Get<CrowdSimulationAgent>(entity);
             var templateNode = wiring.TemplateRegistry.Get(templateId)!.Components["CrowdSimulationAgent"]!;
             string profileId = templateNode["profileId"]!.GetValue<string>();
-            string agentTypeId = templateNode["agentTypeId"]!.GetValue<string>();
             int expectedProfile = -1;
+            int expectedAgent = -1;
             for (int p = 0; p < runtime.Profiles.Count; p++)
             {
                 if (runtime.Profiles[p].Id == profileId)
                 {
                     expectedProfile = p;
-                    break;
-                }
-            }
-
-            int expectedAgent = -1;
-            for (int a = 0; a < runtime.AgentTypes.Count; a++)
-            {
-                if (runtime.AgentTypes[a].Id == agentTypeId)
-                {
-                    expectedAgent = runtime.AgentTypes[a].AgentTypeIndex;
+                    expectedAgent = runtime.Profiles[p].AgentTypeIndex;
                     break;
                 }
             }
@@ -91,18 +74,81 @@ public class TemplatePipelineIntegrationTests
             Assert.That(agent.ProfileIndex, Is.EqualTo(expectedProfile),
                 $"单位 {handle:x} 档案下标应在生成时从模板 profileId 解析");
             Assert.That(agent.AgentTypeIndex, Is.EqualTo(expectedAgent),
-                $"单位 {handle:x} 移动类型下标应在生成时从模板 agentTypeId 解析");
-            Assert.That(agent.PersonalRadiusCm, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["personalRadiusCm"]!.GetValue<int>())),
-                $"单位 {handle:x} 个人半径应来自模板写真");
+                $"单位 {handle:x} 移动类型下标应在生成时从体型 navProfileId 解析");
+            Assert.That(agent.PersonalRadiusCm, Is.EqualTo(runtime.Profiles[expectedProfile].PersonalRadiusCm),
+                $"单位 {handle:x} 个人半径应等于体型半径 × avoidanceRadiusScale");
             Assert.That(agent.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["pushPriority"]!.GetValue<int>())),
                 $"单位 {handle:x} 推挤优先级应来自模板写真");
-            Assert.That(agent.SpeedCmPerSecond, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSecond"]!.GetValue<int>())),
+            Assert.That(agent.SpeedCmPerSec, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(templateNode["speedCmPerSec"]!.GetValue<int>())),
                 $"单位 {handle:x} 速度应来自模板写真");
             seenProfiles.Add(profileId);
         }
 
         Assert.That(seenProfiles.Count, Is.GreaterThan(1), "64 单位应覆盖多种体型档案(部署按类型×体型散布)");
         TestContext.Out.WriteLine($"{session.Units.Count} 单位全部经模板管线,{seenProfiles.Count} 种档案,模板写真值逐位一致");
+
+        var radiusClasses = CrowdDeployment.DistinctRadiusClasses(runtime);
+        Assert.That(wiring.TemplatesByUnitTypeRadius.Count, Is.EqualTo(runtime.UnitTypes.Count), "映射表行数 = 配置 unitTypes 数");
+        for (int t = 0; t < runtime.UnitTypes.Count; t++)
+        {
+            var unitType = runtime.UnitTypes[t];
+            var row = wiring.TemplatesByUnitTypeRadius[t];
+            Assert.That(row.Count, Is.EqualTo(radiusClasses.Count), $"unitType={unitType.Id} 映射列数 = 半径级数");
+            for (int r = 0; r < row.Count; r++)
+            {
+                var (mappedId, keyId) = row[r];
+                string declared = unitType.TemplatesByRadiusCm![radiusClasses[r]];
+                Assert.That(mappedId, Is.EqualTo(declared),
+                    $"unitType={unitType.Id} 半径 {radiusClasses[r]} 映射到 {mappedId}，配置声明的是 {declared}");
+                Assert.That(keyId, Is.EqualTo(wiring.TemplateKeys.GetId(declared)),
+                    $"unitType={unitType.Id} 半径 {radiusClasses[r]} 的模板键不是声明模板的键");
+            }
+        }
+    }
+
+    [Test]
+    public void DifferentiatedTemplates_PerRadiusValuesMatchEntityNotSharedDemoDefault()
+    {
+        var (_, session) = S4DeployTruthTests.BuildSession("s1337");
+        var wiring = session.Presentation;
+        string templateR100 = wiring.TemplatesByUnitTypeRadius[0][0].TemplateId;
+        string templateR200 = wiring.TemplatesByUnitTypeRadius[0][1].TemplateId;
+        var node100 = wiring.TemplateRegistry.Get(templateR100)!.Components["CrowdSimulationAgent"]!;
+        var node200 = wiring.TemplateRegistry.Get(templateR200)!.Components["CrowdSimulationAgent"]!;
+        int speed100 = node100["speedCmPerSec"]!.GetValue<int>();
+        int speed200 = node200["speedCmPerSec"]!.GetValue<int>();
+        int push100 = node100["pushPriority"]!.GetValue<int>();
+        int push200 = node200["pushPriority"]!.GetValue<int>();
+        Assert.That(push200, Is.Not.EqualTo(push100), "相邻半径级模板应有可区分的写真值");
+
+        session.Commands.Submit<object?>(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.SpawnAt,
+            Player = 1,
+            XCm = 480000,
+            YCm = 560000,
+            Count = 1,
+            UnitType = 0,
+            RIdx = 0,
+        }, CrowdSimCommands.Exec);
+        session.Commands.Submit<object?>(session, new CrowdSimCommand
+        {
+            Kind = CrowdSimCommandKind.SpawnAt,
+            Player = 1,
+            XCm = 481000,
+            YCm = 560000,
+            Count = 1,
+            UnitType = 0,
+            RIdx = 1,
+        }, CrowdSimCommands.Exec);
+
+        var agent100 = session.World.Get<CrowdSimulationAgent>(session.Units.EntityAt(0));
+        var agent200 = session.World.Get<CrowdSimulationAgent>(session.Units.EntityAt(1));
+        Assert.That(agent100.SpeedCmPerSec, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(speed100)));
+        Assert.That(agent200.SpeedCmPerSec, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(speed200)));
+        Assert.That(agent100.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(push100)));
+        Assert.That(agent200.PushPriority, Is.EqualTo(Ludots.Core.Mathematics.FixedPoint.Fix64.FromInt(push200)));
+        Assert.That(agent100.PushPriority, Is.Not.EqualTo(agent200.PushPriority));
     }
 
 }

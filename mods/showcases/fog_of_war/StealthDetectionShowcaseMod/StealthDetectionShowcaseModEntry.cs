@@ -10,9 +10,10 @@ public sealed class StealthDetectionShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
+        var runtime = FogShowcaseRuntime.Load(
+            context,
             FogShowcaseKind.StealthDetection,
-            "StealthDetectionShowcaseMod"));
+            "StealthDetectionShowcaseMod");
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

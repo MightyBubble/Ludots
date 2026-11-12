@@ -7,8 +7,8 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// 流场(双层):积分场(自终点的 Dijkstra,限于 HPA 走廊掩码)
 /// + 每格 8 向下降指针 + 拉直路点(按 Dijkstra 弹出序处理,父先子后 → 任意角绷紧路径)。
-/// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 地面,1 桥面);两层仅在双层可走的
-/// 桥头格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。
+/// 每个数组都是 2 × N²:下标 = 层 × N² + 格(层 0 底层,1 上层);两层仅在双层可走的
+/// 入口格相交(0 代价 0 长度边;经该边到达的格 wp = 另一层同格)。
 /// len = 每格绷紧路线的几何长度(格),与地形代价无关,是所有到达阈值的长度单位。
 /// </summary>
 public sealed class FlowField
@@ -16,7 +16,7 @@ public sealed class FlowField
     public required Fix64[] Integ { get; set; }
     public required Fix64[] Len { get; set; }
     public required int[] Wp { get; set; }
-    /// <summary>跳跃链接的出路格 → 链接号(仅地面,N²;无链接能力为 null)。</summary>
+    /// <summary>链接的出路格 → 链接号(仅底层,N²;无链接能力为 null)。</summary>
     public int[]? Lk { get; set; }
     /// <summary>随池缓冲保留的 Lk 后备数组(避免反复分配)。</summary>
     public int[]? LkBuf { get; set; }
@@ -27,8 +27,19 @@ public sealed class FlowField
     public int Reached { get; set; }
     public int Goal { get; set; }
     public int NavId { get; set; }
+    /// <summary>
+    /// 答复挂到组上时写成该答复的路径请求号。
+    /// 请求号在主线程按提交序分配。缓冲池的复用次数随 worker 与主线程交错变化，不能当诊断身份。
+    /// </summary>
+    public int BuildRevision { get; internal set; }
     /// <summary>来源池(还回时物归原主,池才能平台化)。</summary>
     public FlowPool? OriginPool { get; set; }
+    /// <summary>跟随的组加上在途请求。和 <see cref="Cached"/> 都是 0 才可以回池。</summary>
+    public int Refs { get; set; }
+    /// <summary>仍占着结果缓存的一个条目。</summary>
+    public bool Cached { get; set; }
+    /// <summary>已经在来源池的空闲栈里。重复 Give 直接返回。</summary>
+    public bool Pooled { get; set; }
 }
 
 /// <summary>
@@ -45,7 +56,7 @@ public sealed class FlowPool
     public FlowPool(int cellCount, int capacity)
     {
         LayeredCount = 2 * cellCount * cellCount;
-        GroundCount = cellCount * cellCount;
+        BaseCellCount = cellCount * cellCount;
         _capacity = capacity;
         Heap = new NavMinHeap(8192);
         Order = new int[LayeredCount];
@@ -53,13 +64,27 @@ public sealed class FlowPool
 
     /// <summary>2 × N²(双层数组长度)。</summary>
     public int LayeredCount { get; }
-    /// <summary>N²(地面层格数)。</summary>
-    public int GroundCount { get; }
+    /// <summary>N²(底层格数)。</summary>
+    public int BaseCellCount { get; }
     public NavMinHeap Heap { get; }
     public int[] Order { get; }
     public int Allocated { get; private set; }
     public int Reused { get; private set; }
     public int FreeCount { get { lock (_freeLock) { return _free.Count; } } }
+
+    /// <summary>空闲栈按引用查找。枚举会分配，只给调试校验用。</summary>
+    internal bool Holds(FlowField field)
+    {
+        lock (_freeLock)
+        {
+            foreach (var item in _free)
+            {
+                if (ReferenceEquals(item, field)) return true;
+            }
+        }
+
+        return false;
+    }
 
     /// <summary>取未初始化缓冲(构建方会填满它读到的每个数组)。场对象和数组一起复用。</summary>
     public FlowField Take()
@@ -69,7 +94,11 @@ public sealed class FlowPool
             if (_free.Count > 0)
             {
                 Reused++;
-                return _free.Pop();
+                var reused = _free.Pop();
+                reused.Pooled = false;
+                reused.Refs = 0;
+                reused.Cached = false;
+                return reused;
             }
         }
 
@@ -87,11 +116,16 @@ public sealed class FlowPool
     public void Give(FlowField f)
     {
         if (f.Integ.Length != LayeredCount) return;
+        // 组或缓存在用的缓冲不能进空闲栈。Admit 和换场可能先后还回同一份。
+        if (f.Refs > 0 || f.Cached) return;
         f.Links = null;
         f.Lk = null;
         lock (_freeLock)
         {
-            if (_free.Count < _capacity) _free.Push(f);
+            if (f.Pooled) return;
+            if (_free.Count >= _capacity) return;
+            f.Pooled = true;
+            _free.Push(f);
         }
     }
 }
@@ -255,7 +289,7 @@ public static class FlowFieldBuilder
         for (int i = 0; i < a.Length; i++) output[i] = (byte)(a[i] | b[i]);
     }
 
-    /// <summary>沿拉直路点链走(单位实际行走的绷紧路径),跳跃链接处跳接。</summary>
+    /// <summary>沿拉直路点链走(单位实际行走的绷紧路径),链接处接上链接。</summary>
     public static List<int> TracePath(FlowField flow, int start, int maxSteps)
     {
         var cells = new List<int>();

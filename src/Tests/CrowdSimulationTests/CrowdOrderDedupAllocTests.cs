@@ -18,18 +18,21 @@ public sealed class CrowdOrderDedupAllocTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         Assert.That(CrowdDeployment.SpawnAt(session, Fix64.FromInt(480000), Fix64.FromInt(560000), 32, 1, 0, 0), Is.EqualTo(32));
+        var members = new uint[session.Units.Count];
+        Assert.That(session.Units.CopyOwnHandles(1, members), Is.EqualTo(members.Length));
 
         string shape = runtime.Formations[0].Id;
-        var mode = CrowdIssueOrder.Issue(session, Fix64.FromInt(900000), Fix64.FromInt(800000), 1, shape, null, null, Fix64.Zero);
+        var mode = CrowdIssueOrder.Issue(session, Fix64.FromInt(900000), Fix64.FromInt(800000), 1, shape, null, null, Fix64.Zero, members);
         Assert.That(mode, Is.Not.Null);
 
         GC.Collect();
         GC.WaitForPendingFinalizers();
         GC.Collect();
         long before = GC.GetAllocatedBytesForCurrentThread();
-        var again = CrowdIssueOrder.Issue(session, Fix64.FromInt(900000), Fix64.FromInt(800000), 1, shape, null, null, Fix64.Zero);
+        var again = CrowdIssueOrder.Issue(session, Fix64.FromInt(900000), Fix64.FromInt(800000), 1, shape, null, null, Fix64.Zero, members);
         long delta = GC.GetAllocatedBytesForCurrentThread() - before;
         TestContext.Out.WriteLine($"repeated issue allocated {delta} bytes");
         Assert.That(again, Is.EqualTo(mode));

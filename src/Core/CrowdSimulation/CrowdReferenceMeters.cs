@@ -4,7 +4,7 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.CrowdSimulation;
 
 /// <summary>
-/// 米制换算口。迷雾面、视线和桥面烘焙的计算留在原处，
+/// 米制换算口。迷雾面、视线和上层烘焙的计算留在原处，
 /// 这里只固定厘米进米的那一步。几种除法不能互换：Fix64/Fix64 是精确除，
 /// Fix64/int 是原始值整数除，double 与先截断的 int 各走各的舍入。
 /// </summary>
@@ -20,7 +20,7 @@ public static class CrowdReferenceMeters
     public static Fix64 CmToMPrecise(Fix64 centimeters)
         => centimeters / Fix64.FromInt(CentimetersPerMeter);
 
-    /// <summary>Fix64.FromInt 之后按 int 除原始值。桥面端点与格心。</summary>
+    /// <summary>Fix64.FromInt 之后按 int 除原始值。上层端点与格心。</summary>
     public static Fix64 CmToMRaw(int centimeters)
         => Fix64.FromInt(centimeters) / CentimetersPerMeter;
 
@@ -28,7 +28,7 @@ public static class CrowdReferenceMeters
     public static Fix64 HalfWidthM(int widthCm)
         => Fix64.FromInt(widthCm) / (CentimetersPerMeter * 2);
 
-    /// <summary>先按 int 截断到米，再装进 Fix64。桥头可达距离。</summary>
+    /// <summary>先按 int 截断到米，再装进 Fix64。入口可达距离。</summary>
     public static Fix64 TruncatedCmToM(int centimeters)
         => Fix64.FromInt(centimeters / CentimetersPerMeter);
 

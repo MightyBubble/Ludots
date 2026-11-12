@@ -6,7 +6,8 @@
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CrowdSimulationMod": "^1.0.0",
-    "CrowdSimulationStandardMod": "^1.0.0"
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": [

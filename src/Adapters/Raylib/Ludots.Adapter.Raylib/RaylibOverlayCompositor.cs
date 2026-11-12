@@ -153,12 +153,19 @@ namespace Ludots.Adapter.Raylib
             if (refreshUiLayer)
             {
                 long uiRenderStart = Stopwatch.GetTimestamp();
-                _uiLayer.Clear();
                 if (hasUiLayer)
                 {
+                    if (!_uiHadContent)
+                    {
+                        uiRoot.IsDirty = true;
+                    }
                     skiaRenderer.SetCanvas(_uiLayer.Canvas);
                     uiRoot.Render();
                     _uiLayer.SetHasContent(true);
+                }
+                else
+                {
+                    _uiLayer.Clear();
                 }
 
                 uiRenderMs = ElapsedMs(uiRenderStart);

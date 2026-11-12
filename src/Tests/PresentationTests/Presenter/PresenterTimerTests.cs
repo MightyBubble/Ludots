@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests;
 
 namespace Ludots.Tests.Presentation
 {
@@ -684,11 +685,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(fixture.World.IsAlive(presenter), Is.True, "打断只清 timer，不应销毁 presenter");
             }
 
-            string artifactDir = Path.Combine(
-                PresenterBlacksmithShowcaseTestHarness.FindRepoRoot(),
-                "artifacts",
-                "acceptance",
-                "presenter-timer");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/presenter-timer");
             Directory.CreateDirectory(artifactDir);
 
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), string.Join('\n', trace) + "\n");

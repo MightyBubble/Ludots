@@ -1,0 +1,473 @@
+{
+  "Id": "crowd_minimal",
+  "Tags": [
+    "crowd_simulation"
+  ],
+  "Tuning": {
+    "LoadedChunkCapacity": 256
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthCm": 1600000,
+      "HeightCm": 1600000,
+      "Anchor": {
+        "LocalXCm": 0,
+        "LocalYCm": 0,
+        "WorldXCm": 0,
+        "WorldYCm": 0
+      },
+      "Grid": {
+        "CellSizeCm": 100
+      }
+    }
+  ],
+  "ContinuousHeightmap": {
+    "Asset": "assets/terrain/crowd_minimal.height",
+    "RenderProfile": {
+      "DisableDistanceFog": true
+    }
+  },
+  "DefaultCamera": {
+    "VirtualCameraId": "CrowdSimulationMinimalMod.Camera",
+    "TargetXCm": 800000,
+    "TargetYCm": 770000,
+    "Yaw": 0,
+    "Pitch": 60,
+    "DistanceCm": 400000,
+    "FovYDeg": 50
+  },
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "team_1"
+    },
+    {
+      "TeamId": 2,
+      "RepresentativeInstanceId": "team_2"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_1"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 2,
+      "RepresentativeInstanceId": "player_2"
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "team_1",
+      "Template": "crowd_minimal.team",
+      "Relations": [
+        {
+          "To": "team_1",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team_2",
+          "Type": "Hostile"
+        }
+      ]
+    },
+    {
+      "InstanceId": "team_2",
+      "Template": "crowd_minimal.team",
+      "Relations": [
+        {
+          "To": "team_2",
+          "Type": "Friendly"
+        },
+        {
+          "To": "team_1",
+          "Type": "Hostile"
+        }
+      ]
+    },
+    {
+      "InstanceId": "player_1",
+      "Template": "crowd_minimal.player"
+    },
+    {
+      "InstanceId": "player_2",
+      "Template": "crowd_minimal.player"
+    },
+    {
+      "InstanceId": "wall_112",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 703125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_113",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 709375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_114",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 715625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_115",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 721875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_116",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 728125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_117",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 734375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_118",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 740625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_119",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 746875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_120",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 753125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_121",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 759375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_122",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 765625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_123",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 771875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_124",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 778125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_125",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 784375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_126",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 790625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_127",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 796875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_128",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 803125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_129",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 809375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_130",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 815625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_131",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 821875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_132",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 828125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_133",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 834375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_134",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 840625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_135",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 846875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_136",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 853125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_137",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 859375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_138",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 865625
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_139",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 871875
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_140",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 878125
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_141",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 884375
+          }
+        }
+      }
+    },
+    {
+      "InstanceId": "wall_142",
+      "Template": "crowd_minimal.wall_block",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 803125,
+            "Y": 890625
+          }
+        }
+      }
+    }
+  ]
+}

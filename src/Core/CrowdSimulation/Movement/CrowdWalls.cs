@@ -20,7 +20,7 @@ public static class CrowdWalls
         {
             public int Version = -1;
             public byte[]? Walk;
-            public byte[]? UpWalk; // 桥面层以 UpPass 为 walk 口径
+            public byte[]? UpWalk; // 上层以 UpPass 为 walk 口径
             public byte[]? Grid;
             public bool Filled;
         }
@@ -135,9 +135,7 @@ public static class CrowdWalls
                 Fix64 d2 = dx * dx + dy * dy;
                 // Q31.32 下 FromFloat(1e-12f) 截断为 0,最小正 raw 量即守卫
                 if (d2 >= r2 || d2 <= Fix64.FromRaw(1)) continue;
-                Fix64 d = Fix64Math.Sqrt(d2);
-                dx /= d;
-                dy /= d;
+                CrowdContactNormal.Normalize(ref dx, ref dy, d2);
                 px = qx + dx * radiusCm;
                 py = qy + dy * radiusCm;
                 normalX = dx;

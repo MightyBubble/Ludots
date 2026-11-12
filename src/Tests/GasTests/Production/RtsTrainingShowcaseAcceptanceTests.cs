@@ -23,6 +23,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests;
 using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
@@ -84,8 +85,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static void RunTrainingScenario(TrainingScenarioSpec scenario)
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", scenario.ArtifactFolderName);
+            string artifactDir = CommittedTestArtifacts.Resolve($"artifacts/acceptance/{scenario.ArtifactFolderName}");
             Directory.CreateDirectory(artifactDir);
             string screensDir = Path.Combine(artifactDir, "screens");
             Directory.CreateDirectory(screensDir);

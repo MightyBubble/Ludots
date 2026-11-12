@@ -167,9 +167,38 @@ public sealed class CrowdOrderBook
         for (int i = 0; i < _list.Count; i++)
         {
             var o = _list[i];
-            o.Groups.RemoveAll(l => !groups.TryGet(l.GroupId, out var g) || g.Count <= 0 || g.OrderId != o.Id);
-            if (o.Groups.Count == 0) continue;
-            o.Leaders.RemoveAll(l => !o.Groups.Exists(gl => groups.TryGet(gl.GroupId, out var g) && g.Leader == l));
+            var links = o.Groups;
+            int linkWrite = 0;
+            for (int g = 0; g < links.Count; g++)
+            {
+                var link = links[g];
+                if (!groups.TryGet(link.GroupId, out var group) || group.Count <= 0 || group.OrderId != o.Id) continue;
+                links[linkWrite++] = link;
+            }
+
+            if (linkWrite < links.Count) links.RemoveRange(linkWrite, links.Count - linkWrite);
+            if (links.Count == 0) continue;
+
+            var leaders = o.Leaders;
+            int leaderWrite = 0;
+            for (int li = 0; li < leaders.Count; li++)
+            {
+                var leader = leaders[li];
+                bool keep = false;
+                for (int g = 0; g < links.Count; g++)
+                {
+                    if (groups.TryGet(links[g].GroupId, out var group) && group.Leader == leader)
+                    {
+                        keep = true;
+                        break;
+                    }
+                }
+
+                if (!keep) continue;
+                leaders[leaderWrite++] = leader;
+            }
+
+            if (leaderWrite < leaders.Count) leaders.RemoveRange(leaderWrite, leaders.Count - leaderWrite);
             _list[w++] = o;
         }
 

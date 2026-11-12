@@ -20,18 +20,13 @@ namespace Ludots.Core.UI.PanelProjection
     /// </summary>
     public sealed class PanelEventActionBridge
     {
-        private const int ReleaseHoldTicks = 2;
-
         private readonly UiPanelActivationStore _activation;
-        private readonly Func<ClientLocalSeatInputRuntime?> _seatInput;
-        private readonly Func<ClientLocalSeatRegistry?> _seats;
-        private readonly Func<PlayerInputHandler?> _globalHandler;
+        private readonly ClientLocalSeatActionEdges _edges;
         private readonly Action<string>? _onRejected;
         /// <summary>Companion custom-event prefix: payload-carrying fires also dispatch "panel.&lt;eventId&gt;" in-tick.</summary>
         public const string CompanionEventPrefix = "panel.";
 
         private readonly Dictionary<string, PanelEventDispatcher> _dispatchers = new(StringComparer.Ordinal);
-        private readonly List<PendingRelease> _pendingReleases = new();
         private readonly List<PendingCompanionEvent> _pendingCompanions = new();
 
         public PanelEventActionBridge(
@@ -42,9 +37,8 @@ namespace Ludots.Core.UI.PanelProjection
             Action<string>? onRejected = null)
         {
             _activation = activation ?? throw new ArgumentNullException(nameof(activation));
-            _seatInput = seatInput ?? throw new ArgumentNullException(nameof(seatInput));
-            _seats = seats;
-            _globalHandler = globalHandler;
+            ArgumentNullException.ThrowIfNull(seatInput);
+            _edges = new ClientLocalSeatActionEdges(seatInput, seats ?? (static () => null), globalHandler ?? (static () => null));
             _onRejected = onRejected;
         }
 
@@ -88,45 +82,11 @@ namespace Ludots.Core.UI.PanelProjection
         /// edge is observed exactly once by the authoritative snapshot, then released so the
         /// action does not stay down.
         /// </summary>
-        public void Update()
-        {
-            for (int i = _pendingReleases.Count - 1; i >= 0; i--)
-            {
-                PendingRelease entry = _pendingReleases[i];
-                if (entry.RemainingTicks <= 1)
-                {
-                    _pendingReleases.RemoveAt(i);
-                    entry.Handler.InjectButtonRelease(entry.ActionId);
-                }
-                else
-                {
-                    _pendingReleases[i] = entry with { RemainingTicks = entry.RemainingTicks - 1 };
-                }
-            }
-        }
+        public void Update() => _edges.Update();
 
         private void InjectActionEdge(string seatId, string actionId)
         {
-            PlayerInputHandler? handler = null;
-            ClientLocalSeatInputRuntime? seatInput = _seatInput();
-            if (seatInput != null && seatInput.TryGetChannel(seatId, out ClientLocalSeatInputChannel channel))
-            {
-                handler = channel.Handler;
-            }
-            else
-            {
-                // Sole-seat clients keep the global handler/snapshot chain (no per-seat channels);
-                // only the sole seat may fall back to it — anything else is an attribution bug.
-                // Policy twin: TriggerGraphActionBindingSystem (read side) routes multi-seat
-                // per channel and sole-seat through the global reader — keep the two in lockstep.
-                ClientLocalSeatRegistry? seats = _seats();
-                PlayerInputHandler? global = _globalHandler();
-                if (seats != null && global != null && seats.Count == 1 && seats.SeatIds[0] == seatId)
-                {
-                    handler = global;
-                }
-            }
-
+            PlayerInputHandler? handler = _edges.ResolveHandler(seatId);
             if (handler == null)
             {
                 throw new InvalidOperationException(
@@ -141,8 +101,7 @@ namespace Ludots.Core.UI.PanelProjection
                     "panel event ids must be registered in the input config action catalog (eventId 即 action id).");
             }
 
-            handler.InjectButtonPress(actionId);
-            _pendingReleases.Add(new PendingRelease(handler, actionId, ReleaseHoldTicks));
+            _edges.Press(handler, actionId);
         }
 
         private PanelEventDispatcher GetDispatcher(PanelTemplate template)
@@ -198,7 +157,5 @@ namespace Ludots.Core.UI.PanelProjection
         }
 
         private readonly record struct PendingCompanionEvent(string EventId, IReadOnlyDictionary<string, object?> Payload);
-
-        private readonly record struct PendingRelease(PlayerInputHandler Handler, string ActionId, int RemainingTicks);
     }
 }

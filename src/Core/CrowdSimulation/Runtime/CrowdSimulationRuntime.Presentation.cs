@@ -1,11 +1,15 @@
 using System;
 using Arch.System;
+using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Presentation;
+using Ludots.Core.CrowdSimulation.Units;
+using Ludots.Core.CrowdSimulation.World;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -18,6 +22,7 @@ public sealed partial class CrowdSimulationRuntime
     private bool _deployPresentationInstalled;
     private S3PathDemoRuntime? _pathDemo;
     private S4DeployDemoRuntime? _deployDemo;
+    private S4DeployDemoViewProjector? _deployViewProjector;
     private CrowdPresentationConfig? _presentation;
     private CrowdFieldProjectorSlot? _projectorSlot;
     private ISystem<float>? _pathInput;
@@ -25,6 +30,11 @@ public sealed partial class CrowdSimulationRuntime
     private ISystem<float>? _pathPresentation;
     private ISystem<float>? _deployInput;
     private ISystem<float>? _deployPresentation;
+    private ISystem<float>? _terrainOverlayInput;
+    private string? _terrainOverlayAction;
+
+    /// <summary>当前焦点演示的 HUD 数据口；没有装演示呈现时为 null。</summary>
+    public CrowdHudFeed? HudFeed { get; private set; }
 
     internal void BindProjectorSlot(GlobalFieldVisualProjectorRegistry registry)
     {
@@ -69,15 +79,24 @@ public sealed partial class CrowdSimulationRuntime
         UnregisterFixed(engine, ref _pathInput, SystemGroup.PostMovement);
         UnregisterFixed(engine, ref _pathSimulation, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _pathPresentation);
+        if (HudFeed is { Kind: CrowdHudKind.Path }) HudFeed = null;
         _pathPresentationInstalled = false;
     }
 
     private void DetachDeploy(GameEngine engine)
     {
-        if (_deployDemo != null) _deployDemo.Active = false;
+        if (_deployDemo != null)
+        {
+            _deployDemo.ReleasePlayback();
+            _deployDemo.Active = false;
+        }
+
         _deployDemo = null;
+        OrderPrefs = null;
+        _deployViewProjector = null;
         UnregisterFixed(engine, ref _deployInput, SystemGroup.PostMovement);
         UnregisterPresented(engine, ref _deployPresentation);
+        if (HudFeed is { Kind: CrowdHudKind.Deploy }) HudFeed = null;
         _deployPresentationInstalled = false;
     }
 
@@ -126,15 +145,35 @@ public sealed partial class CrowdSimulationRuntime
             demo,
             new CrowdFlowFieldVisualProjector(flow),
             new CrowdWalkableVisualProjector(flow, () => demo.Nav));
-        var overlay = RequireOverlay(engine);
-        _pathInput = new S3PathInputSystem(engine, demo, bindings, presentation.Hud);
+        _pathInput = new S3PathInputSystem(engine, demo, bindings);
         _pathSimulation = new S3PathDemoSimulationSystem(demo);
-        _pathPresentation = new S3PathDemoPresentationSystem(demo, routes, overlay, presentation);
+        _pathPresentation = new S3PathDemoPresentationSystem(demo, routes);
         engine.RegisterSystem(_pathInput, SystemGroup.PostMovement);
         engine.RegisterSystem(_pathSimulation, SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(_pathPresentation);
         _pathDemo = demo;
+        HudFeed = new CrowdHudFeed(
+            demo,
+            presentation,
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null,
+            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null);
         _pathPresentationInstalled = true;
+    }
+
+    private S4DeployDemoRuntime.PaletteChoice[] ResolvePalette(GameEngine engine, CrowdDeployPresentation deploy)
+    {
+        var structures = (_session ?? throw new InvalidOperationException("部署演示面板要在会话激活之后装。")).Config.Structures;
+        var entries = CrowdStructurePalette.LoadMerged(engine.ConfigPipeline, engine.ConfigCatalog, engine.ConfigConflictReport);
+        var choices = new S4DeployDemoRuntime.PaletteChoice[deploy.Palette.Length];
+        for (int i = 0; i < deploy.Palette.Length; i++)
+        {
+            CrowdPaletteSlotDto slot = deploy.Palette[i];
+            if (!entries.TryGetValue(slot.Entry, out CrowdPaletteEntry? entry))
+                throw new InvalidOperationException($"CrowdSimulationDebug.json presentation.deploy.palette[{i}].entry \"{slot.Entry}\" 不在 {CrowdStructurePalette.RelativePath}。");
+            CrowdStructurePalette.RequireTemplate(slot.Entry, entry, structures);
+            choices[i] = new S4DeployDemoRuntime.PaletteChoice(slot.Entry, entry.TemplateId, entry.Label, entry.Gesture, entry.SizeCm, entry.ToOffsetXCm, entry.ToOffsetYCm, slot.SelectAction);
+        }
+        return choices;
     }
 
     private void InstallDeployPresentation(GameEngine engine)
@@ -150,40 +189,136 @@ public sealed partial class CrowdSimulationRuntime
             ToggleBuild = deploy.Actions.ToggleBuild,
             Remove = deploy.Actions.Remove,
             Place = deploy.Actions.Place,
+            Validate = deploy.Actions.Validate,
+            ToolOff = deploy.Actions.ToolOff,
+            ToolBoom = deploy.Actions.ToolBoom,
+            ToolSpawn = deploy.Actions.ToolSpawn,
+            ToolStructure = deploy.Actions.ToolStructure,
+            ToolDemolish = deploy.Actions.ToolDemolish,
+            Deploy = deploy.Actions.Deploy,
+            Scatter = deploy.Actions.Scatter,
+            Stress = deploy.Actions.Stress,
+            ClearCaches = deploy.Actions.ClearCaches,
+            AvoidDown = deploy.Actions.AvoidDown,
+            AvoidUp = deploy.Actions.AvoidUp,
+            SliceDown = deploy.Actions.SliceDown,
+            SliceUp = deploy.Actions.SliceUp,
+            Pause = deploy.Actions.Pause,
+            SpeedDown = deploy.Actions.SpeedDown,
+            SpeedUp = deploy.Actions.SpeedUp,
+            Fuzz = deploy.Actions.Fuzz,
         };
-        var choices = new S4DeployDemoRuntime.StructureChoice[deploy.Structures.Length];
-        for (int i = 0; i < deploy.Structures.Length; i++)
-        {
-            CrowdStructureTemplateDto item = deploy.Structures[i];
-            choices[i] = new S4DeployDemoRuntime.StructureChoice(
-                item.Id,
-                item.Label,
-                item.Shape,
-                item.SizeCm,
-                item.RoadLengthCm ?? 0,
-                item.SelectAction);
-        }
+        S4DeployDemoRuntime.PaletteChoice[] choices = ResolvePalette(engine, deploy);
 
         var (routes, slot) = RequireVisualServices(engine);
         var demo = new S4DeployDemoRuntime(engine);
+        CrowdPlayerViewHost? playerView = null;
+        CrowdTerrainPaletteProjector? terrain = null;
+        if (_playerView != null)
+        {
+            NavHeightField heights = Heights
+                ?? throw new InvalidOperationException("玩家视图地形需要导航高度场。");
+            playerView = new CrowdPlayerViewHost(engine, _playerView);
+            terrain = new CrowdTerrainPaletteProjector(heights, _playerView);
+            demo.DeployBuilder = playerView.BuildDeploy;
+            OrderPrefs = playerView.Prefs;
+        }
+        CrowdDebugTools tools = _debug?.Tools
+            ?? throw new InvalidOperationException("部署演示缺少 tools。");
+        CrowdDebugRates rates = _debug?.Rates
+            ?? throw new InvalidOperationException("部署演示缺少 rates。");
         demo.UseViewLabels(presentation.ViewLabels);
-        demo.UseStructures(choices);
-        slot.Current = new S4DeployDemoViewProjector(
+        demo.UsePalette(choices);
+        demo.UseDebugTools(tools, rates);
+        Func<CrowdSimSession?> sessionSource = () =>
+            engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null;
+        if (playerView != null && sessionSource() is { } liveSession)
+        {
+            playerView.Bind(liveSession);
+        }
+
+        var demoProjector = new S4DeployDemoViewProjector(
             demo,
-            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null);
+            sessionSource,
+            terrain,
+            playerView == null ? null : () => playerView.FogHide);
+        _deployViewProjector = demoProjector;
+        CrowdDebugViewFrame? debugView = _debugView == null ? null : new CrowdDebugViewFrame(_debugView);
+        slot.Current = debugView == null
+            ? demoProjector
+            : new S4DeployFrameProjector(demoProjector, debugView, sessionSource);
         var overlay = RequireOverlay(engine);
-        _deployInput = new S4DeployInputSystem(engine, demo, bindings, presentation.Hud);
-        _deployPresentation = new S4DeployDemoPresentationSystem(
+        var input = new S4DeployInputSystem(engine, demo, bindings);
+        var feed = new CrowdHudFeed(
             demo,
-            routes,
-            overlay,
+            presentation,
+            sessionSource,
             () => engine.TryGetService(CoreServiceKeys.CrowdSimulationRuntime, out var runtime) ? runtime : null,
-            () => engine.TryGetService(CoreServiceKeys.CrowdSimulationSession, out var session) ? session : null,
-            presentation);
+            () => ResolveLocalSeatVisionScope(engine));
+        feed.UseActions(new CrowdHudActions(
+            deploy.Actions,
+            choices.Select(c => c.SelectAction).ToArray(),
+            _debugView?.Actions,
+            _playerView?.Actions));
+        var presented = new S4DeployDemoPresentationSystem(demo, routes, overlay, sessionSource, presentation, feed);
+        if (debugView != null)
+        {
+            debugView.BindEngine(engine);
+            input.UseDebugView(debugView);
+            presented.UseDebugView(debugView);
+            feed.UseDebugView(debugView);
+        }
+
+        if (playerView != null)
+        {
+            input.UsePlayerView(playerView);
+            presented.UsePlayerView(playerView);
+            presented.SuppressDominantGoal = () => true;
+            feed.UsePlayerView(playerView);
+        }
+
+        _deployInput = input;
+        _deployPresentation = presented;
         engine.InsertSystemBeforeRequired<CrowdSimulationSessionTickSystem>(_deployInput, SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(_deployPresentation);
         _deployDemo = demo;
+        HudFeed = feed;
         _deployPresentationInstalled = true;
+    }
+
+    private void InstallTerrainOverlayInput(GameEngine engine)
+    {
+        if (_terrainOverlayInput != null || TerrainTypeOverlay == null) return;
+        if (string.IsNullOrEmpty(_terrainOverlayAction))
+        {
+            throw new InvalidOperationException($"{CrowdTerrainTypeOverlaySettings.RelativePath}: action 为空。");
+        }
+
+        var system = new CrowdTerrainOverlayInputSystem(engine, _terrainOverlayAction);
+        engine.RegisterSystem(system, SystemGroup.PostMovement);
+        _terrainOverlayInput = system;
+    }
+
+    private void ReleaseTerrainOverlayInput(GameEngine engine)
+    {
+        UnregisterFixed(engine, ref _terrainOverlayInput, SystemGroup.PostMovement);
+    }
+
+    private static int ResolveLocalSeatVisionScope(GameEngine engine)
+    {
+        if (!engine.TryGetService(CoreServiceKeys.SeatVisionScope, out ISeatVisionScope? source) || source == null)
+        {
+            return 0;
+        }
+
+        if (!engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) ||
+            seats == null ||
+            !seats.TryGetSoleSeat(out ClientLocalSeat seat))
+        {
+            return 0;
+        }
+
+        return source.TryGetScopeKeyId(seat.SeatId, out int scopeKeyId) ? scopeKeyId : 0;
     }
 
     private (RouteVisualBuffer Routes, CrowdFieldProjectorSlot Slot) RequireVisualServices(GameEngine engine)
@@ -197,6 +332,7 @@ public sealed partial class CrowdSimulationRuntime
         return (routes, slot);
     }
 
+    /// <summary>屏幕覆盖层只承载世界投影的调试线、单位标记和框选矩形。</summary>
     private static ScreenOverlayBuffer RequireOverlay(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
         ?? throw new InvalidOperationException("群体演示需要 ScreenOverlayBuffer。");

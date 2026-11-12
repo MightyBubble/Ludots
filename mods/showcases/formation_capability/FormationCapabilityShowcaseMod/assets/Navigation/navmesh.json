@@ -1,6 +1,7 @@
 {
   "maps": {
     "formation_capability_showcase": {
+      "solver": "mass-navigation",
       "navProfiles": [
         "Small"
       ],

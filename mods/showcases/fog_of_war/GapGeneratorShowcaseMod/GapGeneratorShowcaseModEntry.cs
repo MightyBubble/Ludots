@@ -10,9 +10,10 @@ public sealed class GapGeneratorShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
+        var runtime = FogShowcaseRuntime.Load(
+            context,
             FogShowcaseKind.GapGenerator,
-            "GapGeneratorShowcaseMod"));
+            "GapGeneratorShowcaseMod");
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

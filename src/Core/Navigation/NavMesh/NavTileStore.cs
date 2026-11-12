@@ -27,6 +27,26 @@ namespace Ludots.Core.Navigation.NavMesh
             }
         }
 
+        public int LoadedCount
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _loaded.Count;
+                }
+            }
+        }
+
+        public void ReadPublication(out uint revision, out int loadedCount)
+        {
+            lock (_gate)
+            {
+                revision = _revision;
+                loadedCount = _loaded.Count;
+            }
+        }
+
         public bool TryGet(NavTileId id, out NavTile tile)
         {
             lock (_gate)
@@ -47,10 +67,16 @@ namespace Ludots.Core.Navigation.NavMesh
 
         public int CopyLoadedTiles(NavTile[] scratch)
         {
+            return CopyLoadedTiles(scratch, out _);
+        }
+
+        public int CopyLoadedTiles(NavTile[] scratch, out uint revision)
+        {
             if (scratch == null) throw new ArgumentNullException(nameof(scratch));
 
             lock (_gate)
             {
+                revision = _revision;
                 if (_loaded.Count > scratch.Length)
                 {
                     throw new InvalidOperationException(

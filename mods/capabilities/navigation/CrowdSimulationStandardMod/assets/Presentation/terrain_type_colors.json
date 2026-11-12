@@ -1,0 +1,9 @@
+{
+  "colors": {
+    "water": { "red": 36, "green": 112, "blue": 196, "alpha": 220 },
+    "shore": { "red": 214, "green": 186, "blue": 122, "alpha": 220 },
+    "land": { "red": 74, "green": 140, "blue": 68, "alpha": 220 },
+    "mountain": { "red": 128, "green": 124, "blue": 118, "alpha": 220 },
+    "cliff": { "red": 78, "green": 62, "blue": 86, "alpha": 220 }
+  }
+}

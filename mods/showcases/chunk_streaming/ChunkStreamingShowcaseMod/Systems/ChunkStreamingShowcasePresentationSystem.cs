@@ -192,12 +192,12 @@ namespace ChunkStreamingShowcaseMod.Systems
             string chunks = $"Chunks {_runtime.LoadedChunkCount} | Nodes {_runtime.LoadedNodeCount} | Splines {_runtime.LoadedSplineRibbonCount}";
             string status = _runtime.LastStatus;
 
-            _overlay.AddRect(12, 12, 920, 156, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 9200, dirtySerial: 1);
-            _overlay.AddText(24, 24, "Chunk Streaming Showcase", 22, new Vector4(0.94f, 0.96f, 0.98f, 1f), stableId: 9201, dirtySerial: 1);
-            _overlay.AddText(24, 52, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 9202, dirtySerial: StringHash(status));
-            _overlay.AddText(24, 78, camera, 14, new Vector4(0.66f, 0.83f, 0.96f, 1f), stableId: 9203, dirtySerial: StringHash(camera));
-            _overlay.AddText(24, 102, chunks, 14, new Vector4(0.94f, 0.83f, 0.57f, 1f), stableId: 9204, dirtySerial: StringHash(chunks));
-            _overlay.AddText(24, 126, "Use panel buttons to jump the camera and validate that chunk tiles and road spline batches stream with the camera window.", 13, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 9205, dirtySerial: 1);
+            _overlay.AddRect(PresentationOverlayLayer.TopMost, 12, 12, 920, 156, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 9200, dirtySerial: 1);
+            _overlay.AddText(PresentationOverlayLayer.TopMost, 24, 24, "Chunk Streaming Showcase", 22, new Vector4(0.94f, 0.96f, 0.98f, 1f), stableId: 9201, dirtySerial: 1);
+            _overlay.AddText(PresentationOverlayLayer.TopMost, 24, 52, status, 14, new Vector4(0.90f, 0.92f, 0.95f, 1f), stableId: 9202, dirtySerial: StringHash(status));
+            _overlay.AddText(PresentationOverlayLayer.TopMost, 24, 78, camera, 14, new Vector4(0.66f, 0.83f, 0.96f, 1f), stableId: 9203, dirtySerial: StringHash(camera));
+            _overlay.AddText(PresentationOverlayLayer.TopMost, 24, 102, chunks, 14, new Vector4(0.94f, 0.83f, 0.57f, 1f), stableId: 9204, dirtySerial: StringHash(chunks));
+            _overlay.AddText(PresentationOverlayLayer.TopMost, 24, 126, "Use panel buttons to jump the camera and validate that chunk tiles and road spline batches stream with the camera window.", 13, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 9205, dirtySerial: 1);
         }
 
         private static int StringHash(string value)

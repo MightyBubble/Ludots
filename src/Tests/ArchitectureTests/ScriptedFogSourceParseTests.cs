@@ -26,6 +26,11 @@ public sealed class ScriptedFogSourceParseTests
         var at = source.PositionAt(0f);
         Assert.That(at.X, Is.EqualTo(204800 + 60000).Within(0.01f));
         Assert.That(at.Y, Is.EqualTo(204800).Within(0.01f));
+        Assert.That(source.Palette.Unseen.A, Is.EqualTo(232));
+        Assert.That(source.Palette.Explored.A, Is.EqualTo(148));
+        Assert.That(source.Palette.Visible.A, Is.EqualTo(0));
+        Assert.That(source.Palette.Denied.R, Is.EqualTo(64));
+        Assert.That(source.Palette.Denied.A, Is.EqualTo(214));
     }
 
     private static string ValidJson(string extra) => $$"""
@@ -44,7 +49,13 @@ public sealed class ScriptedFogSourceParseTests
       "ringHeight": 1.2,
       "borderWidth": 0.06,
       "fill": [0.15, 0.65, 1, 0.10],
-      "border": [0.25, 0.85, 1, 0.75]
+      "border": [0.25, 0.85, 1, 0.75],
+      "fogDecal": {
+        "unseen": [0, 0, 0, 232],
+        "explored": [0, 0, 0, 148],
+        "visible": [0, 0, 0, 0],
+        "denied": [64, 8, 16, 214]
+      }
     }
     """;
 }

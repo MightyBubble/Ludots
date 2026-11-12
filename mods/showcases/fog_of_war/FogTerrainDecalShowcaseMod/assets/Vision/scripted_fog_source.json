@@ -8,8 +8,14 @@
   "visionRadiusCm": 24000,
   "ageVisibleToExplored": true,
   "seedExplored": [
-    { "x": 0, "y": 0 },
-    { "x": 1023, "y": 1023 }
+    {
+      "x": 0,
+      "y": 0
+    },
+    {
+      "x": 1023,
+      "y": 1023
+    }
   ],
   "motion": {
     "kind": "ellipse",
@@ -20,6 +26,42 @@
   },
   "ringHeight": 1.2,
   "borderWidth": 0.06,
-  "fill": [0.15, 0.65, 1, 0.10],
-  "border": [0.25, 0.85, 1, 0.75]
+  "fill": [
+    0.15,
+    0.65,
+    1,
+    0.1
+  ],
+  "border": [
+    0.25,
+    0.85,
+    1,
+    0.75
+  ],
+  "fogDecal": {
+    "unseen": [
+      0,
+      0,
+      0,
+      232
+    ],
+    "explored": [
+      0,
+      0,
+      0,
+      148
+    ],
+    "visible": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "denied": [
+      64,
+      8,
+      16,
+      214
+    ]
+  }
 }

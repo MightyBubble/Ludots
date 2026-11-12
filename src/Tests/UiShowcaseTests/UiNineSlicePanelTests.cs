@@ -193,6 +193,9 @@ public sealed class UiNineSlicePanelTests
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+
+		public UiTextSize MeasureSize(ReadOnlySpan<char> text, UiStyle style, float availableWidth, bool constrainWidth)
+			=> new UiTextSize(text.Length * style.FontSize * 0.5f, style.FontSize * 1.4f);
 	}
 
 	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider

@@ -43,66 +43,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             }
 
-            var query = new DtNavMeshQuery(navMesh);
-            var filter = BuildFilter(areaCosts);
-            float tileWidthM = tileWidthCm / 100f;
-            float tileHeightM = tileHeightCm / 100f;
-            var extents = new RcVec3f(
-                MathF.Max(1.0f, tileWidthM * 0.5f),
-                256f,
-                MathF.Max(1.0f, tileHeightM * 0.5f));
-
-            var start = new RcVec3f(startXcm / 100f, 0f, startZcm / 100f);
-            var goal = new RcVec3f(goalXcm / 100f, 0f, goalZcm / 100f);
-
-            var startStatus = query.FindNearestPoly(start, extents, filter, out long startRef, out RcVec3f startPos, out _);
-            if (startStatus.Failed() || startRef == 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            var goalStatus = query.FindNearestPoly(goal, extents, filter, out long goalRef, out RcVec3f goalPos, out _);
-            if (goalStatus.Failed() || goalRef == 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            int pathCapacity = Math.Clamp(maxPortals <= 0 ? 256 : maxPortals, 2, 4096);
-            if (TryFindDirectRaycastPath(query, filter, startRef, goalRef, startPos, goalPos, pathCapacity, out NavPathResult directResult))
-            {
-                return directResult;
-            }
-
-            long[] pathRefs = new long[pathCapacity];
-            var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs.AsSpan(), out int pathCount, pathCapacity);
-            if (pathStatus.Failed() || pathCount <= 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            // Detour reports DT_PARTIAL when the goal is unreachable but a walkable prefix
-            // exists. That prefix is the answer, not a failure: its end point is the nearest
-            // legal stand point toward the goal. Keep it so callers can degrade gracefully.
-            bool reachedGoal = pathRefs[pathCount - 1] == goalRef;
-
-            var straight = new DtStraightPath[pathCapacity];
-            var straightStatus = query.FindStraightPath(
-                startPos,
-                goalPos,
-                pathRefs.AsSpan(0, pathCount),
-                pathCount,
-                straight.AsSpan(),
-                out int straightCount,
-                pathCapacity,
-                0);
-            if (straightStatus.Failed() || straightCount <= 0)
-            {
-                return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
-            }
-
-            return reachedGoal
-                ? BuildPathResult(straight, straightCount)
-                : BuildPartialPathResult(straight, straightCount);
+            return FindPath(navMesh, areaCosts, startXcm, startZcm, goalXcm, goalZcm, maxPortals);
         }
 
         public static NavPathResult FindPathFromDetourTileBytes(
@@ -161,8 +102,7 @@ namespace Ludots.Core.Navigation.NavMesh
             if (tileWidthCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileWidthCm), "Tile width must be positive.");
             if (tileHeightCm <= 0) throw new ArgumentOutOfRangeException(nameof(tileHeightCm), "Tile height must be positive.");
 
-            DtMeshData data = BuildTileData(tile, tileWidthCm, tileHeightCm)
-                ?? throw new InvalidOperationException($"Failed to build Detour tile data for NavTile {tile.TileId}.");
+            DtMeshData data = BuildTileData(tile, tileWidthCm, tileHeightCm);
 
             return WriteDetourTileBytes(data);
         }
@@ -192,13 +132,36 @@ namespace Ludots.Core.Navigation.NavMesh
             int goalZcm,
             int maxPortals)
         {
-            var query = new DtNavMeshQuery(navMesh);
-            var filter = BuildFilter(areaCosts);
             ref readonly DtNavMeshParams navMeshParams = ref navMesh.GetParams();
+            return QueryExisting(
+                new DtNavMeshQuery(navMesh),
+                BuildFilter(areaCosts),
+                new DetourQueryScratch(),
+                navMeshParams.tileWidth,
+                navMeshParams.tileHeight,
+                startXcm,
+                startZcm,
+                goalXcm,
+                goalZcm,
+                maxPortals);
+        }
+
+        internal static NavPathResult QueryExisting(
+            DtNavMeshQuery query,
+            IDtQueryFilter filter,
+            DetourQueryScratch scratch,
+            float tileWidthM,
+            float tileHeightM,
+            int startXcm,
+            int startZcm,
+            int goalXcm,
+            int goalZcm,
+            int maxPortals)
+        {
             var extents = new RcVec3f(
-                MathF.Max(1.0f, navMeshParams.tileWidth * 0.5f),
+                MathF.Max(1.0f, tileWidthM * 0.5f),
                 256f,
-                MathF.Max(1.0f, navMeshParams.tileHeight * 0.5f));
+                MathF.Max(1.0f, tileHeightM * 0.5f));
 
             var start = new RcVec3f(startXcm / 100f, 0f, startZcm / 100f);
             var goal = new RcVec3f(goalXcm / 100f, 0f, goalZcm / 100f);
@@ -216,13 +179,14 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             int pathCapacity = Math.Clamp(maxPortals <= 0 ? 256 : maxPortals, 2, 4096);
-            if (TryFindDirectRaycastPath(query, filter, startRef, goalRef, startPos, goalPos, pathCapacity, out NavPathResult directResult))
+            scratch.Ensure(pathCapacity);
+            if (TryFindDirectRaycastPath(query, filter, startRef, goalRef, startPos, goalPos, scratch.RayRefs.AsSpan(0, pathCapacity), out NavPathResult directResult))
             {
                 return directResult;
             }
 
-            long[] pathRefs = new long[pathCapacity];
-            var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs.AsSpan(), out int pathCount, pathCapacity);
+            Span<long> pathRefs = scratch.PathRefs.AsSpan(0, pathCapacity);
+            var pathStatus = query.FindPath(startRef, goalRef, startPos, goalPos, filter, pathRefs, out int pathCount, pathCapacity);
             if (pathStatus.Failed() || pathCount <= 0)
             {
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
@@ -233,13 +197,13 @@ namespace Ludots.Core.Navigation.NavMesh
             // legal stand point toward the goal. Keep it so callers can degrade gracefully.
             bool reachedGoal = pathRefs[pathCount - 1] == goalRef;
 
-            var straight = new DtStraightPath[pathCapacity];
+            Span<DtStraightPath> straight = scratch.Straight.AsSpan(0, pathCapacity);
             var straightStatus = query.FindStraightPath(
                 startPos,
                 goalPos,
-                pathRefs.AsSpan(0, pathCount),
+                pathRefs.Slice(0, pathCount),
                 pathCount,
-                straight.AsSpan(),
+                straight,
                 out int straightCount,
                 pathCapacity,
                 0);
@@ -249,13 +213,13 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             return reachedGoal
-                ? BuildPathResult(straight, straightCount)
-                : BuildPartialPathResult(straight, straightCount);
+                ? BuildPathResult(straight.Slice(0, straightCount), straightCount)
+                : BuildPartialPathResult(straight.Slice(0, straightCount), straightCount);
         }
 
         private static NavPathResult BuildPartialPathResult(ReadOnlySpan<DtStraightPath> straight, int straightCount)
         {
-            NavPathResult full = BuildPathResult(straight.ToArray(), straightCount);
+            NavPathResult full = BuildPathResult(straight, straightCount);
             if (full.PathXcm.Length <= 0)
             {
                 return new NavPathResult(NavPathStatus.NotReachable, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
@@ -278,11 +242,10 @@ namespace Ludots.Core.Navigation.NavMesh
             long goalRef,
             RcVec3f startPos,
             RcVec3f goalPos,
-            int pathCapacity,
+            Span<long> rayPath,
             out NavPathResult result)
         {
             result = default;
-            long[] rayPath = new long[pathCapacity];
             DtStatus rayStatus = query.Raycast(
                 startRef,
                 startPos,
@@ -290,9 +253,9 @@ namespace Ludots.Core.Navigation.NavMesh
                 filter,
                 out float t,
                 out _,
-                rayPath.AsSpan(),
+                rayPath,
                 out int rayPathCount,
-                pathCapacity);
+                rayPath.Length);
             if (rayStatus.Failed() ||
                 rayStatus.IsPartial() ||
                 rayStatus.Has(DtStatus.DT_BUFFER_TOO_SMALL) ||
@@ -412,11 +375,6 @@ namespace Ludots.Core.Navigation.NavMesh
             for (int i = 0; i < filtered.Count; i++)
             {
                 DtMeshData data = BuildTileData(filtered[i], tileWidthCm, tileHeightCm);
-                if (data == null)
-                {
-                    continue;
-                }
-
                 var addStatus = navMesh.AddTile(data, 0, 0, out _);
                 if (addStatus.Failed())
                 {
@@ -427,8 +385,14 @@ namespace Ludots.Core.Navigation.NavMesh
             return navMesh;
         }
 
-        private static DtMeshData BuildTileData(NavTile tile, int tileWidthCm, int tileHeightCm)
+        internal static DtMeshData BuildTileData(NavTile tile, int tileWidthCm, int tileHeightCm)
         {
+            if (tile.VertexCount >= 0xffff)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile {tile.TileId} at ({tile.OriginXcm}, {tile.OriginYcm}) cm cannot build Detour tile data: vertex count {tile.VertexCount} is at least 65535.");
+            }
+
             int minYcm = int.MaxValue;
             int maxYcm = int.MinValue;
             for (int i = 0; i < tile.VertexCount; i++)
@@ -492,7 +456,14 @@ namespace Ludots.Core.Navigation.NavMesh
                 buildBvTree = true
             };
 
-            return DtNavMeshBuilder.CreateNavMeshData(option);
+            DtMeshData data = DtNavMeshBuilder.CreateNavMeshData(option);
+            if (data == null)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile {tile.TileId} at ({tile.OriginXcm}, {tile.OriginYcm}) cm cannot build Detour tile data: vertex count {tile.VertexCount}, polygon count {tile.TriangleCount}.");
+            }
+
+            return data;
         }
 
         private static DtMeshData BuildFlatGridBaselineTileData(NavTile tile, int tileWidthCm, int tileHeightCm)
@@ -632,42 +603,42 @@ namespace Ludots.Core.Navigation.NavMesh
             return new NavAreaQueryFilter(WalkFlag, costs, passable);
         }
 
-        /// <summary>
-        /// Builds a nav mesh from loaded tiles for surface-correction queries
-        /// (<c>FindNearestPoly</c> / <c>ClosestPointOnPolyBoundary</c>) performed outside pathfinding.
-        /// </summary>
-        internal static DtNavMesh? BuildNavMeshForSurfaceQueries(
-            NavTile[] tiles,
-            int layer,
-            int tileWidthCm,
-            int tileHeightCm)
-        {
-            return BuildNavMesh(tiles, layer, tileWidthCm, tileHeightCm);
-        }
-
-        /// <summary>
-        /// Builds the default query filter for the given area costs. Exposed for callers that need to
-        /// issue their own Detour queries against a nav mesh built by this engine.
-        /// </summary>
         internal static IDtQueryFilter BuildDefaultFilter(NavAreaCostTable areaCosts)
         {
             return BuildFilter(areaCosts);
         }
 
-        private static NavPathResult BuildPathResult(DtStraightPath[] straight, int straightCount)
+        private static NavPathResult BuildPathResult(ReadOnlySpan<DtStraightPath> straight, int straightCount)
         {
-            var xs = new List<int>(straightCount);
-            var zs = new List<int>(straightCount);
-            Fix64 travelCost = Fix64.Zero;
+            int count = 0;
             int prevX = 0;
             int prevZ = 0;
             bool hasPrev = false;
-
             for (int i = 0; i < straightCount; i++)
             {
                 int x = (int)MathF.Round(straight[i].pos.X * 100f);
                 int z = (int)MathF.Round(straight[i].pos.Z * 100f);
-                if (xs.Count > 0 && xs[xs.Count - 1] == x && zs[zs.Count - 1] == z)
+                if (hasPrev && prevX == x && prevZ == z)
+                {
+                    continue;
+                }
+
+                count++;
+                prevX = x;
+                prevZ = z;
+                hasPrev = true;
+            }
+
+            var xs = new int[count];
+            var zs = new int[count];
+            Fix64 travelCost = Fix64.Zero;
+            hasPrev = false;
+            int written = 0;
+            for (int i = 0; i < straightCount; i++)
+            {
+                int x = (int)MathF.Round(straight[i].pos.X * 100f);
+                int z = (int)MathF.Round(straight[i].pos.Z * 100f);
+                if (hasPrev && prevX == x && prevZ == z)
                 {
                     continue;
                 }
@@ -679,14 +650,15 @@ namespace Ludots.Core.Navigation.NavMesh
                     travelCost += Fix64.FromFloat(MathF.Sqrt(dx * dx + dz * dz));
                 }
 
-                xs.Add(x);
-                zs.Add(z);
+                xs[written] = x;
+                zs[written] = z;
+                written++;
                 prevX = x;
                 prevZ = z;
                 hasPrev = true;
             }
 
-            return new NavPathResult(NavPathStatus.Ok, xs.ToArray(), zs.ToArray(), travelCost);
+            return new NavPathResult(NavPathStatus.Ok, xs, zs, travelCost);
         }
 
         private static NavPathResult BuildDirectPathResult(RcVec3f startPos, RcVec3f goalPos)

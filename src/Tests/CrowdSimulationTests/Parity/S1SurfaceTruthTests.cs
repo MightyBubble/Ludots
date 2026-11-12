@@ -8,13 +8,16 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.CrowdSimulation.World;
+using Ludots.Core.Presentation.Terrain;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace CrowdSimulationTests.Parity;
 
 /// <summary>
 /// S1 逐格对拍：从 Ludots 侧资产（.navsurface + Maps/<id>.json + 模板）重建与 Web 导出器
-/// 同一字节流，FNV-1a 摘要必须相等。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
+/// 同一字节流，FNV-1a 摘要必须相等。地形格、阻挡物和桥逐字节比；跳跃候选那一段用 Web 快照
+/// s1-jump-truth.json 填，入库 .navsurface 的候选由 Ludots 烘焙，按行为对拍另测。字节流契约见 `tools/crowdsimulation-export/exportLudots.mjs`（沙盒运行时放在 `scripts/` 下）。
 /// </summary>
 [TestFixture]
 public class S1SurfaceTruthTests
@@ -46,14 +49,33 @@ public class S1SurfaceTruthTests
             NavCellsY = cellsY,
             NavCellSizeCm = navCellSizeCm,
             TerrainTypeIds = typeIds,
+            LinkKindIds = surface.LinkKindIds,
+            BakeInputsDigest = surface.BakeInputsDigest,
             TerrainCells = surface.TerrainCells,
-            JumpCandidates = surface.JumpCandidates,
+            LinkCandidates = surface.LinkCandidates,
         };
 
-        Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.NavCellsX + 1, surface.NavCellsY, surface.NavCellSizeCm, surface.TerrainTypeIds), runtime));
-        Assert.Throws<InvalidOperationException>(() =>
-            NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm * 2, surface.TerrainTypeIds), runtime));
+        int boardCm = runtime.NavCellsPerSide * runtime.NavCellSizeCm;
+        var height = ContinuousHeightmapAsset.CreateSingleLayerFromRawUInt16(
+            new WorldAabbCm(0, 0, boardCm, boardCm),
+            runtime.NavCellsPerSide,
+            runtime.NavCellsPerSide,
+            new ushort[runtime.NavCellsPerSide * runtime.NavCellsPerSide],
+            ContinuousHeightSampleScale.IdentityCentimeters);
+        const string surfacePath = "assets/terrain/crowd_simulation_s1337.navsurface";
+        const string heightPath = "assets/terrain/crowd_simulation_s1337.height";
+        var cells = Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.ValidateWorldSize(
+                boardCm, boardCm, runtime.NavCellsPerSide, runtime.NavCellSizeCm,
+                Mutate(surface.NavCellsX + 1, surface.NavCellsY, surface.NavCellSizeCm, surface.TerrainTypeIds),
+                surfacePath, height, heightPath));
+        Assert.That(cells!.Message, Does.StartWith(surfacePath));
+        var cellSize = Assert.Throws<InvalidOperationException>(() =>
+            NavSurfaceContract.ValidateWorldSize(
+                boardCm, boardCm, runtime.NavCellsPerSide, runtime.NavCellSizeCm,
+                Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm * 2, surface.TerrainTypeIds),
+                surfacePath, height, heightPath));
+        Assert.That(cellSize!.Message, Does.StartWith(surfacePath));
         string[] renamed = surface.TerrainTypeIds.Select(id => id + "_x").ToArray();
         Assert.Throws<InvalidOperationException>(() =>
             NavSurfaceContract.Validate(Mutate(surface.NavCellsX, surface.NavCellsY, surface.NavCellSizeCm, renamed), runtime));
@@ -67,12 +89,13 @@ public class S1SurfaceTruthTests
         var (blockers, bridges) = LoadMapEntities(seed);
         var grid = SurfaceGrid.Build(runtime, surface, blockers);
 
-        var hash = ComputeDigest(surface, grid, blockers, bridges);
+        var hash = ComputeDigest(surface, grid, blockers, bridges, S1JumpTruth.Read(SeedDir(seed)));
         var truth = JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulation", "parity", "s1-truth.json")))!;
         Assert.That(hash, Is.EqualTo(truth["fnv1a"]!.GetValue<string>()),
             $"S1 地表与 Web 导出逐格不一致（seed {seed}）");
         Assert.That(blockers.Count, Is.EqualTo(truth["blockers"]!.GetValue<int>()));
-        Assert.That(bridges.Count, Is.EqualTo(truth["bridges"]!.GetValue<int>()));
+        Assert.That(bridges.Count, Is.EqualTo(truth["layeredPaths"]!.GetValue<int>()));
+        Assert.That(surface.LinkCandidates.Length, Is.EqualTo(truth["linkCandidates"]!.GetValue<int>()));
     }
 
     [Test]
@@ -121,7 +144,7 @@ public class S1SurfaceTruthTests
         var runtime = LoadRuntime("s1337");
         var surface = ReadSurface("s1337");
         var (blockers, _) = LoadMapEntities("s1337");
-        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250)).ToArray();
+        var grown = blockers.Select(b => new BlockerFootprint(b.XCm, b.YCm, b.HalfSizeCm + 6250, b.TemplateId)).ToArray();
         var baseline = SurfaceGrid.Build(runtime, surface, blockers);
         var resized = SurfaceGrid.Build(runtime, surface, grown);
         int delta = 0;
@@ -139,10 +162,10 @@ public class S1SurfaceTruthTests
         var runtime = TestDefaults.Assemble();
         var surface = EmptySurface(runtime);
         // 6250 cm 格：半宽 1562 cm（边长 3125 cm）居中于格心 → 覆盖 0.25 < 0.5 不阻挡
-        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562) });
+        var small = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 1562, "building") });
         Assert.That(small.Blocked[0], Is.EqualTo(0));
         // 半宽 3125 cm（边长 = 格边长）居中 → 覆盖 1.0 ≥ 0.5 阻挡
-        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125) });
+        var full = SurfaceGrid.Build(runtime, surface, new[] { new BlockerFootprint(3125, 3125, 3125, "building") });
         Assert.That(full.Blocked[0], Is.EqualTo(1));
     }
 
@@ -150,32 +173,49 @@ public class S1SurfaceTruthTests
         => NavSurfaceAsset.Read(File.OpenRead(Path.Combine(SeedDir(seed), "terrain", $"crowd_simulation_{seed}.navsurface")));
 
     internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight = false)
+        => LoadRuntime(seed, lineOfSight, pairRules: null);
+
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, CrowdPairRules pairRules)
+        => LoadRuntime(seed, lineOfSight: false, pairRules);
+
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(string seed, bool lineOfSight, CrowdPairRules? pairRules)
+        => LoadRuntime(seed, lineOfSight, pairRules, tuneConfig: null);
+
+    /// <param name="tuneConfig">在合并后的 CrowdSimulationConfig JSON 上改值，再交给加载器校验。</param>
+    /// <param name="bodies">换掉演示体型表与单位模板事实（null = 演示资产）。</param>
+    /// <param name="tuneNavmesh">在合并后的 navmesh.json 上改值。</param>
+    internal static CrowdSimulationRuntimeConfig LoadRuntime(
+        string seed, bool lineOfSight, CrowdPairRules? pairRules, Action<JsonObject>? tuneConfig, CrowdTestBodies? bodies = null,
+        Action<JsonObject>? tuneNavmesh = null)
     {
         // CrowdSimulationMod 全量默认 + 地图 Mod 覆盖（与 config_catalog 的 DeepObject 合并同路径）。
         var merged = TestDefaults.DefaultConfigJson();
         var overlay = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "CrowdSimulationConfig.json")))!;
         ConfigPipeline.DeepMerge(merged, overlay);
         if (lineOfSight) merged["fog"]!["lineOfSight"] = true;
+        tuneConfig?.Invoke(merged);
         var config = CrowdSimulationConfig.Load(merged);
 
         var navmeshJson = TestDefaults.StandardNavmeshJson();
         var seedNav = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "Navigation", "navmesh.json")))!;
         ConfigPipeline.DeepMerge(navmeshJson, seedNav);
+        tuneNavmesh?.Invoke(navmeshJson);
 
         var mapJson = File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json"));
         var map = JsonSerializer.Deserialize<MapConfig>(mapJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdSimulationConfigLoader.Load(
             config,
             map,
-            TestDefaults.DemoProfiles(),
-            TestDefaults.ParseNavmesh(navmeshJson),
-            TestDefaults.DemoPathing(),
-            TestDefaults.DemoTemplates(),
+            bodies?.Profiles ?? TestDefaults.DemoProfiles(),
+            TestDefaults.ParseNavmesh(navmeshJson, bodies?.Profiles),
+            bodies?.Traversal ?? TestDefaults.DemoTraversal(),
+            bodies?.Templates ?? TestDefaults.DemoTemplates(),
             TestDefaults.FixedHz,
-            TestDefaults.DemoPairRules());
+            pairRules ?? TestDefaults.DemoPairRules());
     }
 
-    internal static CrowdSimulationMapSurface LoadMapSurface(string seed)
+    /// <param name="tuneMap">在地图 JSON 上改值，再抽取地表输入。</param>
+    internal static CrowdSimulationMapSurface LoadMapSurface(string seed, Action<JsonObject>? tuneMap = null)
     {
         var templates = JsonSerializer.Deserialize<List<EntityTemplate>>(
             File.ReadAllText(Path.Combine(SeedDir(seed), "Entities", "templates.json")),
@@ -183,9 +223,9 @@ public class S1SurfaceTruthTests
         var templatesById = templates.Where(t => !string.IsNullOrWhiteSpace(t.Id))
             .ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-        var map = JsonSerializer.Deserialize<MapConfig>(
-            File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json")),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var mapJson = (JsonObject)JsonNode.Parse(File.ReadAllText(Path.Combine(SeedDir(seed), "Maps", $"crowd_simulation_{seed}.json")))!;
+        tuneMap?.Invoke(mapJson);
+        var map = mapJson.Deserialize<MapConfig>(new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         return CrowdSimulationMapSurfaceSource.Extract(map, templatesById);
     }
 
@@ -193,7 +233,7 @@ public class S1SurfaceTruthTests
     {
         var surface = LoadMapSurface(seed);
         var blockers = surface.Blockers.ToList();
-        var bridges = surface.Bridges.Select(b => (b.Span.X0Cm, b.Span.Y0Cm, b.Span.X1Cm, b.Span.Y1Cm, b.Span.WidthCm)).ToList();
+        var bridges = surface.LayeredPaths.Select(b => (b.Span.FromXCm, b.Span.FromYCm, b.Span.ToXCm, b.Span.ToYCm, b.Span.WidthCm)).ToList();
         // 地图实体按抽取时的遍历序返回，这里不排序。
         return (blockers, bridges);
     }
@@ -207,8 +247,10 @@ public class S1SurfaceTruthTests
             NavCellsY = navCellsPerSide,
             NavCellSizeCm = runtime.NavCellSizeCm,
             TerrainTypeIds = runtime.TerrainTypeIds.ToArray(),
+            LinkKindIds = runtime.LinkCandidateBakes.Select(b => b.KindId).ToArray(),
+            BakeInputsDigest = 0,
             TerrainCells = new byte[navCellsPerSide * navCellsPerSide], // 全部 water（下标 0）
-            JumpCandidates = Array.Empty<NavSurfaceJumpCandidate>(),
+            LinkCandidates = Array.Empty<NavSurfaceLinkCandidate>(),
         };
     }
 
@@ -216,7 +258,8 @@ public class S1SurfaceTruthTests
         NavSurfaceAsset surface,
         SurfaceGrid grid,
         List<BlockerFootprint> blockers,
-        List<(int x0, int y0, int x1, int y1, int width)> bridges)
+        List<(int x0, int y0, int x1, int y1, int width)> bridges,
+        IReadOnlyList<NavSurfaceLinkCandidate> jumpCandidates)
     {
         using var ms = new MemoryStream();
         using var w = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
@@ -252,8 +295,8 @@ public class S1SurfaceTruthTests
             w.Write(b.width);
         }
 
-        w.Write(surface.JumpCandidates.Length);
-        foreach (var j in surface.JumpCandidates)
+        w.Write(jumpCandidates.Count);
+        foreach (var j in jumpCandidates)
         {
             w.Write(j.FromX);
             w.Write(j.FromY);
@@ -274,3 +317,9 @@ public class S1SurfaceTruthTests
         return h.ToString("x8");
     }
 }
+
+/// <summary>会话用的体型表与单位模板事实（两者须互相一致：模板的个人半径 = 体型半径 × 避让倍数），可另换通行矩阵（null = 演示资产）。</summary>
+internal sealed record CrowdTestBodies(
+    Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry Profiles,
+    List<CrowdUnitTemplateFacts> Templates,
+    CrowdTraversalConfig? Traversal = null);

@@ -36,6 +36,7 @@ using Ludots.UI;
 using NUnit.Framework;
 using SkiaSharp;
 using Ludots.Tests.TestCommon;
+using Ludots.Tests;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -53,8 +54,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void EntityQueryTactics_PlayableAcceptance_WritesArtifacts()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "entity-query-tactics-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/acceptance/entity-query-tactics-showcase");
             string screensDir = Path.Combine(artifactDir, "screens");
             AcceptanceUiEvidenceWriter.ResetArtifactDirectory(artifactDir, screensDir);
 
@@ -253,8 +253,7 @@ namespace Ludots.Tests.GAS.Production
         [Test]
         public void EntityQueryTactics_ProductionBenchmark_WritesReport()
         {
-            string repoRoot = FindRepoRoot();
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "benchmarks", "entity-query-tactics-showcase");
+            string artifactDir = CommittedTestArtifacts.Resolve("artifacts/benchmarks/entity-query-tactics-showcase");
             Directory.CreateDirectory(artifactDir);
 
             using var engine = CreateEngineWithPlan(out LauncherLaunchPlan launchPlan);

@@ -8,6 +8,7 @@ namespace Ludots.Core.Vision
         private readonly StringIntRegistry _keys = new(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
         private FogLayerDefinition[] _definitions = new FogLayerDefinition[16];
         private bool[] _registered = new bool[16];
+        private bool[] _externalStamp = new bool[16];
 
         public FogLayerId Register(string key, int cellSizeCm, int updateHz)
         {
@@ -83,6 +84,21 @@ namespace Ludots.Core.Vision
             return definition;
         }
 
+        public void SetExternalStamp(FogLayerId id, bool external)
+        {
+            if (!TryGet(id, out _))
+            {
+                throw new InvalidOperationException($"Fog layer id {id.Value} is not registered.");
+            }
+
+            _externalStamp[id.Value] = external;
+        }
+
+        public bool IsExternalStamp(FogLayerId id)
+        {
+            return id.Value > 0 && (uint)id.Value < (uint)_externalStamp.Length && _externalStamp[id.Value];
+        }
+
         public uint ToMask(FogLayerId id)
         {
             if (id.Value <= 0 || id.Value > 32)
@@ -108,6 +124,7 @@ namespace Ludots.Core.Vision
 
             Array.Resize(ref _definitions, next);
             Array.Resize(ref _registered, next);
+            Array.Resize(ref _externalStamp, next);
         }
     }
 }

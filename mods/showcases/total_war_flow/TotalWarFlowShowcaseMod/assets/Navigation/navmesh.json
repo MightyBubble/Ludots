@@ -30,6 +30,7 @@
   },
   "maps": {
     "total_war_flow_field": {
+      "solver": "mass-navigation",
       "boards": {
         "default": {
           "tileWorldWidthCm": 6400,

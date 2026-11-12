@@ -22,6 +22,7 @@
   },
   "maps": {
     "east_asia_visual_heightmap": {
+      "solver": "mass-navigation",
       "boards": {
         "default": {
           "tileWorldWidthCm": 228544,

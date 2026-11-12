@@ -9,12 +9,12 @@ namespace Ludots.Core.CrowdSimulation.Movement;
 /// <summary>
 /// 局部避让(Fix64 厘米域):非对称分离——
 /// 重叠对的让出份额按玩家对功能位分摊。Yield:有效优先级 = 兵种推挤优先级
-/// +(移动中 + movingBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
+/// +(移动中 + movingPriorityBonus),低者让(1 - dominantShare)、相等对半、高者近不动。
 /// Hold:优先级失效,休息单位对移动单位不可动、同状态对半。同导航组且都在移动:
-/// 对称对半,不查功能位。跳跃(JUMP)单位腾空:半径记 0,不收推也不推人。
+/// 对称对半,不查功能位。穿越链接(Traversing)的单位腾空:半径记 0,不收推也不推人。
 /// 两个预算保证最坏 O(n) 而不偏袒谁被看见:maxNeighbors 只数重叠对,maxScan 数所有
 /// 读到的候选(含跳过的);查询范围 = 单位自己的哈希环。
-/// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;跳跃状态单独把所在占格标醒。整片可达邻域
+/// 静/动分界(calm):非移动、零速、上次解出的推力低于 restDeadband 即睡;穿越状态单独把所在占格标醒。整片可达邻域
 /// 全睡的占格是静态岛——不收推不耗算,任何醒着的单位在触及范围内即唤醒整格。
 /// 降频:stride &gt; 1 时本调用只解 cy % stride == phase 的行,其余保留上次向量。
 /// </summary>
@@ -55,25 +55,25 @@ public static class CrowdAvoidance
                 int j = hash2.Items[kk];
                 var state = k.States[j];
                 bool moving = state.State == (byte)CrowdUnitState.Moving;
-                bool jump = state.State == (byte)CrowdUnitState.Jump;
+                bool traversing = state.State == (byte)CrowdUnitState.Traversing;
                 var pos = k.Positions[j];
                 var kin = k.Kins[j];
                 gx[kk] = pos.X;
                 gy[kk] = pos.Y;
-                gr[kk] = jump ? Fix64.Zero : k.Radii[j];
+                gr[kk] = traversing ? Fix64.Zero : k.Radii[j];
                 gp[kk] = (byte)k.PlayerIdx[j];
                 gl[kk] = state.Level;
                 gg[kk] = state.GroupId;
                 gm[kk] = moving ? (byte)1 : (byte)0;
-                ge[kk] = k.PushPriorities[j] + (moving ? k.MovingBonus : Fix64.Zero);
-                if (moving || jump || calm[j] == 0 || kin.Velocity.X != Fix64.Zero || kin.Velocity.Y != Fix64.Zero) aw = 1;
+                ge[kk] = k.PushPriorities[j] + (moving ? k.MovingPriorityBonus : Fix64.Zero);
+                if (moving || traversing || calm[j] == 0 || kin.Velocity.X != Fix64.Zero || kin.Velocity.Y != Fix64.Zero) aw = 1;
             }
 
             awake[a] = (byte)aw;
         }
     }
 
-    internal static void SolveRange(CrowdMovementKernel k, int start, int end)
+    internal static void SolveRange(CrowdMovementKernel k, int start, int end, int step)
     {
         var session = k.Session;
         var pairRules = session.Config.PairRules;
@@ -85,11 +85,11 @@ public static class CrowdAvoidance
         int width = hash2.Width;
         Fix64 cellCm = hash2.CellSizeCm;
         Fix64 reach = hash2.Reach;
-        Fix64 keep = Fix64.OneValue - k.Smoothing;
+        Fix64 keep = Fix64.OneValue - k.SmoothingRatio;
         var gx = k.GatherX; var gy = k.GatherY; var gr = k.GatherRadius; var ge = k.GatherPriority;
         var gp = k.GatherPlayer; var gm = k.GatherMoving; var gl = k.GatherLevel; var gg = k.GatherGroup;
         var calm = k.Calm; var awake = k.Awake;
-        for (int a = start; a < end; a++)
+        for (int a = start; a < end; a += step)
         {
             int c = hash2.Active[a];
             int cy = c / dim;
@@ -201,7 +201,7 @@ public static class CrowdAvoidance
                 }
 
                 var previous = k.Separation[i2];
-                k.Separation[i2] = new Fix64Vec2(previous.X * k.Smoothing + sx * keep, previous.Y * k.Smoothing + sy * keep);
+                k.Separation[i2] = new Fix64Vec2(previous.X * k.SmoothingRatio + sx * keep, previous.Y * k.SmoothingRatio + sy * keep);
             }
         }
     }

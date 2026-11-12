@@ -28,14 +28,17 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             ConfigConflictReport report = null,
             string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
+            return ConfigMergeProvenance.Wrap(relativePath, report, tracked =>
+            {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, tracked);
             if (mergedObject == null)
             {
                 throw new InvalidOperationException($"NavMeshBakeConfig not found in any source for '{relativePath}'.");
             }
 
             return Parse(mergedObject, _agentProfiles, relativePath);
+            });
         }
 
         /// <summary>
@@ -48,7 +51,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         {
             ArgumentNullException.ThrowIfNull(mergedObject);
             ArgumentNullException.ThrowIfNull(agentProfiles);
-            ValidateRaw(mergedObject, relativePath);
+            bool requiresDotRecastBakeRoot = NavSolverDeclaration.RequiresDotRecastBakeRoot(mergedObject);
+            ValidateRaw(mergedObject, relativePath, requiresDotRecastBakeRoot);
             var options = StrictJsonOptions.CreateCamelCase();
 
             var config = mergedObject.Deserialize<NavMeshBakeConfig>(options);
@@ -57,10 +61,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException($"Failed to deserialize NavMeshBakeConfig from '{relativePath}'.");
             }
 
+            ValidatePerMapTileGranularity(config);
+
+            if (!requiresDotRecastBakeRoot && !NavSolverDeclaration.ContainsAnyDotRecastBakeRootKey(mergedObject))
+            {
+                return config;
+            }
+
             _ = config.ParsedMode;
             _ = config.ParsedAlgorithm;
-
-            ValidatePerMapTileGranularity(config);
 
             if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
                 config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt &&
@@ -172,7 +181,10 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             return new NavMeshBakeConfigContext(config, agentProfiles);
         }
 
-        private static IReadOnlyList<ResolvedModLoadEntry> ResolveModLoadPlan(string repoRoot, string targetModId)
+        /// <summary>
+        /// 目标 mod 的依赖闭包，按 DependencyResolver 排序。无烘焙启动计划时，游戏把这份清单交给 LoadResolvedPlan。
+        /// </summary>
+        public static IReadOnlyList<ResolvedModLoadEntry> ResolveModLoadPlan(string repoRoot, string targetModId)
         {
             string modsRoot = Path.Combine(Path.GetFullPath(repoRoot), "mods");
             if (!Directory.Exists(modsRoot))
@@ -285,21 +297,27 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private static void ValidateRaw(JsonObject root, string relativePath)
+        private static void ValidateRaw(JsonObject root, string relativePath, bool requiresDotRecastBakeRoot)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", new[] { "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental" }, new[] { "terrainFeed", "maps" });
-            string mode = RequireString(root, "mode", "NavMeshBakeConfig");
-            string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
-            _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
-            _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
-            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
+            if (requiresDotRecastBakeRoot)
             {
-                if (terrainFeedNode is null)
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.DotRecastBakeRootRequiredKeys,
+                    NavSolverDeclaration.DotRecastBakeRootOptionalKeys);
+            }
+            else
+            {
+                string[] optionalWhenCrowdOnly =
                 {
-                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
-                }
-
-                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
+                    "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental", "terrainFeed",
+                };
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.CrowdSimulationOnlyRootRequiredKeys,
+                    optionalWhenCrowdOnly);
             }
 
             if (root.TryGetPropertyValue("maps", out var mapsNode))
@@ -316,34 +334,52 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                         throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key} must be an object.");
                     }
 
-                    if (mapObj.ContainsKey("surfaceAsset"))
+                    string solver = RequireString(mapObj, "solver", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                    if (!NavSolverDeclaration.IsKnown(solver))
                     {
                         throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.surfaceAsset 已删除。.navsurface 从地图 ContinuousHeightmap.asset 推导（去掉 assets/ 前缀，.height 换成 .navsurface）。");
-                    }
-
-                    if (mapObj.ContainsKey("agentTypes"))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.agentTypes 已删除。本图要烘焙的能力档写在 maps.{mapEntry.Key}.navProfiles（能力档 id 数组）。");
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.solver 必须是 {NavSolverDeclaration.AllowedList}，当前是 \"{solver}\"。");
                     }
 
                     RequireOnlyProperties(
                         mapObj,
-                        $"NavMeshBakeConfig.maps.{mapEntry.Key}",
-                        Array.Empty<string>(),
-                        new[] { "boards", "terrainAreas", "navProfiles", "navAreas" });
+                        $"NavMeshBakeConfig.maps.{mapEntry.Key}（solver {solver}）",
+                        [.. NavSolverDeclaration.RequiredMapKeys(solver)],
+                        [.. NavSolverDeclaration.OptionalMapKeys(solver)]);
                     if (mapObj.ContainsKey("navProfiles"))
                     {
                         RequireNavProfiles(mapObj, mapEntry.Key);
                     }
 
-                    if (mapObj.ContainsKey("terrainAreas"))
+                    if (mapObj.ContainsKey("terrainTypes"))
                     {
-                        ValidateTerrainAreasArray(mapObj, mapEntry.Key);
+                        ValidateTerrainTypes(mapObj, mapEntry.Key);
                     }
 
-                    bool bindsAgents = mapObj.ContainsKey("navProfiles") || mapObj.ContainsKey("terrainAreas");
+                    if (mapObj.ContainsKey("navCellSizeCm"))
+                    {
+                        int navCellSizeCm = RequireInt(mapObj, "navCellSizeCm", $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                        if (navCellSizeCm <= 0)
+                        {
+                            throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.navCellSizeCm 需为 > 0。");
+                        }
+                    }
+
+                    if (mapObj.ContainsKey("linkCandidateBake"))
+                    {
+                        ValidateLinkCandidateBake(mapObj, mapEntry.Key);
+                    }
+
+                    if (mapObj.ContainsKey("logicTerrainAsset"))
+                    {
+                        string asset = RequireString(
+                            mapObj,
+                            "logicTerrainAsset",
+                            $"NavMeshBakeConfig.maps.{mapEntry.Key}");
+                        RequireModRelativeAsset(asset, $"NavMeshBakeConfig.maps.{mapEntry.Key}.logicTerrainAsset");
+                    }
+
+                    bool bindsAgents = mapObj.ContainsKey("navProfiles");
                     if (mapObj.ContainsKey("navAreas") || bindsAgents)
                     {
                         RequireNavAreas(mapObj, mapEntry.Key, bindsAgents);
@@ -363,12 +399,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                                 throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must be an object.");
                             }
 
-                            if (boardObj.ContainsKey("surfaceAsset"))
-                            {
-                                throw new InvalidOperationException(
-                                    $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}.surfaceAsset 已删除。.navsurface 从地图 ContinuousHeightmap.asset 推导（去掉 assets/ 前缀，.height 换成 .navsurface）。");
-                            }
-
                             RequireOnlyProperties(
                                 boardObj,
                                 $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key}",
@@ -382,8 +412,42 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                                     $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards.{boardEntry.Key} must declare tileWorldWidthCm and tileWorldHeightCm together.");
                             }
                         }
+
+                        if (boards.Count != 1)
+                        {
+                            throw new InvalidOperationException(
+                                $"NavMeshBakeConfig.maps.{mapEntry.Key}.boards 声明了 {boards.Count} 块板。一张图只能有一块求解器板；不写 boards 时用地图的 RootBoard。");
+                        }
                     }
                 }
+            }
+
+            if (!requiresDotRecastBakeRoot)
+            {
+                if (!NavSolverDeclaration.ContainsAnyDotRecastBakeRootKey(root))
+                {
+                    return;
+                }
+
+                RequireOnlyProperties(
+                    root,
+                    "NavMeshBakeConfig",
+                    NavSolverDeclaration.DotRecastBakeRootRequiredKeys,
+                    NavSolverDeclaration.DotRecastBakeRootOptionalKeys);
+            }
+
+            string mode = RequireString(root, "mode", "NavMeshBakeConfig");
+            string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
+            _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
+            _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
+            if (root.TryGetPropertyValue("terrainFeed", out var terrainFeedNode))
+            {
+                if (terrainFeedNode is null)
+                {
+                    throw new InvalidOperationException("NavMeshBakeConfig.terrainFeed must be 'triangles' or 'direct', not null.");
+                }
+
+                _ = NavBakeNames.ParseTerrainFeed(RequireString(root, "terrainFeed", "NavMeshBakeConfig"), "NavMeshBakeConfig.terrainFeed");
             }
 
             if (root["profiles"] is JsonArray)
@@ -534,8 +598,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
             ValidateNavProfileReferences(root);
             ValidateNavAreaReferences(root, seenAreaIds);
-            ValidateTerrainAreaReferences(root, seenAreaIds);
-            ValidateTerrainAreasCoveredByNavAreas(root);
 
             if (root["runtimeIncremental"] is not JsonObject runtimeIncremental)
             {
@@ -735,124 +797,92 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
 
-        private static void ValidateTerrainAreasCoveredByNavAreas(JsonObject root)
+        private static void ValidateTerrainTypes(JsonObject mapObj, string mapId)
         {
-            if (root["maps"] is not JsonObject maps)
+            string path = $"NavMeshBakeConfig.maps.{mapId}.terrainTypes";
+            if (mapObj["terrainTypes"] is not JsonArray terrainTypes || terrainTypes.Count == 0)
             {
-                return;
+                throw new InvalidOperationException($"{path} 必须是非空的地形 id 数组。数组下标就是地编资产和 .navsurface 里的地形编号。");
             }
 
-            foreach (var mapEntry in maps)
+            if (terrainTypes.Count > 256)
             {
-                if (mapEntry.Value is not JsonObject mapObj || mapObj["terrainAreas"] is not JsonArray terrainAreas)
-                {
-                    continue;
-                }
-
-                var declared = new HashSet<string>(StringComparer.Ordinal);
-                if (mapObj["navAreas"] is JsonArray navAreas)
-                {
-                    for (int i = 0; i < navAreas.Count; i++)
-                    {
-                        if (navAreas[i] is JsonValue value && value.TryGetValue<string>(out string id) && id != null)
-                        {
-                            declared.Add(id);
-                        }
-                    }
-                }
-
-                for (int i = 0; i < terrainAreas.Count; i++)
-                {
-                    string areaId = string.Empty;
-                    if (terrainAreas[i] is JsonObject row &&
-                        row["areaId"] is JsonValue value &&
-                        value.TryGetValue<string>(out string parsed) &&
-                        parsed != null)
-                    {
-                        areaId = parsed;
-                    }
-
-                    if (!declared.Contains(areaId))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}] 的 areaId \"{areaId}\" 不在 maps.{mapEntry.Key}.navAreas 里。");
-                    }
-                }
-            }
-        }
-
-        private static void ValidateTerrainAreasArray(JsonObject mapObj, string mapId)
-        {
-            if (mapObj["terrainAreas"] is JsonObject)
-            {
-                throw new InvalidOperationException(
-                    $"NavMeshBakeConfig.maps.{mapId}.terrainAreas 是有序数组 [{{ terrainId, areaId }}]，不再使用对象。数组下标就是 .navsurface 地形编号。");
-            }
-
-            if (mapObj["terrainAreas"] is not JsonArray terrainAreas)
-            {
-                throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas must be an array.");
+                throw new InvalidOperationException($"{path} 有 {terrainTypes.Count} 项，最多 256 项（格里存 u8）。");
             }
 
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < terrainAreas.Count; i++)
+            for (int i = 0; i < terrainTypes.Count; i++)
             {
-                if (terrainAreas[i] is not JsonObject row)
+                if (terrainTypes[i] is not JsonValue value ||
+                    !value.TryGetValue<string>(out string? id) ||
+                    string.IsNullOrWhiteSpace(id) ||
+                    !string.Equals(id.Trim(), id, StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas[{i}] must be an object.");
+                    throw new InvalidOperationException($"{path}[{i}] 必须是非空地形 id。");
                 }
 
-                string path = $"NavMeshBakeConfig.maps.{mapId}.terrainAreas[{i}]";
-                RequireOnlyProperties(row, path, "terrainId", "areaId");
-                string terrainId = RequireString(row, "terrainId", path);
-                RequireString(row, "areaId", path);
-                if (!seen.Add(terrainId))
+                if (!seen.Add(id))
                 {
-                    throw new InvalidOperationException($"NavMeshBakeConfig.maps.{mapId}.terrainAreas contains duplicate terrainId '{terrainId}'.");
+                    throw new InvalidOperationException($"{path} 重复写了地形 \"{id}\"。");
                 }
             }
         }
 
-        private static void ValidateTerrainAreaReferences(JsonObject root, HashSet<string> areaIds)
+        private static void ValidateLinkCandidateBake(JsonObject mapObj, string mapId)
         {
-            if (root["maps"] is not JsonObject maps)
+            string path = $"NavMeshBakeConfig.maps.{mapId}.linkCandidateBake";
+            if (mapObj["linkCandidateBake"] is not JsonObject kinds || kinds.Count == 0)
             {
-                return;
+                throw new InvalidOperationException($"{path} 必须是以链接种类 id 为键的非空对象。");
             }
 
-            foreach (var mapEntry in maps)
+            int navCellSizeCm = RequireInt(mapObj, "navCellSizeCm", $"NavMeshBakeConfig.maps.{mapId}");
+            foreach (var kind in kinds)
             {
-                if (mapEntry.Value is not JsonObject mapObj || mapObj["terrainAreas"] is not JsonArray terrainAreas)
+                string kindPath = $"{path}.{kind.Key}";
+                if (kind.Value is not JsonObject bake)
                 {
-                    continue;
+                    throw new InvalidOperationException($"{kindPath} 必须是对象。");
                 }
 
-                for (int i = 0; i < terrainAreas.Count; i++)
+                RequireOnlyProperties(bake, kindPath, "maxGapCm", "linkSpacingCm", "endpointMaxSlopeDeg");
+                RequireNavCellMultiple(bake, "maxGapCm", kindPath, navCellSizeCm);
+                RequireNavCellMultiple(bake, "linkSpacingCm", kindPath, navCellSizeCm);
+                RequireNumber(bake, "endpointMaxSlopeDeg", kindPath);
+                double endpointMaxSlopeDeg = bake["endpointMaxSlopeDeg"]!.GetValue<double>();
+                if (!(endpointMaxSlopeDeg > 0d && endpointMaxSlopeDeg < 90d))
                 {
-                    string areaId = string.Empty;
-                    string terrainId = string.Empty;
-                    if (terrainAreas[i] is JsonObject row)
-                    {
-                        if (row["terrainId"] is JsonValue terrainValue &&
-                            terrainValue.TryGetValue<string>(out string? parsedTerrain) &&
-                            parsedTerrain != null)
-                        {
-                            terrainId = parsedTerrain;
-                        }
+                    throw new InvalidOperationException($"{kindPath}.endpointMaxSlopeDeg = {endpointMaxSlopeDeg}，需在 (0, 90) 之间。");
+                }
+            }
+        }
 
-                        if (row["areaId"] is JsonValue value &&
-                            value.TryGetValue<string>(out string? parsed) &&
-                            parsed != null)
-                        {
-                            areaId = parsed;
-                        }
-                    }
+        private static void RequireNavCellMultiple(JsonObject bake, string key, string path, int navCellSizeCm)
+        {
+            int centimeters = RequireInt(bake, key, path);
+            if (centimeters <= 0 || centimeters % navCellSizeCm != 0)
+            {
+                throw new InvalidOperationException(
+                    $"{path}.{key} = {centimeters}，需为 > 0 且是 navCellSizeCm（{navCellSizeCm}）的整数倍。");
+            }
+        }
 
-                    if (areaId.Length == 0 || !areaIds.Contains(areaId))
-                    {
-                        throw new InvalidOperationException(
-                            $"NavMeshBakeConfig.maps.{mapEntry.Key}.terrainAreas[{i}]（{terrainId}）references unknown area '{areaId}'.");
-                    }
+        internal static void RequireModRelativeAsset(string asset, string path)
+        {
+            string trimmed = asset.Replace('\\', '/');
+            if (Path.IsPathRooted(asset) ||
+                trimmed.StartsWith("/", StringComparison.Ordinal) ||
+                trimmed.Contains(':', StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path} 必须是 Mod assets 下的相对路径，不能是绝对路径：{asset}");
+            }
+
+            string[] segments = trimmed.Split('/');
+            for (int i = 0; i < segments.Length; i++)
+            {
+                if (segments[i] == "..")
+                {
+                    throw new InvalidOperationException($"{path} 不能包含 ..：{asset}");
                 }
             }
         }

@@ -196,9 +196,7 @@ public sealed class CrowdBlockerColliders
             if (d2 >= radiusCm * radiusCm) continue;
             if (d2 > Fix64.FromFloat(1e-8f))
             {
-                Fix64 d = Fix64Math.Sqrt(d2);
-                dx /= d;
-                dy /= d;
+                CrowdContactNormal.Normalize(ref dx, ref dy, d2);
                 px = qx + dx * radiusCm;
                 py = qy + dy * radiusCm;
             }

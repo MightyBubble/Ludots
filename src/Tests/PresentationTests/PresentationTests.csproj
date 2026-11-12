@@ -43,6 +43,7 @@
     <ProjectReference Include="..\..\..\mods\fixtures\animation\AnimationAcceptanceMod\AnimationAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\presenter_blacksmith\PresenterBlacksmithShowcaseMod\PresenterBlacksmithShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\presenter_tree_override\PresenterTreeOverrideShowcaseMod\PresenterTreeOverrideShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\CapabilityStandardCrowdPhysicsArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPresenterCommandShowcaseMod\CapabilityStandardPresenterCommandShowcaseMod.csproj" />
@@ -53,6 +54,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\TestCommon\CommittedTestArtifacts.cs" Link="CommittedTestArtifacts.cs" />
     <Compile Include="..\TestCommon\RepoModPaths.cs" Link="RepoModPaths.cs" />
     <Compile Include="..\TestCommon\TeamRelationTestHarness.cs" Link="TeamRelationTestHarness.cs" />
     <Compile Include="..\TestCommon\PresentationTestConstants.cs" Link="PresentationTestConstants.cs" />

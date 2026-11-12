@@ -17,6 +17,7 @@ public sealed class CrowdHudStateCountTests
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s7");
         using var service = new PathQueryService(session.Navs, session.Config, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         int spawned = CrowdDeployment.SpawnAt(
             session, Fix64.FromInt(480000), Fix64.FromInt(560000), 24, 1, 0, 0);
@@ -32,7 +33,7 @@ public sealed class CrowdHudStateCountTests
                 case (byte)CrowdUnitState.Moving: moving++; break;
                 case (byte)CrowdUnitState.Arrived: arrived++; break;
                 case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                case (byte)CrowdUnitState.Jump: jumping++; break;
+                case (byte)CrowdUnitState.Traversing: jumping++; break;
             }
         }
 
@@ -41,7 +42,7 @@ public sealed class CrowdHudStateCountTests
         Assert.That(telemetry.Moving, Is.EqualTo(moving));
         Assert.That(telemetry.Arrived, Is.EqualTo(arrived));
         Assert.That(telemetry.Unreachable, Is.EqualTo(unreachable));
-        Assert.That(telemetry.Jumping, Is.EqualTo(jumping));
+        Assert.That(telemetry.Traversing, Is.EqualTo(jumping));
         Assert.That(idle + moving + arrived + unreachable + jumping, Is.EqualTo(session.Units.Count));
     }
 }

@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using SkiaSharp;
 
 using Ludots.UI.Runtime;
@@ -16,6 +19,12 @@ public static class UiFontRegistry
 
 	private static readonly Dictionary<string, SKTypeface> CachedTypefaces = new Dictionary<string, SKTypeface>(StringComparer.OrdinalIgnoreCase);
 
+	// 每量一段文字都要查一次，读路径不上锁；写入与清空仍在 Sync 内。
+	private static readonly ConcurrentDictionary<StyleKey, SKTypeface> StyleTypefaces = new ConcurrentDictionary<StyleKey, SKTypeface>(StyleKeyComparer.Instance);
+
+	// 预留容量：新字符第一次出现时只填表不扩容，界面稳态下量字不分配。
+	private static readonly Dictionary<RuneKey, SKTypeface> RuneTypefaces = new Dictionary<RuneKey, SKTypeface>(2048, RuneKeyComparer.Instance);
+
 	private static readonly string[] GlyphFallbackFamilies =
 	{
 		"WenQuanYi Micro Hei",
@@ -26,6 +35,11 @@ public static class UiFontRegistry
 		"Segoe UI",
 		"Arial Unicode MS"
 	};
+
+	private static int _generation;
+
+	/// <summary>每次注册字体文件加一；按字缓存字体选择的调用方据此作废缓存。</summary>
+	public static int Generation => Volatile.Read(ref _generation);
 
 	public static void RegisterFile(string familyName, string fontPath)
 	{
@@ -46,22 +60,56 @@ public static class UiFontRegistry
 			{
 				CachedTypefaces.Remove(key);
 			}
+			StyleTypefaces.Clear();
+			RuneTypefaces.Clear();
+			Interlocked.Increment(ref _generation);
 		}
 	}
 
 	public static SKTypeface ResolveTypeface(string? familyList, bool bold, bool italic = false)
 	{
-		string key = $"{familyList ?? string.Empty}|{bold}|{italic}";
+		var styleKey = new StyleKey(familyList ?? string.Empty, bold, italic);
+		if (StyleTypefaces.TryGetValue(styleKey, out SKTypeface? cached))
+		{
+			return cached;
+		}
 		lock (Sync)
 		{
-			if (CachedTypefaces.TryGetValue(key, out SKTypeface value))
+			string key = $"{familyList ?? string.Empty}|{bold}|{italic}";
+			if (!CachedTypefaces.TryGetValue(key, out SKTypeface? value))
 			{
-				return value;
+				value = CreateTypeface(familyList, bold, italic);
+				CachedTypefaces[key] = value;
 			}
-			SKTypeface sKTypeface = CreateTypeface(familyList, bold, italic);
-			CachedTypefaces[key] = sKTypeface;
-			return sKTypeface;
+			StyleTypefaces[styleKey] = value;
+			return value;
 		}
+	}
+
+	/// <summary>
+	/// 按码位选字体：首选字体有这个字就用它，没有再按 <see cref="ResolveTypefaceForTextElement"/> 的顺序找回退字体。
+	/// 结果按（首选字体，码位）缓存，命中时不分配。
+	/// </summary>
+	public static SKTypeface ResolveTypefaceForCodePoint(string? familyList, bool bold, bool italic, SKTypeface preferred, int codePoint)
+	{
+		ArgumentNullException.ThrowIfNull(preferred, nameof(preferred));
+		var runeKey = new RuneKey(preferred, codePoint);
+		lock (Sync)
+		{
+			if (RuneTypefaces.TryGetValue(runeKey, out SKTypeface? cached))
+			{
+				return cached;
+			}
+		}
+
+		SKTypeface resolved = preferred.ContainsGlyph(codePoint)
+			? preferred
+			: ResolveTypefaceForTextElement(familyList, bold, char.ConvertFromUtf32(codePoint), italic);
+		lock (Sync)
+		{
+			RuneTypefaces[runeKey] = resolved;
+		}
+		return resolved;
 	}
 
 	public static SKTypeface ResolveTypefaceForTextElement(string? familyList, bool bold, string textElement, bool italic = false)
@@ -267,6 +315,30 @@ public static class UiFontRegistry
 	private static bool ContainsGlyphs(SKTypeface typeface, string text)
 	{
 		return typeface.ContainsGlyphs(text);
+	}
+
+	private readonly record struct StyleKey(string Family, bool Bold, bool Italic);
+
+	private sealed class StyleKeyComparer : IEqualityComparer<StyleKey>
+	{
+		public static readonly StyleKeyComparer Instance = new StyleKeyComparer();
+
+		public bool Equals(StyleKey x, StyleKey y) =>
+			x.Bold == y.Bold && x.Italic == y.Italic && string.Equals(x.Family, y.Family, StringComparison.OrdinalIgnoreCase);
+
+		public int GetHashCode(StyleKey key) =>
+			HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(key.Family), key.Bold, key.Italic);
+	}
+
+	private readonly record struct RuneKey(SKTypeface Preferred, int CodePoint);
+
+	private sealed class RuneKeyComparer : IEqualityComparer<RuneKey>
+	{
+		public static readonly RuneKeyComparer Instance = new RuneKeyComparer();
+
+		public bool Equals(RuneKey x, RuneKey y) => x.CodePoint == y.CodePoint && ReferenceEquals(x.Preferred, y.Preferred);
+
+		public int GetHashCode(RuneKey key) => HashCode.Combine(RuntimeHelpers.GetHashCode(key.Preferred), key.CodePoint);
 	}
 
 	private static bool TryGetFirstCodePoint(string textElement, out int codePoint)

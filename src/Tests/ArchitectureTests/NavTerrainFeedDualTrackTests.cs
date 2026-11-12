@@ -227,14 +227,14 @@ namespace Ludots.Tests.Architecture
         {
             Assert.That(LoadTempNavConfig(null), Is.EqualTo(NavBakeNames.TerrainFeedTriangles));
             Assert.That(LoadTempNavConfig("\"direct\""), Is.EqualTo(NavBakeNames.TerrainFeedDirect));
-            Assert.Throws<InvalidOperationException>(() => LoadTempNavConfig("null"));
-            Assert.Throws<InvalidOperationException>(() => LoadTempNavConfig("\"bogus\""));
+            Assert.Throws<ConfigLoadException>(() => LoadTempNavConfig("null"));
+            Assert.Throws<ConfigLoadException>(() => LoadTempNavConfig("\"bogus\""));
         }
 
         [Test]
         public void Loader_AuthoredArea63_IsRejected()
         {
-            Assert.Throws<InvalidOperationException>(
+            Assert.Throws<ConfigLoadException>(
                 () => LoadTempNavConfig(null, areasOverride: "\"areas\": { \"Bad\": { \"areaId\": 63, \"slopeFree\": false } }"));
         }
 

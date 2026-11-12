@@ -2369,7 +2369,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleRelationshipQueryOutgoing(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            ApplyRelationshipQueryResult(ref s, in ins, s.Api.CollectOutgoing(s.E[ins.A], s.Targets, ResolveQueryTypeId(ins.Dst)));
+            int typeId = ResolveQueryTypeId(ins.Dst);
+            RelationshipQueryResult result = s.Api.CollectOutgoing(s.E[ins.A], s.Targets, typeId);
+            // 完整查询（flags == 0）在默认 256 槽装不下时按 QueryFromCollection 的方式长大缓冲再收一次。
+            // 截断查询（flags == 1）仍把丢下的条数交给调用方。
+            if (result.Dropped > 0 && ins.Flags == 0)
+            {
+                int needed = checked(result.Count + result.Dropped);
+                s.Targets = s.Api.GetEntityQueryBuffer(s.InvokeDepth, needed);
+                s.TargetList = new GraphTargetList(s.Targets);
+                result = s.Api.CollectOutgoing(s.E[ins.A], s.Targets, typeId);
+            }
+
+            ApplyRelationshipQueryResult(ref s, in ins, result);
         }
 
         private static void HandleRelationshipQueryIncoming(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

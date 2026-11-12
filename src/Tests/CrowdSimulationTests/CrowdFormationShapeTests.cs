@@ -32,7 +32,7 @@ public sealed class CrowdFormationShapeTests
     {
         var (_, session) = Parity.S4DeployTruthTests.BuildSession("s1337");
         var order = CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"order","player":1,"xCm":620000,"yCm":620000,"shape":"aaa"}""")!);
+            """{"type":"order","player":1,"xCm":620000,"yCm":620000,"shape":"aaa","members":[1]}""")!);
 
         var live = Assert.Throws<InvalidOperationException>(
             () => session.Commands.Submit(session, order, CrowdSimCommands.Exec));
@@ -50,7 +50,7 @@ public sealed class CrowdFormationShapeTests
     public void OmittedShape_DefaultsToBox_AndMissingBoxThrows()
     {
         var parsed = CrowdSimCommand.Parse(JsonNode.Parse(
-            """{"type":"order","player":1,"xCm":1,"yCm":2}""")!);
+            """{"type":"order","player":1,"xCm":1,"yCm":2,"members":[1]}""")!);
         Assert.That(parsed.ShapeId, Is.EqualTo("box"));
 
         var withoutBox = TestDefaults.Assemble().Formations.Where(shape => shape.Id != "box").ToArray();

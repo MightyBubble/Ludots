@@ -25,7 +25,7 @@ namespace CrowdSimulationTests.Parity;
 /// 分支;去量化实验(参考端全部 f32 缓冲→f64、删显式 fround)未覆盖全部 f32 路径
 /// (restX/Y、slot、blend、stall、jump*、motor.js 显式 fround),不收敛不构成"非 f32
 /// 来源"的反证;Fix64 每运算舍入约 2^-32 cm,比观测差小约 10 个数量级,排除为主因——
-/// 残余来源记档为参考端 f32 存储(2026-10-09 甲方裁决:行为对拍口径)。
+/// 残余来源记档为参考端 f32 存储。对拍口径是行为对拍，数值以 Ludots Fix64 为准。
 /// 接触计数硬门:不一致 10/144234 样本(0.007%,全部 ±1 骑线),容忍线 0.05% + 幅度
 /// ±1;失败断言输出全量不一致清单。系统性分歧(接触集大面积错)会同时击穿两条。
 /// </summary>
@@ -52,14 +52,10 @@ public sealed class S5TrajectoryTruthTests
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(30), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
         session.BlockOnDueReplies = true;
-        session.TruthNavFrozen = true; // 旧真值在迷雾冻结口径下录制(参考端 S5 导出虽未置门,冻结与活雾在此场景行为等价——认知集恒真相)
 
         string dir = Path.Combine(S1SurfaceTruthTests.SeedDir("s1337"), "CrowdSimulation", "parity");
         var meta = JsonNode.Parse(File.ReadAllText(Path.Combine(dir, "s5-trajectory-truth.json")))!;
-        var script = meta["script"]!.AsArray()
-            .Select(e => new CrowdCommand(e!["tick"]!.GetValue<int>(), CrowdSimCommand.Parse(e!["cmd"]!)))
-            .ToArray();
-        session.Commands.Schedule(session, script);
+        var script = CrowdReferenceScript.Load(meta["script"]!.AsArray(), session.Units.Capacity);
 
         var bin = File.ReadAllBytes(Path.Combine(dir, "s5-trajectory.bin"));
         int cursor = 4; // magic
@@ -79,10 +75,10 @@ public sealed class S5TrajectoryTruthTests
         string? firstStateMismatch = null;
         for (int t = 0; t < ticks; t++)
         {
-            if (!session.Step(out _))
+            if (!script.Step(session, out _))
             {
                 int guard = 0;
-                while (!session.Step(out _))
+                while (!script.Step(session, out _))
                 {
                     if (guard++ > 4096) throw new InvalidOperationException($"tick {t} 停摆未恢复。");
                 }

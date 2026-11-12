@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Ludots.Core.CrowdSimulation.Config;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -8,9 +9,9 @@ namespace Ludots.Core.CrowdSimulation.Nav;
 /// <summary>
 /// TILE 寻址的 NavMesh 查询:
 /// 多边形 A* + 漏斗,直接跑在某上下文的 tile 条目上,不经过拼装全局网格:
-///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 地面 · 1 桥面)
+///   poly 引用 = (tile × 2 + 层) × navCellsPerTile² + 局部多边形号(层 0 底层 · 1 上层)
 ///   同层同 tile → 条目内部邻接;同层邻 tile → 两边界的重叠缝合(带记忆化)
-///   地面 ↔ 桥面 → 仅在桥头 portal 格,以格心点 portal 相连
+///   底层 ↔ 上层 → 仅在入口 portal 格,以格心点 portal 相连
 /// 侧边顺序(−y, −x, +x, +y)与拼装网格一致。
 /// </summary>
 public static class TilePathQuery
@@ -27,8 +28,8 @@ public static class TilePathQuery
         public Dictionary<int, Fix64> Ey = new(4096);
         public Dictionary<int, int> Parent = new(4096);
         public HashSet<int> Closed = new(4096);
-        /// <summary>逐 (navId, tile 条目) 的地面多边形代价备忘。键钉在上下文与条目引用上,增量重烘换条目即失效。</summary>
-        public Dictionary<(int NavId, NavTileEntry Entry), Fix64[]> GroundCostMemo = new(1024);
+        /// <summary>逐 (navId, tile 下标) 的底层多边形代价备忘。上界 = 上下文数 × tile 数;条目引用或导航版本变了就原位重算。</summary>
+        public Dictionary<(int NavId, int Tile), BaseLayerCostEntry> BaseLayerCostMemo = new(1024);
         public List<Fix64> Portals = new();
         public List<Fix64> FunnelPoints = new();
         public HashSet<int> PortalSeen = new();
@@ -65,7 +66,7 @@ public static class TilePathQuery
             Ey.EnsureCapacity(4096);
             Parent.EnsureCapacity(4096);
             Closed.EnsureCapacity(4096);
-            GroundCostMemo.EnsureCapacity(1024);
+            BaseLayerCostMemo.EnsureCapacity(1024);
             while (_costFree.Count < 1024) _costFree.Push(new Fix64[tileCellCount]);
         }
 
@@ -137,7 +138,7 @@ public static class TilePathQuery
         public Fix64 Cost;
     }
 
-    /// <summary>返回 null = 起终点无多边形或不连通。layers = false 时不上桥面。</summary>
+    /// <summary>返回 null = 起终点无多边形或不连通。layers = false 时不进上层。</summary>
     public static Result? FindTilePath(
         NavContext nav,
         CrowdSimulationRuntimeConfig config,
@@ -148,7 +149,7 @@ public static class TilePathQuery
     {
         ArgumentNullException.ThrowIfNull(nav.Tiles);
         int navCellsPerSide = nav.NavCellsPerSide, navCellsPerTile = config.Hpa.NavCellsPerTile;
-        int sp = GroundRef(nav, navCellsPerTile, startCell), gp = GroundRef(nav, navCellsPerTile, goalCell);
+        int sp = BaseLayerRef(nav, navCellsPerTile, startCell), gp = BaseLayerRef(nav, navCellsPerTile, goalCell);
         if (sp < 0 || gp < 0) return null;
 
         var half = Fix64.HalfValue;
@@ -238,8 +239,8 @@ public static class TilePathQuery
         for (int i = 0; i < polyCount; i++) mask[(polys[i] / l) >> 1] = 1;
     }
 
-    // 地面格的 poly 引用,-1 = 该格无多边形
-    private static int GroundRef(NavContext nav, int navCellsPerTile, int cell)
+    // 底层格的 poly 引用,-1 = 该格无多边形
+    private static int BaseLayerRef(NavContext nav, int navCellsPerTile, int cell)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         int x = cell % navCellsPerSide, y = cell / navCellsPerSide;
@@ -248,14 +249,22 @@ public static class TilePathQuery
         return p < 0 ? -1 : tile * 2 * navCellsPerTile * navCellsPerTile + p;
     }
 
-    // 地面 tile 的逐多边形代价(格代价均值;查询间备忘,键钉在 tile 条目引用上——重烘换条目即失效)
-    private static Fix64[] GroundCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
+    public struct BaseLayerCostEntry
+    {
+        public NavTileEntry? Entry;
+        public int Version;
+        public Fix64[]? Cost;
+    }
+
+    // 底层 tile 的逐多边形代价(格代价均值)。tile 条目跨上下文共享,代价随导航重烘变,所以条目引用和导航版本都要对上
+    private static Fix64[] BaseLayerCost(NavContext nav, int navCellsPerTile, int tile, Scratch s)
     {
         int navCellsPerSide = nav.NavCellsPerSide, navTilesPerSide = navCellsPerSide / navCellsPerTile;
         var e = nav.Tiles![tile];
-        if (s.GroundCostMemo.TryGetValue((nav.Id, e), out var memo)) return memo;
+        ref var memo = ref CollectionsMarshal.GetValueRefOrAddDefault(s.BaseLayerCostMemo, (nav.Id, tile), out _);
+        if (ReferenceEquals(memo.Entry, e) && memo.Version == nav.Version) return memo.Cost!;
         int ox = tile % navTilesPerSide * navCellsPerTile, oy = tile / navTilesPerSide * navCellsPerTile;
-        var pc = s.RentCost();
+        var pc = memo.Cost is { Length: > 0 } kept && kept.Length >= e.Count ? kept : s.RentCost();
         if (pc.Length < e.Count) pc = new Fix64[e.Count];
         Array.Clear(pc, 0, e.Count);
         if (s.CostCount.Length < e.Count) s.CostCount = new int[e.Count];
@@ -271,7 +280,9 @@ public static class TilePathQuery
         }
 
         for (int p = 0; p < e.Count; p++) pc[p] = cnt[p] > 0 ? pc[p] / cnt[p] : Fix64.OneValue;
-        s.GroundCostMemo[(nav.Id, e)] = pc;
+        memo.Entry = e;
+        memo.Version = nav.Version;
+        memo.Cost = pc;
         return pc;
     }
 
@@ -280,7 +291,7 @@ public static class TilePathQuery
         int l = navCellsPerTile * navCellsPerTile, tl = refr / l;
         return (tl & 1) != 0
             ? nav.UpperTiles![tl >> 1].PolyCost[refr - tl * l]
-            : GroundCost(nav, navCellsPerTile, tl >> 1, s)[refr - tl * l];
+            : BaseLayerCost(nav, navCellsPerTile, tl >> 1, s)[refr - tl * l];
     }
 
     private static NavTileEntry? EntryOf(NavContext nav, int tile, int layer)

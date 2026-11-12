@@ -46,8 +46,8 @@ public static class CrowdIntents
         if (k.Proposals.Length < n) k.EnsureCapacity(Math.Max(n, session.Units.Capacity));
 
         // 撞上已到达同伴读的是本轮已提交的更小稠密下标。提案不读邻居到达状态，可以按区间并行；
-        // 提交必须按原下标串行。散兵回调插在单位计算中途，非空时整段保持原序。
-        if (k.OnStray != null || k.RequireParallelWorkerCount() <= 1)
+        // 提交必须按原下标串行。场外记录写在提案上，回调留在提交，避免为了扩展把整段意图改成串行。
+        if (k.RequireParallelWorkerCount() <= 1)
         {
             for (int i = 0; i < n; i++)
             {
@@ -67,9 +67,9 @@ public static class CrowdIntents
         }
     }
 
-    internal static void WriteRange(CrowdMovementKernel k, int start, int end)
+    internal static void WriteRange(CrowdMovementKernel k, int start, int end, int step)
     {
-        for (int i = start; i < end; i++) WriteProposal(k, i);
+        for (int i = start; i < end; i += step) WriteProposal(k, i);
     }
 
     private static void WriteProposal(CrowdMovementKernel k, int i)
@@ -143,7 +143,7 @@ public static class CrowdIntents
         int cx = CellCoord(px, s.NavCellSizeCm), cy = CellCoord(py, s.NavCellSizeCm);
         int cell = cy * s.NavN + cx;
 
-        // 桥头双层可走时比较 flow.Integ。等积分时用路点跨层打破平局。
+        // 入口双层可走时比较 flow.Integ。等积分时用路点跨层打破平局。
         if (nav.Portal[cell] != 0 && nav.Passable[cell] != 0 && nav.UpPass[cell] != 0)
         {
             Fix64 a = flow.Integ[cell], b = flow.Integ[s.N2 + cell];
@@ -157,11 +157,11 @@ public static class CrowdIntents
         int lv = state.Level;
         byte[] pass = lv != 0 ? nav.UpPass : nav.Passable;
 
-        // 到达优先于跳跃——已在目标可达范围内的单位不起跳
+        // 到达优先于穿越——已在目标可达范围内的单位不进入链接
         if (lv == 0 && flow.Lk != null && flow.Lk[cell] >= 0 &&
             !(CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, lv) <= k.GoalArriveNavCells))
         {
-            if (TryStartJump(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, s.NavN, session.Config.NavCellSizeCm, pos))
+            if (TryStartLinkTraversal(ref state, ref kin, flow.Links!, flow.Lk[cell], nav, s.NavN, session.Config.NavCellSizeCm, pos))
             {
                 Store(ref p, state, kin, ix, iy);
                 return;
@@ -170,16 +170,14 @@ public static class CrowdIntents
 
         Fix64 spd = k.Speeds[i];
         Fix64 divHere = (lv != 0 ? nav.UpSpeedDivisor : nav.SpeedDivisor)[cell];
-        spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
+        if (divHere != Fix64.OneValue) spd = spd / (divHere == Fix64.Zero ? Fix64.OneValue : divHere);
 
-        // 槽位世界坐标 = 领队位置 + 槽位偏移旋进领队系
-        Fix64 lat = kin.SlotOffsetCm.X, back = kin.SlotOffsetCm.Y;
-        Fix64 tx = leader.XCm - leader.Hy * lat - leader.Hx * back;
-        Fix64 ty = leader.YCm + leader.Hx * lat - leader.Hy * back;
+        var slot = leader.SlotWorldCm(kin.SlotOffsetCm);
+        Fix64 tx = slot.X, ty = slot.Y;
         int sc = tx >= Fix64.Zero && ty >= Fix64.Zero && tx < s.WorldSizeCm && ty < s.WorldSizeCm
             ? CellCoord(ty, s.NavCellSizeCm) * s.NavN + CellCoord(tx, s.NavCellSizeCm)
             : -1;
-        // 槽位在地面(目标层)才算数;桥面上只跟流场
+        // 槽位在底层(目标层)才算数;在上层只跟流场
         bool slotOk = !converge && lv == 0 && sc >= 0 && pass[sc] == 1 && nav.Comp[sc] == g.GoalComp;
 
         if (!slotOk)
@@ -189,7 +187,7 @@ public static class CrowdIntents
         else if (g.LosAll || (int)(session.Units.HandleAt(i) + (uint)k.Tick) % s.Every == 0)
         {
             Fix64 sightIn = Fix64.Max(k.SlotSightNavCells, Fix64.FromInt(order?.ReachCells ?? 1));
-            Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresis : sightIn;
+            Fix64 lim = state.Mode != 0 ? sightIn * k.SightHysteresisScale : sightIn;
             int scx = sc % s.NavN, scy = sc / s.NavN;
             bool vis = Fix64.Abs(Fix64.FromInt(scx - cx)) <= lim && Fix64.Abs(Fix64.FromInt(scy - cy)) <= lim
                 && NavGridSteps.LineOfSight(pass, s.NavN, cell, sc);
@@ -199,7 +197,7 @@ public static class CrowdIntents
                 Fix64 ra = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, px, py, cell, 0);
                 Fix64 rb = CrowdFlowSample.RouteLength(flow, s.NavN, session.Config.NavCellSizeCm, tx, ty, sc, 0);
                 if (ra < CrowdFlowSample.Unreachable / 4 && rb < CrowdFlowSample.Unreachable / 4 &&
-                    ra - rb > CrowdFix.Hypot(tx - px, ty - py) / s.Cs * RouteRatio + Fix64.OneValue)
+                    ra - rb > Fix64.DivPositiveInt(CrowdFix.Hypot(tx - px, ty - py), s.NavCellSizeCm) * RouteRatio + Fix64.OneValue)
                 {
                     vis = false;
                 }
@@ -218,7 +216,7 @@ public static class CrowdIntents
         Fix64 slotDist = CrowdFix.Hypot(ox2, oy2);
         if (w > Fix64.Zero)
         {
-            if (leader.Done && w > k.BlendCommit && slotDist < s.ArriveSlot)
+            if (leader.Done && w > k.BlendCommitRatio && slotDist < s.ArriveSlot)
             {
                 arrived = true;
             }
@@ -226,7 +224,7 @@ public static class CrowdIntents
             {
                 // 槽位跟踪:领队速度前馈 + 比例修正(无 bang-bang)
                 Fix64 sx = leader.Vx + ox2 * k.SlotGain, sy = leader.Vy + oy2 * k.SlotGain;
-                Fix64 cap = spd * k.CatchUp, m2 = sx * sx + sy * sy;
+                Fix64 cap = spd * k.CatchUpSpeedRatio, m2 = sx * sx + sy * sy;
                 if (m2 > cap * cap)
                 {
                     Fix64 scale = cap / Fix64Math.Sqrt(m2);
@@ -252,8 +250,9 @@ public static class CrowdIntents
                     return;
                 }
 
-                k.OnStray?.Invoke(g.Id, cell);
-                // 场外时朝领队当前位置的方向,速度用本单位巡航速度
+                p.Stray = 1;
+                p.StrayCell = cell;
+                // 场外时朝领队当前位置的方向,速度用本单位巡航速度。扩展答复落地前一直这样走。
                 Fix64 lx = leader.XCm - px, ly = leader.YCm - py;
                 Fix64 ld = CrowdFix.Hypot(lx, ly);
                 if (ld > Fix64.FromFloat(1e-6f))
@@ -262,7 +261,7 @@ public static class CrowdIntents
                     dvy += (ly / ld) * spd * (Fix64.OneValue - w);
                 }
             }
-            else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommit)
+            else if (!slotOk && route <= k.GoalArriveNavCells && w < k.BlendCommitRatio)
             {
                 arrived = true; // 槽位无效且路线短、混合权重低时,按目标格到达
             }
@@ -315,6 +314,7 @@ public static class CrowdIntents
     private static void CommitProposal(CrowdMovementKernel k, int i)
     {
         ref var p = ref k.Proposals[i];
+        if (p.Stray != 0) k.OnStray?.Invoke(p.State.GroupId, p.StrayCell);
         if ((p.Flags & IntentProposal.NeedsContact) != 0 &&
             CrowdContact.TouchesRestingPeer(k.Hash, k, i, k.MaxScan))
         {
@@ -343,8 +343,8 @@ public static class CrowdIntents
 
     private static Fix64 Square(Fix64 v) => v * v;
 
-    /// <summary>落点保底是链接末端格心,且必须可走;保不住就不跳。</summary>
-    private static bool TryStartJump(
+    /// <summary>落点保底是链接末端格心,且必须可走;保不住就不穿越。</summary>
+    private static bool TryStartLinkTraversal(
         ref CrowdSimulationUnitState state, ref CrowdSimulationKinematics kin,
         NavLinkSet links, int linkIndex, NavContext nav, int navCellsPerSide, int navCellSizeCm, Fix64Vec2 pos)
     {
@@ -361,11 +361,11 @@ public static class CrowdIntents
             ty = (Fix64.FromInt(b / navCellsPerSide) + Fix64.HalfValue) * navCellCm;
         }
 
-        state.State = (byte)CrowdUnitState.Jump;
+        state.State = (byte)CrowdUnitState.Traversing;
         kin.RestCm = new Fix64Vec2(px, py);
-        kin.JumpToCm = new Fix64Vec2(tx, ty);
-        kin.JumpT = Fix64.Zero;
-        kin.JumpLengthCm = Fix64.Max(Fix64.FromFloat(1e-3f), Fix64Math.Sqrt(Square(tx - px) + Square(ty - py)));
+        kin.LinkToCm = new Fix64Vec2(tx, ty);
+        kin.LinkT = Fix64.Zero;
+        kin.LinkLengthCm = Fix64.Max(Fix64.FromFloat(1e-3f), Fix64Math.Sqrt(Square(tx - px) + Square(ty - py)));
         return true;
     }
 }
@@ -378,4 +378,6 @@ internal struct IntentProposal
     public Fix64 IntentX;
     public Fix64 IntentY;
     public byte Flags;
+    public byte Stray;
+    public int StrayCell;
 }

@@ -1,13 +1,15 @@
 {
   "name": "CrowdSimulationS4DeployMod",
   "version": "0.4.0",
-  "description": "CrowdSimulation S4 部署演示(种子 1337,交互版):进图自动按规范脚本部署 12000 单位并到点自动回放对拍;HUD 上屏 tick/单位状态分布/重烘报告/回放结论,V 巡回流场/可走/NavMesh 视图,B 建造 X 拆除(1/2/3 切模板,足迹红绿预览),重烘脏 tile 闪烁,进入交互后自动回放停用。脚本含迷雾命令(reveal/obscure/forget/fogTerrain),单位按认知改道。调试 HUD 按下标读玩家 1 的可见、探索、残影，字符串是 fogCells vis/explored/ghost。没有黑板键，没有认知计数，没有单独的迷雾绘制。",
+  "description": "S4 部署交互演示（种子 1337）：开局按规则部署单位，带自动回放对拍、建造/迷雾脚本与完整调试 HUD。键位与工具说明见 gitbook/architecture/crowdsimulation-showcases.md 的「S4 部署演示」。",
 
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
     "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
     "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
     "CrowdSimulationS1Terrain1337Mod": "^0.1.0"
   },
   "author": "Ludots Team",

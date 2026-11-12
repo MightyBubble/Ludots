@@ -83,7 +83,7 @@ namespace DiagnosticsOverlayMod.Systems
             if (_turnBasedMode)
             {
                 var tbColor = new Vector4(1f, 0.9f, 0.2f, 1f);
-                overlay.AddText(20, 56, $"[TURN-BASED] Turn #{_turnCount}  |  Space=Step  F8=Switch to Realtime", 16, tbColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, 20, 56, $"[TURN-BASED] Turn #{_turnCount}  |  Space=Step  F8=Switch to Realtime", 16, tbColor);
             }
 
             switch (_activePanel)
@@ -278,13 +278,13 @@ namespace DiagnosticsOverlayMod.Systems
             int startX = 20;
             int startY = 80;
 
-            overlay.AddRect(startX, startY, panelWidth, panelHeight, bg, border);
-            overlay.AddText(startX + padding, startY + padding, $"[{title}]", 16, titleColor);
+            overlay.AddRect(PresentationOverlayLayer.TopMost, startX, startY, panelWidth, panelHeight, bg, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, startY + padding, $"[{title}]", 16, titleColor);
 
             int y = startY + padding + lineHeight + 4;
             for (int i = 0; i < lines.Length; i++)
             {
-                overlay.AddText(startX + padding, y, lines[i], 14, textColor);
+                overlay.AddText(PresentationOverlayLayer.TopMost, startX + padding, y, lines[i], 14, textColor);
                 y += lineHeight;
             }
         }
@@ -327,14 +327,14 @@ namespace DiagnosticsOverlayMod.Systems
             var title = new Vector4(1f, 0.95f, 0.4f, 1f);
             var text = new Vector4(0.9f, 0.95f, 1f, 1f);
 
-            overlay.AddRect(x, y, w, h, bg, border);
-            overlay.AddText(x + 10, y + 8, $"Runtime HUD | FPS={fps}", 16, title);
-            overlay.AddText(x + 10, y + 30, $"VertexMap: {vertexMapStatus} | Primitives: {primitives} (Dropped: {primitivesDropped}) | WorldPositionCm: {wpCount}", 14, text);
-            overlay.AddText(x + 10, y + 50, $"Camera: Target=({camera.TargetCm.X:F0},{camera.TargetCm.Y:F0})cm Pitch={camera.Pitch:F1} Dist={camera.DistanceCm:F0}cm", 14, text);
-            overlay.AddText(x + 10, y + 70, $"Scale: Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m", 14, text);
-            overlay.AddText(x + 10, y + 92, $"F9 Terrain[{OnOff(renderDebugState.DrawTerrain)}]  F10 Primitive[{OnOff(renderDebugState.DrawPrimitives)}]", 14, text);
-            overlay.AddText(x + 10, y + 112, $"F11 DebugDraw[{OnOff(renderDebugState.DrawDebugDraw)}]  F12 SkiaUI[{OnOff(renderDebugState.DrawSkiaUi)}]", 14, text);
-            overlay.AddText(x + 10, y + 132, "F5 Config | F6 Mods | F7 Attributes | F8 TurnBased", 13, new Vector4(0.7f, 0.8f, 0.9f, 0.95f));
+            overlay.AddRect(PresentationOverlayLayer.TopMost, x, y, w, h, bg, border);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 8, $"Runtime HUD | FPS={fps}", 16, title);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 30, $"VertexMap: {vertexMapStatus} | Primitives: {primitives} (Dropped: {primitivesDropped}) | WorldPositionCm: {wpCount}", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 50, $"Camera: Target=({camera.TargetCm.X:F0},{camera.TargetCm.Y:F0})cm Pitch={camera.Pitch:F1} Dist={camera.DistanceCm:F0}cm", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 70, $"Scale: Grid=1.00m | HexWidth={HexCoordinates.HexWidth:F3}m | RowSpacing={HexCoordinates.RowSpacing:F3}m", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 92, $"F9 Terrain[{OnOff(renderDebugState.DrawTerrain)}]  F10 Primitive[{OnOff(renderDebugState.DrawPrimitives)}]", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 112, $"F11 DebugDraw[{OnOff(renderDebugState.DrawDebugDraw)}]  F12 SkiaUI[{OnOff(renderDebugState.DrawSkiaUi)}]", 14, text);
+            overlay.AddText(PresentationOverlayLayer.TopMost, x + 10, y + 132, "F5 Config | F6 Mods | F7 Attributes | F8 TurnBased", 13, new Vector4(0.7f, 0.8f, 0.9f, 0.95f));
         }
 
         private static string OnOff(bool enabled) => enabled ? "ON" : "OFF";

@@ -40,6 +40,11 @@ LOCAL_ONLY_REASON = (
     "requires a real OpenGL/WGL window context; GitHub windows runner has no GL driver, "
     "so headless execution crashes in raylib InitWindow"
 )
+# CrowdSimulation authoring 云端门禁：T1 以外、但必须在 solution-verify 跑 TestCategory 切片的 showcase。
+CROWD_AUTHORING_GATE_IDS = frozenset({
+    "crowd_simulation_minimal",
+})
+
 LOCAL_ONLY_IDS = frozenset({
     "engine_raylib_atmosphere_fog",
     "engine_raylib_composition",
@@ -78,6 +83,29 @@ def load_registry(path: Path) -> dict:
         return json.load(f)
 
 
+def build_crowd_authoring_gates(registry: dict) -> list:
+    by_id = {entry.get("id"): entry for entry in registry.get("showcases", [])}
+    gates = []
+    for entry_id in sorted(CROWD_AUTHORING_GATE_IDS):
+        entry = by_id.get(entry_id)
+        if entry is None:
+            raise ValueError(f"CROWD_AUTHORING_GATE_IDS 含未知 showcase id: {entry_id}")
+        acceptance_test = (entry.get("acceptanceTest") or "").strip()
+        if not acceptance_test:
+            raise ValueError(f"{entry_id}: crowd authoring 门禁要求注册表填写 acceptanceTest")
+        gates.append(
+            {
+                "id": entry_id,
+                "mapId": "crowd_minimal" if entry_id == "crowd_simulation_minimal" else None,
+                "binding": entry.get("binding") or None,
+                "preset": entry.get("preset") or None,
+                "testCategory": "crowd-authoring",
+                "testFilter": acceptance_test,
+            }
+        )
+    return gates
+
+
 def build_index(registry: dict) -> tuple:
     """返回 (index, skipped_ids)。skipped 为 T1 active 但既无 preset 也无 acceptanceTest 的条目。"""
     runnable = []
@@ -114,6 +142,8 @@ def build_index(registry: dict) -> tuple:
     test_only.sort(key=lambda x: x["id"])
     local_only.sort(key=lambda x: x["id"])
 
+    crowd_authoring_gates = build_crowd_authoring_gates(registry)
+
     index = {
         "schemaVersion": SCHEMA_VERSION,
         "source": "showcase.registry.json",
@@ -122,11 +152,13 @@ def build_index(registry: dict) -> tuple:
             "runnable": len(runnable),
             "testOnly": len(test_only),
             "localOnly": len(local_only),
-            "total": len(runnable) + len(test_only) + len(local_only),
+            "crowdAuthoringGates": len(crowd_authoring_gates),
+            "total": len(runnable) + len(test_only) + len(local_only) + len(crowd_authoring_gates),
         },
         "runnable": runnable,
         "testOnly": test_only,
         "localOnly": local_only,
+        "crowdAuthoringGates": crowd_authoring_gates,
     }
     return index, skipped
 

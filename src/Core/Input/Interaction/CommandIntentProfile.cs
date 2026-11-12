@@ -91,7 +91,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>Merged root of <c>Input/command_intent_profiles.json</c>.</summary>
     public sealed class CommandIntentProfilesConfig
     {
-        public List<CommandIntentProfileDefinition> Profiles { get; set; }
+        public Dictionary<string, CommandIntentProfileDefinition> Profiles { get; set; }
     }
 
     /// <summary>One pointer-intent routing profile (RFC-0065 §5.11). Strings live only in JSON.</summary>

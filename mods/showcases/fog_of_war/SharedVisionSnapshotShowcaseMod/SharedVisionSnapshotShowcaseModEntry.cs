@@ -10,9 +10,10 @@ public sealed class SharedVisionSnapshotShowcaseModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        var runtime = new FogShowcaseRuntime(FogShowcaseScenario.Create(
+        var runtime = FogShowcaseRuntime.Load(
+            context,
             FogShowcaseKind.SharedVisionSnapshot,
-            "SharedVisionSnapshotShowcaseMod"));
+            "SharedVisionSnapshotShowcaseMod");
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

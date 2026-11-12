@@ -1,0 +1,23 @@
+{
+  "name": "CrowdSimulationFogAllyVisionShowcaseMod",
+  "version": "0.1.0",
+  "description": "共享视野演示：玩家 1 和盟友玩家 3 各 12 人站在一起，东边 15 格有一栋建筑，西边有一个敌人，都在视野外。只有盟友走去看建筑，玩家 1 原地不动，画面上照样出现这栋建筑。盟友再往西走，路过时把敌人也照出来。盟友走远后建筑被拆掉，玩家 1 这边留着残影，敌方视野组不受影响；盟友回去看一眼，残影才消失。框选、右键下令照常可用。",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CrowdSimulationMod": "^1.0.0",
+    "CrowdSimulationUiMod": "^1.0.0",
+    "CrowdSimulationStandardMod": "^1.0.0",
+    "CrowdSimulationDemoContentMod": "^1.0.0",
+    "CrowdSimulationS1Terrain1337Mod": "^0.1.0",
+    "CrowdSimulationShowcaseStageMod": "^0.1.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "crowd_simulation",
+    "c03",
+    "fog",
+    "shared_vision"
+  ]
+}

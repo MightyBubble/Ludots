@@ -4,18 +4,21 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 
 // https://vite.dev/config/
+const editorPort = Number(process.env.LUDOTS_EDITOR_PORT || 5173);
+const editorBridge = process.env.LUDOTS_EDITOR_BRIDGE_URL || 'http://localhost:5299';
+
 export default defineConfig({
   server: {
     host: 'localhost',
-    port: 5173,
+    port: editorPort,
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5299',
+        target: editorBridge,
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://localhost:5299',
+        target: editorBridge,
         changeOrigin: true,
       },
       '/agent-bridge': {

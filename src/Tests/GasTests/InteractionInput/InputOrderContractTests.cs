@@ -467,8 +467,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     options)
                 ?? throw new InvalidOperationException("Default command intent profile config failed to parse.");
 
-            CommandIntentProfileDefinition profile = config.Profiles.Single(p =>
-                string.Equals(p.Id, "intent.command.default", StringComparison.Ordinal));
+            Assert.That(config.Profiles.ContainsKey("intent.command.default"), Is.True);
+            CommandIntentProfileDefinition profile = config.Profiles["intent.command.default"];
             Assert.That(
                 profile.Rules.Any(rule =>
                     rule.Target?.HasEntity == false &&

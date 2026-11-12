@@ -1,0 +1,15 @@
+{
+  "script": [
+    {
+      "tick": 0,
+      "cmd": {
+        "type": "spawnAt",
+        "player": 1,
+        "xCm": 803125,
+        "yCm": 803125,
+        "count": 120,
+        "template": "crowd_simulation.unit.infantry.r100"
+      }
+    }
+  ]
+}

@@ -1,8 +1,10 @@
 using System;
 using Arch.Core;
+using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -291,14 +293,20 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RelationshipQuery_RequireComplete_ThrowsWhenOutgoingExceedsMaxTargets()
+        public void RelationshipQuery_RequireComplete_GrowsPastMaxTargets()
         {
             using var world = World.Create();
             RelationshipRuntime runtime = CreateRelationshipRuntime(world, out int typeId);
-            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+            var queries = new EntitySetQueryRuntime(
+                world,
+                new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry()),
+                runtime,
+                new TeamRelationQuery(runtime, new TeamEntityLookup()));
+            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime, entityQueries: queries);
             Entity source = world.Create();
             int extra = 3;
-            for (int i = 0; i < GraphVmLimits.MaxTargets + extra; i++)
+            int total = GraphVmLimits.MaxTargets + extra;
+            for (int i = 0; i < total; i++)
             {
                 runtime.EnsureLink(source, world.Create(), typeId);
             }
@@ -311,19 +319,43 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
             };
 
-            InvalidOperationException? ex = null;
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+
+            That(state.TargetList.Count, Is.EqualTo(total));
+        }
+
+        [Test]
+        public void RelationshipQuery_Incoming_OverMaxTargets_ThrowsIncomplete()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRelationshipRuntime(world, out int typeId);
+            var api = new GasGraphRuntimeApi(world, relationshipRuntime: runtime);
+            Entity source = world.Create();
+            for (int i = 0; i < GraphVmLimits.MaxTargets + 1; i++)
+            {
+                runtime.EnsureLink(world.Create(), source, typeId);
+            }
+
+            GraphExecutionState state = CreateGraphState(world, api, source);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.RelationshipQueryIncoming, A = 0, Dst = (byte)typeId, Flags = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+            };
+
+            InvalidOperationException? error = null;
             try
             {
                 GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             }
             catch (InvalidOperationException caught)
             {
-                ex = caught;
+                error = caught;
             }
 
-            That(ex, Is.Not.Null);
-            That(ex!.Message, Does.Contain("GAS.GRAPH.ERR.RelationshipQueryIncomplete"));
-            That(ex.Message, Does.Contain($"dropped={extra}"));
+            That(error, Is.Not.Null);
+            That(error!.Message, Does.Contain("RelationshipQueryIncomplete"));
         }
 
         [Test]

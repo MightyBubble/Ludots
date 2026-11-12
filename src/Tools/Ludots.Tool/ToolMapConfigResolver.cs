@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Map.Board;
 
@@ -15,6 +17,9 @@ namespace Ludots.Tool
         {
             PropertyNameCaseInsensitive = true
         };
+
+        private static readonly HashSet<string> MapPropertyNames = JsonPropertyNames(typeof(MapConfig));
+        private static readonly HashSet<string> BoardPropertyNames = JsonPropertyNames(typeof(BoardConfig));
 
         public static MapConfig LoadMap(string repoRoot, string mapId, string? targetModId = null)
         {
@@ -283,7 +288,7 @@ namespace Ludots.Tool
                         throw new InvalidOperationException($"Map config '{path}' could not be deserialized.");
                     }
 
-                    RejectLegacyWorldExtentKeys(path);
+                    RejectUnknownMapKeys(path);
                     MergeMap(merged, source);
                     foundAny = true;
                 }
@@ -402,7 +407,7 @@ namespace Ludots.Tool
             yield return Path.Combine(rootPath, "assets", "Maps", $"{mapId}.json");
         }
 
-        private static void RejectLegacyWorldExtentKeys(string path)
+        private static void RejectUnknownMapKeys(string path)
         {
             JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
             if (node is not JsonObject root)
@@ -410,40 +415,45 @@ namespace Ludots.Tool
                 return;
             }
 
-            if (ContainsKey(root, "WidthInTiles") || ContainsKey(root, "HeightInTiles") ||
-                ContainsKey(root, "WidthInPages") || ContainsKey(root, "HeightInPages"))
-            {
-                throw new InvalidOperationException(
-                    $"Map config '{path}' uses legacy tile-count world keys. Use Boards[].WidthCm/HeightCm; the root board anchor world is the Ludots origin.");
-            }
-
+            RejectUnknown(root, MapPropertyNames, $"Map config '{path}'");
             if (TryGetObjectArray(root, "boards", out JsonArray? boards) && boards != null)
             {
                 for (int i = 0; i < boards.Count; i++)
                 {
-                    JsonNode? boardNode = boards[i];
-                    if (boardNode is JsonObject board &&
-                        (ContainsKey(board, "WidthInTiles") || ContainsKey(board, "HeightInTiles") ||
-                         ContainsKey(board, "WidthInPages") || ContainsKey(board, "HeightInPages")))
+                    if (boards[i] is JsonObject board)
                     {
-                        throw new InvalidOperationException(
-                            $"Map config '{path}' board[{i}] uses legacy tile-count extent keys. Use Boards[].WidthCm/HeightCm and Anchor.");
+                        RejectUnknown(board, BoardPropertyNames, $"Map config '{path}' board[{i}]");
                     }
                 }
             }
         }
 
-        private static bool ContainsKey(JsonObject obj, string key)
+        private static void RejectUnknown(JsonObject obj, HashSet<string> allowed, string where)
         {
             foreach (KeyValuePair<string, JsonNode?> kvp in obj)
             {
-                if (string.Equals(kvp.Key, key, StringComparison.OrdinalIgnoreCase))
+                if (!allowed.Contains(kvp.Key))
                 {
-                    return true;
+                    throw new InvalidOperationException($"{where} contains unknown property '{kvp.Key}'.");
                 }
             }
+        }
 
-            return false;
+        private static HashSet<string> JsonPropertyNames(Type type)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
+            {
+                if (property.GetCustomAttribute<JsonIgnoreAttribute>() != null)
+                {
+                    continue;
+                }
+
+                JsonPropertyNameAttribute? named = property.GetCustomAttribute<JsonPropertyNameAttribute>();
+                names.Add(named?.Name ?? property.Name);
+            }
+
+            return names;
         }
 
         private static bool TryGetObjectArray(JsonObject obj, string key, out JsonArray? array)

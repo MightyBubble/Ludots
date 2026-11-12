@@ -1,0 +1,70 @@
+[
+  {
+    "id": "ptree.text.title_line",
+    "argCount": 1
+  },
+  {
+    "id": "ptree.title.a1",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.a2",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.a3",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.a4",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.a5",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.cart_inner",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.cart_outer",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.rider",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.knight",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.camp_north",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.camp_harbor",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.tent_north",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.tent_harbor",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.beacon_red",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.beacon_green",
+    "argCount": 0
+  },
+  {
+    "id": "ptree.title.beacon_blue",
+    "argCount": 0
+  }
+]

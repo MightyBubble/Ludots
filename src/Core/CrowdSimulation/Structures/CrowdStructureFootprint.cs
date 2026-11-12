@@ -8,13 +8,13 @@ namespace Ludots.Core.CrowdSimulation.Structures;
 
 public enum CrowdStructureShape
 {
-    Rect,
+    Square,
     Disc,
     Path,
 }
 
 /// <summary>
-/// 厘米、Fix64。rect 是半边长轴对齐盒，disc 是圆盘，path 是无圆角的条带。
+/// 厘米、Fix64。square 是半边长轴对齐盒，disc 是圆盘，path 是无圆角的条带。
 /// 区域重标用格心 Covers，阻挡用格覆盖份额。
 /// </summary>
 public readonly struct CrowdStructureFootprint
@@ -34,28 +34,27 @@ public readonly struct CrowdStructureFootprint
     public static CrowdStructureFootprint Make(RuntimeStructureTemplate tpl, Fix64 xCm, Fix64 yCm, Fix64 sizeCm, Fix64 toXCm, Fix64 toYCm) =>
         tpl.Footprint switch
         {
-            "rect" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Rect, CenterXCm = xCm, CenterYCm = yCm, Hx = sizeCm / 2, Hy = sizeCm / 2 },
-            "disc" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Disc, CenterXCm = xCm, CenterYCm = yCm, RadiusCm = sizeCm },
-            "path" => new CrowdStructureFootprint { Shape = CrowdStructureShape.Path, X0 = xCm, Y0 = yCm, X1 = toXCm, Y1 = toYCm, WidthCm = sizeCm },
-            _ => throw new InvalidOperationException($"结构模板 {tpl.Id} 的足迹形状 \"{tpl.Footprint}\" 需为 rect / disc / path。"),
+            CrowdStructureShape.Square => new CrowdStructureFootprint { Shape = CrowdStructureShape.Square, CenterXCm = xCm, CenterYCm = yCm, Hx = sizeCm / 2, Hy = sizeCm / 2 },
+            CrowdStructureShape.Disc => new CrowdStructureFootprint { Shape = CrowdStructureShape.Disc, CenterXCm = xCm, CenterYCm = yCm, RadiusCm = sizeCm },
+            _ => new CrowdStructureFootprint { Shape = CrowdStructureShape.Path, X0 = xCm, Y0 = yCm, X1 = toXCm, Y1 = toYCm, WidthCm = sizeCm },
         };
 
     /// <summary>包围盒 (minX, minY, maxX, maxY),厘米。</summary>
     public (Fix64 MinX, Fix64 MinY, Fix64 MaxX, Fix64 MaxY) Bbox() => Shape switch
     {
-        CrowdStructureShape.Rect => (CenterXCm - Hx, CenterYCm - Hy, CenterXCm + Hx, CenterYCm + Hy),
+        CrowdStructureShape.Square => (CenterXCm - Hx, CenterYCm - Hy, CenterXCm + Hx, CenterYCm + Hy),
         CrowdStructureShape.Disc => (CenterXCm - RadiusCm, CenterYCm - RadiusCm, CenterXCm + RadiusCm, CenterYCm + RadiusCm),
         _ => (Fix64.Min(X0, X1) - WidthCm / 2, Fix64.Min(Y0, Y1) - WidthCm / 2, Fix64.Max(X0, X1) + WidthCm / 2, Fix64.Max(Y0, Y1) + WidthCm / 2),
     };
 
     /// <summary>按 span 的厘米端点原样落成 path。本仓库不延长。</summary>
-    public static CrowdStructureFootprint Bridge(CrowdSimulationBridgeSpan span) => new()
+    public static CrowdStructureFootprint FromPathSpan(CrowdSimulationPathSpan span) => new()
     {
         Shape = CrowdStructureShape.Path,
-        X0 = Fix64.FromInt(span.X0Cm),
-        Y0 = Fix64.FromInt(span.Y0Cm),
-        X1 = Fix64.FromInt(span.X1Cm),
-        Y1 = Fix64.FromInt(span.Y1Cm),
+        X0 = Fix64.FromInt(span.FromXCm),
+        Y0 = Fix64.FromInt(span.FromYCm),
+        X1 = Fix64.FromInt(span.ToXCm),
+        Y1 = Fix64.FromInt(span.ToYCm),
         WidthCm = Fix64.FromInt(span.WidthCm),
     };
 
@@ -64,11 +63,14 @@ public readonly struct CrowdStructureFootprint
     {
         switch (Shape)
         {
-            case CrowdStructureShape.Rect:
+            case CrowdStructureShape.Square:
                 return Fix64.Abs(px - CenterXCm) <= Hx && Fix64.Abs(py - CenterYCm) <= Hy;
             case CrowdStructureShape.Disc:
-                Fix64 dx = px - CenterXCm, dy = py - CenterYCm;
-                return dx * dx + dy * dy <= RadiusCm * RadiusCm;
+                // Q31.32 的平方大约在 46340 厘米溢出，斜向远处会比成圆内。
+                Int128 ddx = (Int128)px.RawValue - CenterXCm.RawValue;
+                Int128 ddy = (Int128)py.RawValue - CenterYCm.RawValue;
+                Int128 radiusRaw = RadiusCm.RawValue;
+                return ddx * ddx + ddy * ddy <= radiusRaw * radiusRaw;
             default:
                 Fix64 ax = X1 - X0, ay = Y1 - Y0;
                 Fix64 length = CrowdFix.Hypot(ax, ay);

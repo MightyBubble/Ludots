@@ -28,7 +28,31 @@ namespace Ludots.Tests.Architecture
             foreach (string line in File.ReadLines(file))
             {
                 lineNumber++;
-                yield return (lineNumber, StripCSharpCommentsAndStrings(line, ref inBlockComment, ref inVerbatimString, ref rawStringQuoteCount));
+                yield return (lineNumber, StripCSharpCommentsAndStrings(line, ref inBlockComment, ref inVerbatimString, ref rawStringQuoteCount, comments: null));
+            }
+        }
+
+        public static IEnumerable<(int LineNumber, string CommentText)> ReadCommentSegments(string file)
+        {
+            if (!string.Equals(Path.GetExtension(file), ".cs", StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            bool inBlockComment = false;
+            bool inVerbatimString = false;
+            int rawStringQuoteCount = 0;
+            int lineNumber = 0;
+            var comments = new StringBuilder();
+            foreach (string line in File.ReadLines(file))
+            {
+                lineNumber++;
+                comments.Clear();
+                StripCSharpCommentsAndStrings(line, ref inBlockComment, ref inVerbatimString, ref rawStringQuoteCount, comments);
+                if (comments.Length > 0)
+                {
+                    yield return (lineNumber, comments.ToString());
+                }
             }
         }
 
@@ -36,7 +60,8 @@ namespace Ludots.Tests.Architecture
             string line,
             ref bool inBlockComment,
             ref bool inVerbatimString,
-            ref int rawStringQuoteCount)
+            ref int rawStringQuoteCount,
+            StringBuilder? comments)
         {
             var output = new StringBuilder(line.Length);
             int index = 0;
@@ -47,10 +72,12 @@ namespace Ludots.Tests.Architecture
                     int end = line.IndexOf("*/", index, StringComparison.Ordinal);
                     if (end < 0)
                     {
+                        comments?.Append(line, index, line.Length - index);
                         AppendSpaces(output, line.Length - index);
                         break;
                     }
 
+                    comments?.Append(line, index, end - index).Append(' ');
                     AppendSpaces(output, end + 2 - index);
                     index = end + 2;
                     inBlockComment = false;
@@ -89,6 +116,7 @@ namespace Ludots.Tests.Architecture
 
                 if (index + 1 < line.Length && line[index] == '/' && line[index + 1] == '/')
                 {
+                    comments?.Append(line, index + 2, line.Length - index - 2);
                     AppendSpaces(output, line.Length - index);
                     break;
                 }

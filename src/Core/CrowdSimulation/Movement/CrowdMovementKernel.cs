@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.CrowdSimulation.Runtime;
 using Ludots.Core.CrowdSimulation.Units;
 using Schedulers;
 
@@ -17,12 +19,12 @@ public sealed class CrowdMovementKernel
     public Fix64Vec2[] Intent = Array.Empty<Fix64Vec2>();
     /// <summary>
     /// 避让分离推力(厘米;每子步由分离求解写入,马达读)。
-    /// 按下标对齐稠密行,GatherUnits 不重读。将来若有退场,必须和稠密行同一次交换搬走,并且退场只能有这一个入口。
+    /// 按下标对齐稠密行,GatherUnits 不重读。退场只走 CrowdSimUnits.ReleaseDense,同一次用 MoveAvoidanceRow 把末行换到空位。
     /// </summary>
     public Fix64Vec2[] Separation = Array.Empty<Fix64Vec2>();
     /// <summary>
     /// 静/动分界:1 = 上次解出的推力低于 restDeadband(睡);新生单位 0(必醒)。
-    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时随同一次交换搬走。
+    /// 与 Separation 一样按下标对齐稠密行并活过 GatherUnits,退场时由 MoveAvoidanceRow 换走。
     /// </summary>
     public byte[] Calm = Array.Empty<byte>();
     /// <summary>哈希序聚集缓冲(分离求解的逐格读取面)。</summary>
@@ -45,7 +47,8 @@ public sealed class CrowdMovementKernel
     // chunk 查询按原型分块,没有跨 chunk 的连续 Span,查询序也不是稠密序(模板组件集可以不同)。
     // 每个 tick 用下面的查询把列扫进 SoA,子步只碰 SoA,tick 末按槽位映回的下标写回 chunk。
     private readonly QueryDescription _unitColumns = new QueryDescription()
-        .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>();
+        .WithAll<CrowdSimulation.Units.CrowdSimulationUnitState, CrowdSimulation.Units.CrowdSimulationKinematics, Ludots.Core.Components.WorldPositionCm, CrowdSimulationAgent, Ludots.Core.Gameplay.Components.PlayerOwner>()
+        .WithNone<Ludots.Core.Presentation.Components.PresentationDestroyPending>();
     public CrowdSimulation.Units.CrowdSimulationUnitState[] States = Array.Empty<CrowdSimulation.Units.CrowdSimulationUnitState>();
     public CrowdSimulation.Units.CrowdSimulationKinematics[] Kins = Array.Empty<CrowdSimulation.Units.CrowdSimulationKinematics>();
     /// <summary>位置(厘米);gather 后由马达子步持续更新,scatter 落回组件。</summary>
@@ -82,7 +85,7 @@ public sealed class CrowdMovementKernel
 
     // 参数来自 formation、movement 与 avoidance。slotGain = 1/slotTimeConstantSec。
     public required Fix64 BlendRate { get; init; }
-    public required Fix64 BlendCommit { get; init; }
+    public required Fix64 BlendCommitRatio { get; init; }
     public required int SlotCheckInterval { get; init; }
     public required Fix64 WakeDistanceNavCells { get; init; }
     public required Fix64 SlotArriveNavCells { get; init; }
@@ -91,11 +94,11 @@ public sealed class CrowdMovementKernel
     public required Fix64 StallDecay { get; init; }
     public required Fix64 SettleTimeSeconds { get; init; }
     public required Fix64 SlotSightNavCells { get; init; }
-    public required Fix64 SightHysteresis { get; init; }
+    public required Fix64 SightHysteresisScale { get; init; }
     public required Fix64 LaneSpreadSpeedRatio { get; init; }
     public required Fix64 GoalArriveNavCells { get; init; }
     public required Fix64 SlotGain { get; init; }
-    public required Fix64 CatchUp { get; init; }
+    public required Fix64 CatchUpSpeedRatio { get; init; }
     public required Fix64 Accel { get; init; }
     public required Fix64 RestAccelScale { get; init; }
     public required Fix64 RestSeparationScale { get; init; }
@@ -105,20 +108,30 @@ public sealed class CrowdMovementKernel
     public required int MaxNeighbors { get; init; }
     /// <summary>单单位单次求解的推力上限(无量纲)。</summary>
     public required Fix64 MaxPush { get; init; }
-    public required Fix64 Smoothing { get; init; }
-    public required Fix64 MovingBonus { get; init; }
+    public required Fix64 SmoothingRatio { get; init; }
+    public required Fix64 MovingPriorityBonus { get; init; }
     public required Fix64 DominantShare { get; init; }
     public required Fix64 UnitTurnRate { get; init; }
     public required Fix64 StopSpeedRatio { get; init; }
     public required Fix64 SpeedCapRatio { get; init; }
-    public required Fix64 JumpSpeedRatio { get; init; }
-    public required Fix64 LeaderSpeed { get; init; }
+    public required Fix64 LinkSpeedRatio { get; init; }
+    public required Fix64 LeaderSpeedRatio { get; init; }
     public required Fix64 LeaderTurnRate { get; init; }
     public required Fix64 FaceTurnScale { get; init; }
     public required Fix64 TurnEpsRad { get; init; }
 
-    /// <summary>场外时回调。当前没有走廊扩展;场外转向见意图层。</summary>
-    public Action<int, int>? OnStray { get; init; }
+    private Fix64[] _prevVx = Array.Empty<Fix64>();
+    private Fix64[] _prevVy = Array.Empty<Fix64>();
+    private sbyte[] _steer = Array.Empty<sbyte>();
+    private int _sampleCursor;
+    private double _headingSum;
+    private int _headingCount;
+    private int _flips;
+    private int _steerPairs;
+    private double _sinEps2 = double.NaN;
+
+    /// <summary>场外采样回调。意图提交时按稠密下标调用，不把提案计算改成串行。</summary>
+    public Action<int, int>? OnStray { get; set; }
 
     public void EnsureCapacity(int unitCapacity)
     {
@@ -132,7 +145,63 @@ public sealed class CrowdMovementKernel
         if (Speeds.Length < unitCapacity) Speeds = new Fix64[unitCapacity];
         if (PushPriorities.Length < unitCapacity) PushPriorities = new Fix64[unitCapacity];
         if (PlayerIdx.Length < unitCapacity) PlayerIdx = new int[unitCapacity];
+        if (_prevVx.Length < unitCapacity)
+        {
+            Array.Resize(ref _prevVx, unitCapacity);
+            Array.Resize(ref _prevVy, unitCapacity);
+            Array.Resize(ref _steer, unitCapacity);
+        }
+
         EnsureAvoidanceCapacity(unitCapacity);
+    }
+
+    public void BeginMotionTick()
+    {
+        _headingSum = 0;
+        _headingCount = 0;
+        _flips = 0;
+        _steerPairs = 0;
+    }
+
+    public void SampleMotion()
+    {
+        if (double.IsNaN(_sinEps2))
+        {
+            double s = Math.Sin((double)TurnEpsRad);
+            _sinEps2 = s * s;
+        }
+
+        CrowdMotionQuality.Scan(
+            Session.Units.Count, _sampleCursor,
+            States, Kins, _prevVx, _prevVy, _steer, _sinEps2,
+            ref _headingSum, ref _headingCount, ref _flips, ref _steerPairs);
+    }
+
+    public void PublishMotion()
+    {
+        _sampleCursor += CrowdSimulationLimits.MotionQualitySamplesPerTick;
+        double heading = _headingCount > 0 ? _headingSum / _headingCount : 0;
+        Session.Telemetry.SetMotion(_headingCount, heading, _flips, _steerPairs);
+    }
+
+    public void ClearMotionMemory()
+    {
+        Array.Clear(_prevVx);
+        Array.Clear(_prevVy);
+        Array.Clear(_steer);
+        _sampleCursor = 0;
+        _headingSum = 0;
+        _headingCount = 0;
+        _flips = 0;
+        _steerPairs = 0;
+    }
+
+    public void ClearMotionSlot(int slot)
+    {
+        if ((uint)slot >= (uint)_prevVx.Length) return;
+        _prevVx[slot] = default;
+        _prevVy[slot] = default;
+        _steer[slot] = 0;
     }
 
     /// <summary>tick 首:按 chunk 列收拢到稠密下标。组级备忘失效。</summary>
@@ -168,7 +237,7 @@ public sealed class CrowdMovementKernel
                 kins[dense] = kinSpan[index];
                 positions[dense] = posSpan[index].Value;
                 var agent = agentSpan[index];
-                speeds[dense] = agent.SpeedCmPerSecond;
+                speeds[dense] = agent.SpeedCmPerSec;
                 radii[dense] = agent.PersonalRadiusCm;
                 push[dense] = agent.PushPriority;
                 playerIdx[dense] = playerIndex[ownerSpan[index].PlayerId];
@@ -216,7 +285,7 @@ public sealed class CrowdMovementKernel
         var units = Session.Units;
         var world = Session.World;
         int n = units.Count;
-        int idle = 0, moving = 0, arrived = 0, unreachable = 0, jumping = 0;
+        int idle = 0, moving = 0, arrived = 0, unreachable = 0, traversing = 0;
         int contacts = 0;
         ushort[] contactCounts = Contacts;
         int contactN = contactCounts.Length;
@@ -229,7 +298,7 @@ public sealed class CrowdMovementKernel
                 case (byte)CrowdUnitState.Moving: moving++; break;
                 case (byte)CrowdUnitState.Arrived: arrived++; break;
                 case (byte)CrowdUnitState.Unreachable: unreachable++; break;
-                case (byte)CrowdUnitState.Jump: jumping++; break;
+                case (byte)CrowdUnitState.Traversing: traversing++; break;
             }
         }
 
@@ -261,7 +330,7 @@ public sealed class CrowdMovementKernel
         }
 
         ContactSum = contacts;
-        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, jumping);
+        Session.Telemetry.SetUnitStates(idle, moving, arrived, unreachable, traversing);
     }
 
     /// <summary>组级备忘:组的指令对象(指令簿只在 tick 边界变)。</summary>
@@ -326,7 +395,7 @@ public sealed class CrowdMovementKernel
         {
             if (NavStamp[gid] != GroupMemoEpoch)
             {
-                NavMemo[gid] = Session.ResolveNavContext(g.NavId);
+                NavMemo[gid] = g.Nav ?? throw new InvalidOperationException($"导航组 {gid} 没有钉住的 NavContext(槽切换后未 AttachGroupNav)。");
                 Volatile.Write(ref NavStamp[gid], GroupMemoEpoch);
             }
 
@@ -360,7 +429,10 @@ public sealed class CrowdMovementKernel
         if (length <= 0) return;
         if (length == 1 || configured == 1)
         {
-            ExecuteRange(phase, 0, length, dt);
+            long serialWorkBefore = Session.Telemetry.ReadParallelWorkTicks();
+            long serialWall0 = Stopwatch.GetTimestamp();
+            ExecuteRange(phase, 0, length, 1, dt);
+            RecordRangeParallel(phase, serialWall0, serialWorkBefore);
             return;
         }
 
@@ -381,45 +453,80 @@ public sealed class CrowdMovementKernel
             _rangeHandles = new JobHandle[workerCount];
         }
 
+        // 分离隔行求解，意图里走流场的单位比已到达的贵。连续切块会把一整段密集下标交给同一个工人。
+        // 按工人号交错取值，密集段被摊开；每个下标仍只进一个区间。
+        bool spread = phase is RangePhaseAvoidSolve or RangePhaseIntent;
         int baseCount = length / workerCount;
         int remainder = length % workerCount;
         int start = 0;
+        long workBefore = Session.Telemetry.ReadParallelWorkTicks();
+        long wall0 = Stopwatch.GetTimestamp();
         for (int w = 0; w < workerCount; w++)
         {
-            int len = baseCount + (w < remainder ? 1 : 0);
             var job = _rangeJobs[w];
             job.Kernel = this;
             job.Phase = phase;
-            job.Start = start;
-            job.End = start + len;
             job.Dt = dt;
+            if (spread)
+            {
+                job.Start = w;
+                job.End = length;
+                job.Step = workerCount;
+            }
+            else
+            {
+                int len = baseCount + (w < remainder ? 1 : 0);
+                job.Start = start;
+                job.End = start + len;
+                job.Step = 1;
+                start += len;
+            }
+
             _rangeHandles[w] = scheduler.Schedule(job);
-            start += len;
         }
 
         scheduler.Flush();
         for (int w = 0; w < workerCount; w++) _rangeHandles[w].Complete();
+        RecordRangeParallel(phase, wall0, workBefore);
     }
 
-    private void ExecuteRange(int phase, int start, int end, Fix64 dt)
+    private void RecordRangeParallel(int phase, long wall0, long workBefore)
     {
+        var telemetry = Session.Telemetry;
+        long wall = Stopwatch.GetTimestamp() - wall0;
+        long work = telemetry.ReadParallelWorkTicks() - workBefore;
+        telemetry.AddParallelWallTicks(wall);
+        switch (phase)
+        {
+            case RangePhaseAvoidGather: telemetry.AddGatherParallel(wall, work); break;
+            case RangePhaseAvoidSolve: telemetry.AddSolveParallel(wall, work); break;
+            case RangePhaseIntent: telemetry.AddIntentParallel(wall, work); break;
+            case RangePhaseMotor: telemetry.AddMotorParallel(wall, work); break;
+        }
+    }
+
+    private void ExecuteRange(int phase, int start, int end, int step, Fix64 dt)
+    {
+        long t0 = Stopwatch.GetTimestamp();
         switch (phase)
         {
             case RangePhaseAvoidGather:
                 CrowdAvoidance.GatherRange(this, start, end);
-                return;
+                break;
             case RangePhaseAvoidSolve:
-                CrowdAvoidance.SolveRange(this, start, end);
-                return;
+                CrowdAvoidance.SolveRange(this, start, end, step);
+                break;
             case RangePhaseIntent:
-                CrowdIntents.WriteRange(this, start, end);
-                return;
+                CrowdIntents.WriteRange(this, start, end, step);
+                break;
             case RangePhaseMotor:
                 CrowdMotor.IntegrateRange(this, start, end, dt);
-                return;
+                break;
             default:
                 throw new InvalidOperationException($"未知的群体并行阶段 {phase}。");
         }
+
+        Session.Telemetry.AddParallelWorkTicks(Stopwatch.GetTimestamp() - t0);
     }
 
     internal const int RangePhaseAvoidGather = 1;
@@ -433,9 +540,10 @@ public sealed class CrowdMovementKernel
         public int Phase;
         public int Start;
         public int End;
+        public int Step;
         public Fix64 Dt;
 
-        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Dt);
+        public void Execute() => Kernel.ExecuteRange(Phase, Start, End, Step, Dt);
     }
 
     /// <summary>分离求解的缓冲面(容量按单位上限;Awake 按占格数,构造时定尺寸)。</summary>
@@ -451,6 +559,23 @@ public sealed class CrowdMovementKernel
         if (GatherMoving.Length < unitCapacity) GatherMoving = new byte[unitCapacity];
         if (GatherGroup.Length < unitCapacity) GatherGroup = new int[unitCapacity];
         if (Contacts.Length < unitCapacity) Contacts = new ushort[unitCapacity];
+    }
+
+    /// <summary>稠密表把末行换到空位时,分离与静动标记跟着换。缓冲还没建(长度 0)时没有行可搬。</summary>
+    internal void MoveAvoidanceRow(int fromDense, int toDense)
+    {
+        if (Separation.Length == 0 && Calm.Length == 0) return;
+        if ((uint)fromDense >= (uint)Separation.Length || (uint)toDense >= (uint)Separation.Length
+            || (uint)fromDense >= (uint)Calm.Length || (uint)toDense >= (uint)Calm.Length)
+        {
+            throw new InvalidOperationException(
+                $"避让行 {fromDense}→{toDense} 超出分离缓冲 {Separation.Length}/{Calm.Length}。");
+        }
+
+        Separation[toDense] = Separation[fromDense];
+        Separation[fromDense] = Fix64Vec2.Zero;
+        Calm[toDense] = Calm[fromDense];
+        Calm[fromDense] = 0;
     }
 
     /// <summary>新单位的槽位不带陈旧推挤,且首次求解前必醒。</summary>
@@ -477,6 +602,8 @@ public sealed class CrowdMovementKernel
     /// <summary>Step 只做领队 → 意图 → 马达。分离求解由会话在 Step 之前调用。</summary>
     public void Step(Fix64 dt)
     {
+        var telemetry = Session.Telemetry;
+        long mark = Stopwatch.GetTimestamp();
         var orders = Session.Orders.List;
         Fix64 turnK = Fix64.Min(Fix64.OneValue, dt * LeaderTurnRate);
         Fix64 faceStep = LeaderTurnRate * FaceTurnScale * dt;
@@ -487,13 +614,16 @@ public sealed class CrowdMovementKernel
             {
                 leaders[li].Step(
                     leaders[li].PaceCmPerSecond,
-                    LeaderSpeed, turnK, faceStep, dt,
+                    LeaderSpeedRatio, turnK, faceStep, dt,
                     Session.Config.NavCellSizeCm, Session.Config.NavCellsPerSide);
             }
         }
 
+        telemetry.AddLeaderTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdIntents.Compute(this, dt);
+        telemetry.AddIntentTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         CrowdMotor.Integrate(this, dt);
+        telemetry.AddMotorTicks(CrowdSimulationTelemetry.TakeTicks(ref mark));
         Tick++;
     }
 
@@ -540,7 +670,7 @@ public sealed class CrowdMovementKernel
         Log.Info(in LogChannels.Engine,
             $"CrowdSimulation avoidance: configured {avoidHz.ToString(CultureInfo.InvariantCulture)} Hz, stride {stride} substeps, actual {actualHz.ToString("0.###", CultureInfo.InvariantCulture)} Hz.");
         int hashCells = hash.CellsPerSide * hash.CellsPerSide;
-        return new CrowdMovementKernel
+        var kernel = new CrowdMovementKernel
         {
             Session = session,
             Hash = hash,
@@ -548,7 +678,7 @@ public sealed class CrowdMovementKernel
             Stride = stride,
             OpenCache = openCache ?? new CrowdWalls.OpenCellCache(),
             BlendRate = mv.BlendRatePerSec,
-            BlendCommit = mv.BlendCommit,
+            BlendCommitRatio = mv.BlendCommitRatio,
             SlotCheckInterval = mv.SlotCheckIntervalSubSteps,
             WakeDistanceNavCells = mv.WakeDistanceNavCells,
             SlotArriveNavCells = fc.SlotArriveNavCells,
@@ -557,11 +687,11 @@ public sealed class CrowdMovementKernel
             StallDecay = mv.StallDecayPerSec,
             SettleTimeSeconds = fc.SettleTimeSec,
             SlotSightNavCells = fc.SlotSightNavCells,
-            SightHysteresis = mv.SightHysteresis,
+            SightHysteresisScale = mv.SightHysteresisScale,
             LaneSpreadSpeedRatio = mv.LaneSpreadSpeedRatio,
             GoalArriveNavCells = fc.GoalArriveNavCells,
             SlotGain = Fix64.OneValue / mv.SlotTimeConstantSec,
-            CatchUp = fc.CatchUp,
+            CatchUpSpeedRatio = fc.CatchUpSpeedRatio,
             Accel = av.AccelerationPerSec,
             RestAccelScale = mv.RestAccelScale,
             RestSeparationScale = mv.RestSeparationScale,
@@ -570,18 +700,22 @@ public sealed class CrowdMovementKernel
             MaxScan = av.MaxScan,
             MaxNeighbors = av.MaxNeighbors,
             MaxPush = av.MaxPush,
-            Smoothing = av.Smoothing,
-            MovingBonus = cfg.Push.MovingBonus,
+            SmoothingRatio = av.SmoothingRatio,
+            MovingPriorityBonus = cfg.Push.MovingPriorityBonus,
             DominantShare = cfg.Push.DominantShare,
             UnitTurnRate = mv.UnitTurnRateRadPerSec,
             StopSpeedRatio = mv.StopSpeedRatio,
             SpeedCapRatio = mv.SpeedCapRatio,
-            JumpSpeedRatio = mv.JumpSpeedRatio,
-            LeaderSpeed = fc.LeaderSpeed,
+            // 没有链接种类时没有单位会进入 Traversing 状态，这个倍率不会被读。
+            LinkSpeedRatio = cfg.LinkKinds.Count > 0 ? cfg.LinkKinds[0].TraversalSpeedRatio : Fix64.Zero,
+            LeaderSpeedRatio = fc.LeaderSpeedRatio,
             LeaderTurnRate = fc.LeaderTurnRatePerSec,
             FaceTurnScale = fc.FaceTurnScale,
             TurnEpsRad = cfg.Telemetry.TurnEpsRad,
         };
+        // 结构重烘的唤醒可能早于首次收拢，按稠密下标读这些行。
+        kernel.EnsureCapacity(session.Units.Capacity);
+        return kernel;
     }
 }
 

@@ -27,6 +27,8 @@ public sealed class CrowdZeroAllocTests
     private const int WarmupTicks = 120;
     private const int SteadyWindow = 80;
     private const int EventWindow = 40;
+    private const int JitQuietMs = 500;
+    private const int JitDrainTimeoutMs = 60_000;
 
     [Test]
     public void CrowdRuntime_MultiPlayerEvents_ZeroAllocation()
@@ -69,18 +71,25 @@ public sealed class CrowdZeroAllocTests
         var (runtime, session) = S4DeployTruthTests.BuildSession("s1337");
         using var service = new PathQueryService(session.Navs, runtime, 1, TimeSpan.FromSeconds(120), session.ResolveNavContext);
         session.EnableMovement(CrowdMovementKernel.Create(session), new CrowdSimPlanner(session, service));
+        TestDefaults.EnableFog(session);
         session.BlockOnDueReplies = true;
         var host = new CrowdSimulationRuntime();
         Bind(host, session);
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
-            Cmd(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":200,"unitType":0,"rIdx":0}"""),
-            Cmd(0, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":200,"unitType":0,"rIdx":0}"""),
-            Cmd(2, """{"type":"order","player":1,"xCm":900000,"yCm":800000,"shape":"box"}"""),
-            Cmd(2, """{"type":"order","player":2,"xCm":700000,"yCm":700000,"shape":"box"}"""),
+            Cmd(0, """{"type":"spawnAt","player":1,"xCm":480000,"yCm":560000,"count":200,"template":"crowd_simulation.unit.infantry.r100"}"""),
+            Cmd(0, """{"type":"spawnAt","player":2,"xCm":1120000,"yCm":1040000,"count":200,"template":"crowd_simulation.unit.infantry.r100"}"""),
             Cmd(8, """{"type":"placeStructure","template":"s7barrier","xCm":620000,"yCm":620000,"sizeCm":4000}"""),
         });
-        for (int i = 0; i < WarmupTicks; i++)
+        host.Tick();
+        if (session.TickCount != 1)
+            throw new InvalidOperationException($"预热第 0 步停摆，tick={session.TickCount}。");
+        session.Commands.Schedule(session, new List<CrowdCommand>
+        {
+            Order(2, 1, 900000, 800000, session),
+            Order(2, 2, 700000, 700000, session),
+        });
+        for (int i = 1; i < WarmupTicks; i++)
         {
             host.Tick();
             if (session.TickCount != i + 1)
@@ -97,8 +106,8 @@ public sealed class CrowdZeroAllocTests
         int at = session.TickCount;
         session.Commands.Schedule(session, new List<CrowdCommand>
         {
-            Cmd(at, """{"type":"order","player":1,"xCm":1000000,"yCm":900000,"shape":"box"}"""),
-            Cmd(at, """{"type":"order","player":2,"xCm":600000,"yCm":800000,"shape":"box"}"""),
+            Order(at, 1, 1000000, 900000, session),
+            Order(at, 2, 600000, 800000, session),
         });
         long orders = Measure(host, session, EventWindow);
         at = session.TickCount;
@@ -115,6 +124,7 @@ public sealed class CrowdZeroAllocTests
 
     private static long Measure(CrowdSimulationRuntime host, CrowdSimSession session, int ticks)
     {
+        WaitForBackgroundJitIdle();
         _ = GC.GetTotalAllocatedBytes(precise: true);
         int at = session.TickCount;
         long before = GC.GetTotalAllocatedBytes(precise: true);
@@ -126,6 +136,31 @@ public sealed class CrowdZeroAllocTests
         }
 
         return GC.GetTotalAllocatedBytes(precise: true) - before;
+    }
+
+    /// <summary>
+    /// 分层编译的后台线程会把建会话时攒下的方法（反射、JSON、烘焙）晚些再编成 tier1，
+    /// 编到引用结构体静态字段的 BCL 方法时会在那条线程上装箱分配静态存储（实测 24 字节的 <see cref="ModuleHandle"/>、32 字节的 <see cref="ArraySegment{T}"/>）。
+    /// 这份分配不属于模拟，却会落进全进程读数；机器忙时积压排得更晚，就成了偶发的非零窗。
+    /// 所以每扇窗开测前等编译计数静止 <see cref="JitQuietMs"/> 毫秒，窗内其余线程的分配照常计入。
+    /// </summary>
+    private static void WaitForBackgroundJitIdle()
+    {
+        var total = Stopwatch.StartNew();
+        var quiet = Stopwatch.StartNew();
+        long seen = System.Runtime.JitInfo.GetCompiledMethodCount();
+        while (quiet.ElapsedMilliseconds < JitQuietMs)
+        {
+            if (total.ElapsedMilliseconds > JitDrainTimeoutMs)
+                throw new InvalidOperationException($"后台编译 {JitDrainTimeoutMs} 毫秒内没有静止。");
+            System.Threading.Thread.Sleep(50);
+            long now = System.Runtime.JitInfo.GetCompiledMethodCount();
+            if (now != seen)
+            {
+                seen = now;
+                quiet.Restart();
+            }
+        }
     }
 
     private readonly record struct Windows(long Steady, long Orders, long Rebake, long After, int FogRefreshes, int Rebakes);
@@ -177,6 +212,18 @@ public sealed class CrowdZeroAllocTests
 
     private static CrowdCommand Cmd(int tick, string json)
         => new(tick, CrowdSimCommand.Parse(JsonNode.Parse(json)!));
+
+    private static CrowdCommand Order(int tick, int player, int xCm, int yCm, CrowdSimSession session)
+    {
+        var parsed = CrowdSimCommand.Parse(
+            JsonNode.Parse($"{{\"type\":\"order\",\"player\":{player},\"xCm\":{xCm},\"yCm\":{yCm},\"shape\":\"box\"}}")!,
+            requireOrderMembers: false);
+        var all = new uint[session.Units.Count];
+        int n = session.Units.CopyOwnHandles(player, all);
+        var members = new uint[n];
+        Array.Copy(all, members, n);
+        return new CrowdCommand(tick, parsed with { Members = members, AllOwnMembers = false });
+    }
 
     private static void Bind(CrowdSimulationRuntime host, CrowdSimSession session)
     {
