@@ -12,7 +12,7 @@
 | 离线 NuGet 源 | 规范闭包 nupkg（含 win/linux/osx 自包含运行时包） | `external/nuget/` | 无 |
 | .NET 9 SDK | 编译仓库源码本身 | 用户自备（唯一前置） | 无 |
 
-根 `nuget.config` 以 `<clear/>` + `LudotsOffline` 本地源接管全部还原：canonical 路径（Core / Raylib / Launcher / 全部维护测试 / mods）**完全离线**。Cef / Ultralight 特例（原生 natives 不入库）在其各自目录（`src/Libraries/Ludots.UI.Browser.Cef`、`src/Tests/BrowserCefTests`、`src/Libraries/Ludots.UI.Browser.Ultralight`、`src/Tests/BrowserUltralightTests`）有附加 nuget.config 显式引入 nuget.org——只在首次构建这些特例时联网，之后走包缓存。
+根 `nuget.config` 是唯一的包源声明：`<clear/>` 加上名为 `LudotsOffline` 的源，指向 `external/nuget/`。Core、Raylib、Launcher、全部维护测试、mods、Cef、Ultralight 都用这一处。子目录不再另放 nuget.config，也不打开 nuget.org。缺的包补进 `external/nuget/`。`chromiumembeddedframework.runtime.win-x64.148.0.9.nupkg` 超过 GitHub 单文件 100MB，`.gitattributes` 把 `external/nuget/chromiumembeddedframework.runtime.win-x64.*.nupkg` 标成 Git LFS。`solution-verify` 会拉取这个文件；本机构建 Cef 前先执行 `git lfs pull`。`solution-verify`、`camera-baseline`、`ci-acceptance`、`mass-navigation-10k-evidence` 的 paths 都包含 `nuget.config` 和 `external/nuget/**`，改包源或离线包会重新跑这些检查。
 
 验证口径：`HTTPS_PROXY` 指向死端口 + 干净 `NUGET_PACKAGES` 下，GasTests / Launcher.Cli / App.Raylib / App.Web / mods 的 `dotnet restore` 全绿即视为离线成立；`./scripts/dev-up.sh build-only` 在 Linux/macOS agent 上应同样绿。
 

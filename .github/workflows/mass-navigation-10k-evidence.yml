@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/mass-navigation-10k-evidence.yml'
       - 'global.json'
+      - 'nuget.config'
+      - 'external/nuget/**'
       - 'mods/capabilities/navigation/**'
       - 'mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod/**'
       - 'scripts/acceptance/MassNavigationEvidencePortability.psm1'
@@ -48,8 +50,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            9.0.x
+          global-json-file: global.json
 
       - name: Configure evidence root
         shell: pwsh
