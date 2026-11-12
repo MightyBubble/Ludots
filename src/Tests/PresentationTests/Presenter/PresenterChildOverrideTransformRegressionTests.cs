@@ -416,6 +416,150 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void BoneAttachment_OverrideStaysPutWhenProviderMisses()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int attachedId = definitions.Register("b3.bone.frozen", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    MeshSlot(0, 81, VisualMobility.Movable),
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Bone,
+                            BoneId = 7,
+                            Offset = new Vector3(0f, 1f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            int rootId = definitions.Register("b3.bone.frozen.root", new PresenterDefinition
+            {
+                Behaviors = [MeshSlot(0, 80, VisualMobility.Movable)],
+                Children =
+                [
+                    new ChildPresenterRef
+                    {
+                        DefinitionId = attachedId,
+                        TransformOverride = TransformOverride(new Vector3(0.5f, 0f, 0f), new Vector3(2f, 2f, 2f)),
+                    },
+                ],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateOwner(world, Vector3.Zero, Quaternion.Identity);
+            const int parentStableId = 8701;
+            Entity root = runtime.CreateHierarchy(
+                definitions, rootId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                Vector3.Zero, parentStableId, Entity.Null, definitions.Get(rootId));
+            Entity child = world.Get<PresenterChildren>(root).Get(0);
+            var bones = new StubBoneTransformProvider(parentStableId, boneId: 7);
+            bones.Position = new Vector3(2f, 3f, 4f);
+            bones.Rotation = YawRadians(MathF.PI / 2f);
+            bones.Scale = new Vector3(3f, 3f, 3f);
+
+            using var behaviors = CreateBehaviors(world, runtime, definitions, bones);
+            behaviors.Update(0.016f);
+            AttachmentConfig attachment = definitions.Get(attachedId).Behaviors[1].Attachment;
+            PresenterInstanceTransformOverride instanceOverride = world.Get<PresenterInstanceTransformOverride>(child);
+            AssertBonePose(world, child, bones, attachment, instanceOverride, "first frame lands on the bone");
+
+            Vector3 frozenPosition = world.Get<PresenterWorldPosition>(child).Value;
+            Quaternion frozenRotation = world.Get<PresenterWorldRotation>(child).Value;
+            Vector3 frozenScale = world.Get<PresenterWorldScale>(child).Value;
+            bones.Fail = true;
+            bones.Position = new Vector3(30f, 0f, -8f);
+            bones.Rotation = YawRadians(1.2f);
+            for (int frame = 0; frame < 5; frame++)
+            {
+                behaviors.Update(0.016f);
+            }
+
+            Assert.That(world.Get<PresenterTransformSource>(child).Value, Is.EqualTo(TransformSource.BoneAttached));
+            AssertClose(world.Get<PresenterWorldPosition>(child).Value, frozenPosition, "a missed bone must not walk the override");
+            AssertClose(world.Get<PresenterWorldScale>(child).Value, frozenScale, "a missed bone must not scale the override again");
+            AssertRotation(world.Get<PresenterWorldRotation>(child).Value, frozenRotation, "a missed bone must not turn the override again");
+
+            Assert.That(runtime.SetBehaviorActive(child, definitions.Get(attachedId), 1, false), Is.True);
+            bones.Fail = false;
+            bones.Position = new Vector3(12f, 4f, -3f);
+            for (int frame = 0; frame < 5; frame++)
+            {
+                behaviors.Update(0.016f);
+            }
+
+            AssertClose(world.Get<PresenterWorldPosition>(child).Value, frozenPosition, "a deactivated attachment must keep the last pose");
+            AssertClose(world.Get<PresenterWorldScale>(child).Value, frozenScale, "a deactivated attachment must keep the last scale");
+            AssertRotation(world.Get<PresenterWorldRotation>(child).Value, frozenRotation, "a deactivated attachment must keep the last rotation");
+        }
+
+        [Test]
+        public void BoneAttachment_InheritScaleDoesNotScaleOffset()
+        {
+            using var world = World.Create();
+            var definitions = new PresenterDefinitionRegistry();
+            int attachedId = definitions.Register("b3.bone.scale", new PresenterDefinition
+            {
+                Behaviors =
+                [
+                    MeshSlot(0, 83, VisualMobility.Movable),
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Bone,
+                            BoneId = 9,
+                            Offset = new Vector3(0f, 1f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = true,
+                        },
+                    },
+                ],
+            });
+            int rootId = definitions.Register("b3.bone.scale.root", new PresenterDefinition
+            {
+                Behaviors = [MeshSlot(0, 82, VisualMobility.Movable)],
+                Children = [new ChildPresenterRef { DefinitionId = attachedId }],
+            });
+
+            var runtime = new PresenterEntityRuntime(world);
+            runtime.BindDefinitions(definitions);
+            Entity owner = CreateOwner(world, Vector3.Zero, Quaternion.Identity);
+            const int parentStableId = 8702;
+            Entity root = runtime.CreateHierarchy(
+                definitions, rootId, owner, scopeId: 1, PresentationAnchorKind.Entity,
+                Vector3.Zero, parentStableId, Entity.Null, definitions.Get(rootId));
+            Entity child = world.Get<PresenterChildren>(root).Get(0);
+            var bones = new StubBoneTransformProvider(parentStableId, boneId: 9);
+            bones.Position = new Vector3(2f, 3f, 4f);
+            bones.Scale = new Vector3(2f, 3f, 4f);
+
+            using var behaviors = CreateBehaviors(world, runtime, definitions, bones);
+            behaviors.Update(0.016f);
+
+            AssertClose(
+                world.Get<PresenterWorldPosition>(child).Value,
+                bones.Position + new Vector3(0f, 1f, 0f),
+                "bone offset stays in bone space and does not multiply bone scale");
+            AssertClose(
+                world.Get<PresenterWorldScale>(child).Value,
+                bones.Scale,
+                "inheritScale still takes the bone scale");
+        }
+
+        [Test]
         public void StaticOwner_DefinitionParentAttachment_LandsAboveRootWithoutTick()
         {
             const float hover = 3.6f;
@@ -707,7 +851,7 @@ namespace Ludots.Tests.Presentation
         {
             Quaternion normalizedParentRotation = VisualMath.NormalizeOrIdentity(parentRotation);
             Vector3 normalizedParentScale = VisualMath.NormalizeScale(parentScale);
-            Vector3 scaledOffset = attachment.InheritScale
+            Vector3 scaledOffset = attachment.InheritScale && attachment.Target != AttachmentTarget.Bone
                 ? normalizedParentScale * attachment.Offset
                 : attachment.Offset;
             position = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
@@ -1069,12 +1213,22 @@ namespace Ludots.Tests.Presentation
 
             public Vector3 Scale { get; set; } = Vector3.One;
 
+            public bool Fail { get; set; }
+
             public bool TryGetBoneWorldTransform(int presenterStableId, int boneId, out Vector3 position, out Quaternion rotation, out Vector3 scale)
             {
+                if (Fail || presenterStableId != _presenterStableId || boneId != _boneId)
+                {
+                    position = default;
+                    rotation = Quaternion.Identity;
+                    scale = Vector3.One;
+                    return false;
+                }
+
                 position = Position;
                 rotation = Rotation;
                 scale = Scale;
-                return presenterStableId == _presenterStableId && boneId == _boneId;
+                return true;
             }
         }
     }

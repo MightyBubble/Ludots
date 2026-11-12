@@ -69,17 +69,13 @@ namespace Ludots.Core.Presentation.Presenters
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
-                    basePosition = presenter.WorldPosition;
-                    baseRotation = VisualMath.NormalizeOrIdentity(presenter.WorldRotation);
-                    baseScale = VisualMath.NormalizeScale(presenter.WorldScale);
-                    baseFacing = presenter.WorldFacing;
-                    return ApplyInstanceOverride(
-                        basePosition,
-                        baseRotation,
-                        baseScale,
-                        baseFacing,
-                        instanceOverride,
-                        inheritScale: true);
+                    // 这两个来源的位姿由挂载行为从父节点或骨骼重算，覆盖也在那里叠。
+                    // 这里再叠一次会把上一帧结果当底；挂载中途返回时，覆盖会逐帧累加。
+                    return CreateResolvedTransform(
+                        presenter.WorldPosition,
+                        VisualMath.NormalizeOrIdentity(presenter.WorldRotation),
+                        VisualMath.NormalizeScale(presenter.WorldScale),
+                        presenter.WorldFacing);
 
                 case TransformSource.WorldFixed:
                     ComposeInstanceOverride(instanceOverride, out Vector3 fixedOffset, out Quaternion fixedRotation, out Vector3 fixedScale);
