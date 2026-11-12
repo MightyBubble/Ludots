@@ -1,0 +1,9 @@
+[
+  {
+    "id": "ptree.knight.profile",
+    "animatorControllerId": "ptree.knight.swing",
+    "stateClips": [
+      { "packedStateIndex": 51, "clipAssetId": "ptree.knight.clip.spinning" }
+    ]
+  }
+]
