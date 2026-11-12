@@ -1,0 +1,11 @@
+{
+  "types": [
+    {
+      "id": "SupplyHold",
+      "isSymmetric": false
+    }
+  ],
+  "metrics": [],
+  "flags": [],
+  "reasons": []
+}

@@ -1,0 +1,2114 @@
+[
+  {
+    "id": "Graph.Supply.Cover.Wei.Up",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "old",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Wei"
+      },
+      {
+        "id": "on",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brOn",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstFloat",
+        "floatValue": 1
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Wei"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "old"
+      },
+      {
+        "from": "old",
+        "fromPort": "next",
+        "to": "on"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "brOn"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "true",
+        "to": "skip"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "old",
+        "toPort": "source"
+      },
+      {
+        "from": "old",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "b"
+      },
+      {
+        "from": "on",
+        "fromPort": "value",
+        "to": "brOn",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Cover.Wei.Down",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Wei"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Cover.Shu.Up",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "old",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Shu"
+      },
+      {
+        "id": "on",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brOn",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstFloat",
+        "floatValue": 1
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Shu"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "old"
+      },
+      {
+        "from": "old",
+        "fromPort": "next",
+        "to": "on"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "brOn"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "true",
+        "to": "skip"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "old",
+        "toPort": "source"
+      },
+      {
+        "from": "old",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "b"
+      },
+      {
+        "from": "on",
+        "fromPort": "value",
+        "to": "brOn",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Cover.Shu.Down",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Shu"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Cover.Wu.Up",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "old",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Wu"
+      },
+      {
+        "id": "on",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brOn",
+        "op": "BranchBool"
+      },
+      {
+        "id": "one",
+        "op": "ConstFloat",
+        "floatValue": 1
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Wu"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "old"
+      },
+      {
+        "from": "old",
+        "fromPort": "next",
+        "to": "on"
+      },
+      {
+        "from": "on",
+        "fromPort": "next",
+        "to": "brOn"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "true",
+        "to": "skip"
+      },
+      {
+        "from": "brOn",
+        "fromPort": "false",
+        "to": "one"
+      },
+      {
+        "from": "one",
+        "fromPort": "next",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "old",
+        "toPort": "source"
+      },
+      {
+        "from": "old",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "on",
+        "toPort": "b"
+      },
+      {
+        "from": "on",
+        "fromPort": "value",
+        "to": "brOn",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "one",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Cover.Wu.Down",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "flag",
+        "op": "LoadAttribute",
+        "attribute": "Supply.IsPerson"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "isP",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brP",
+        "op": "BranchBool"
+      },
+      {
+        "id": "set",
+        "op": "ModifyAttributeSet",
+        "attribute": "Supply.Cover.Wu"
+      },
+      {
+        "id": "go",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Resolve"
+      },
+      {
+        "id": "skip",
+        "op": "ConstInt",
+        "intValue": 0
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "flag"
+      },
+      {
+        "from": "flag",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "isP"
+      },
+      {
+        "from": "isP",
+        "fromPort": "next",
+        "to": "brP"
+      },
+      {
+        "from": "brP",
+        "fromPort": "false",
+        "to": "skip"
+      },
+      {
+        "from": "brP",
+        "fromPort": "true",
+        "to": "set"
+      },
+      {
+        "from": "set",
+        "fromPort": "next",
+        "to": "go"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "flag",
+        "toPort": "source"
+      },
+      {
+        "from": "flag",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "isP",
+        "toPort": "b"
+      },
+      {
+        "from": "isP",
+        "fromPort": "value",
+        "to": "brP",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "target"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "set",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "go",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Pick",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "wei",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Wei"
+      },
+      {
+        "id": "shu",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Shu"
+      },
+      {
+        "id": "wu",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Cover.Wu"
+      },
+      {
+        "id": "zeroF",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "oneF",
+        "op": "ConstFloat",
+        "floatValue": 1
+      },
+      {
+        "id": "ws",
+        "op": "AddFloat"
+      },
+      {
+        "id": "sum",
+        "op": "AddFloat"
+      },
+      {
+        "id": "n",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "zeroI",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "id0",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "id1",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "id2",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "id3",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "wuI",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "wuAbsent",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "laterWeiF",
+        "op": "AddFloat"
+      },
+      {
+        "id": "laterWeiI",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "weiLast",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "weiOn",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "shuOn",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "wuOn",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "none",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brNone",
+        "op": "BranchBool"
+      },
+      {
+        "id": "nF",
+        "op": "IntToFloat"
+      },
+      {
+        "id": "bound",
+        "op": "DivFloat"
+      },
+      {
+        "id": "roll",
+        "op": "RandomFloat01"
+      },
+      {
+        "id": "brWei",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brWeiLast",
+        "op": "BranchBool"
+      },
+      {
+        "id": "takeWei",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brTakeWei",
+        "op": "BranchBool"
+      },
+      {
+        "id": "roll2",
+        "op": "SubFloat"
+      },
+      {
+        "id": "brShuA",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brShuLastA",
+        "op": "BranchBool"
+      },
+      {
+        "id": "takeShuA",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brTakeShuA",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brShuB",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brShuLastB",
+        "op": "BranchBool"
+      },
+      {
+        "id": "takeShuB",
+        "op": "CompareGtFloat"
+      },
+      {
+        "id": "brTakeShuB",
+        "op": "BranchBool"
+      },
+      {
+        "id": "brWu",
+        "op": "BranchBool"
+      },
+      {
+        "id": "neg",
+        "op": "ConstFloat",
+        "floatValue": -1
+      },
+      {
+        "id": "bad",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "w0",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Supply.Picked"
+      },
+      {
+        "id": "w1",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Supply.Picked"
+      },
+      {
+        "id": "w2",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Supply.Picked"
+      },
+      {
+        "id": "w3",
+        "op": "WriteBlackboardInt",
+        "blackboardKey": "Supply.Picked"
+      },
+      {
+        "id": "apply",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Supply.Commit"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "wei"
+      },
+      {
+        "from": "wei",
+        "fromPort": "next",
+        "to": "shu"
+      },
+      {
+        "from": "shu",
+        "fromPort": "next",
+        "to": "wu"
+      },
+      {
+        "from": "wu",
+        "fromPort": "next",
+        "to": "zeroF"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "next",
+        "to": "oneF"
+      },
+      {
+        "from": "oneF",
+        "fromPort": "next",
+        "to": "ws"
+      },
+      {
+        "from": "ws",
+        "fromPort": "next",
+        "to": "sum"
+      },
+      {
+        "from": "sum",
+        "fromPort": "next",
+        "to": "n"
+      },
+      {
+        "from": "n",
+        "fromPort": "next",
+        "to": "zeroI"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "next",
+        "to": "id0"
+      },
+      {
+        "from": "id0",
+        "fromPort": "next",
+        "to": "id1"
+      },
+      {
+        "from": "id1",
+        "fromPort": "next",
+        "to": "id2"
+      },
+      {
+        "from": "id2",
+        "fromPort": "next",
+        "to": "id3"
+      },
+      {
+        "from": "id3",
+        "fromPort": "next",
+        "to": "wuI"
+      },
+      {
+        "from": "wuI",
+        "fromPort": "next",
+        "to": "wuAbsent"
+      },
+      {
+        "from": "wuAbsent",
+        "fromPort": "next",
+        "to": "laterWeiF"
+      },
+      {
+        "from": "laterWeiF",
+        "fromPort": "next",
+        "to": "laterWeiI"
+      },
+      {
+        "from": "laterWeiI",
+        "fromPort": "next",
+        "to": "weiLast"
+      },
+      {
+        "from": "weiLast",
+        "fromPort": "next",
+        "to": "weiOn"
+      },
+      {
+        "from": "weiOn",
+        "fromPort": "next",
+        "to": "shuOn"
+      },
+      {
+        "from": "shuOn",
+        "fromPort": "next",
+        "to": "wuOn"
+      },
+      {
+        "from": "wuOn",
+        "fromPort": "next",
+        "to": "none"
+      },
+      {
+        "from": "none",
+        "fromPort": "next",
+        "to": "brNone"
+      },
+      {
+        "from": "brNone",
+        "fromPort": "true",
+        "to": "w0"
+      },
+      {
+        "from": "brNone",
+        "fromPort": "false",
+        "to": "nF"
+      },
+      {
+        "from": "nF",
+        "fromPort": "next",
+        "to": "bound"
+      },
+      {
+        "from": "bound",
+        "fromPort": "next",
+        "to": "roll"
+      },
+      {
+        "from": "roll",
+        "fromPort": "next",
+        "to": "brWei"
+      },
+      {
+        "from": "brWei",
+        "fromPort": "false",
+        "to": "brShuA"
+      },
+      {
+        "from": "brWei",
+        "fromPort": "true",
+        "to": "brWeiLast"
+      },
+      {
+        "from": "brWeiLast",
+        "fromPort": "true",
+        "to": "w1"
+      },
+      {
+        "from": "brWeiLast",
+        "fromPort": "false",
+        "to": "takeWei"
+      },
+      {
+        "from": "takeWei",
+        "fromPort": "next",
+        "to": "brTakeWei"
+      },
+      {
+        "from": "brTakeWei",
+        "fromPort": "true",
+        "to": "w1"
+      },
+      {
+        "from": "brTakeWei",
+        "fromPort": "false",
+        "to": "roll2"
+      },
+      {
+        "from": "roll2",
+        "fromPort": "next",
+        "to": "brShuB"
+      },
+      {
+        "from": "brShuA",
+        "fromPort": "false",
+        "to": "brWu"
+      },
+      {
+        "from": "brShuA",
+        "fromPort": "true",
+        "to": "brShuLastA"
+      },
+      {
+        "from": "brShuLastA",
+        "fromPort": "true",
+        "to": "w2"
+      },
+      {
+        "from": "brShuLastA",
+        "fromPort": "false",
+        "to": "takeShuA"
+      },
+      {
+        "from": "takeShuA",
+        "fromPort": "next",
+        "to": "brTakeShuA"
+      },
+      {
+        "from": "brTakeShuA",
+        "fromPort": "true",
+        "to": "w2"
+      },
+      {
+        "from": "brTakeShuA",
+        "fromPort": "false",
+        "to": "w3"
+      },
+      {
+        "from": "brShuB",
+        "fromPort": "false",
+        "to": "brWu"
+      },
+      {
+        "from": "brShuB",
+        "fromPort": "true",
+        "to": "brShuLastB"
+      },
+      {
+        "from": "brShuLastB",
+        "fromPort": "true",
+        "to": "w2"
+      },
+      {
+        "from": "brShuLastB",
+        "fromPort": "false",
+        "to": "takeShuB"
+      },
+      {
+        "from": "takeShuB",
+        "fromPort": "next",
+        "to": "brTakeShuB"
+      },
+      {
+        "from": "brTakeShuB",
+        "fromPort": "true",
+        "to": "w2"
+      },
+      {
+        "from": "brTakeShuB",
+        "fromPort": "false",
+        "to": "w3"
+      },
+      {
+        "from": "brWu",
+        "fromPort": "true",
+        "to": "w3"
+      },
+      {
+        "from": "brWu",
+        "fromPort": "false",
+        "to": "neg"
+      },
+      {
+        "from": "neg",
+        "fromPort": "next",
+        "to": "bad"
+      },
+      {
+        "from": "w0",
+        "fromPort": "next",
+        "to": "apply"
+      },
+      {
+        "from": "w1",
+        "fromPort": "next",
+        "to": "apply"
+      },
+      {
+        "from": "w2",
+        "fromPort": "next",
+        "to": "apply"
+      },
+      {
+        "from": "w3",
+        "fromPort": "next",
+        "to": "apply"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "wei",
+        "toPort": "source"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "shu",
+        "toPort": "source"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "wu",
+        "toPort": "source"
+      },
+      {
+        "from": "wei",
+        "fromPort": "value",
+        "to": "ws",
+        "toPort": "a"
+      },
+      {
+        "from": "shu",
+        "fromPort": "value",
+        "to": "ws",
+        "toPort": "b"
+      },
+      {
+        "from": "ws",
+        "fromPort": "value",
+        "to": "sum",
+        "toPort": "a"
+      },
+      {
+        "from": "wu",
+        "fromPort": "value",
+        "to": "sum",
+        "toPort": "b"
+      },
+      {
+        "from": "sum",
+        "fromPort": "value",
+        "to": "n",
+        "toPort": "a"
+      },
+      {
+        "from": "wu",
+        "fromPort": "value",
+        "to": "wuI",
+        "toPort": "a"
+      },
+      {
+        "from": "wuI",
+        "fromPort": "value",
+        "to": "wuAbsent",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "value",
+        "to": "wuAbsent",
+        "toPort": "b"
+      },
+      {
+        "from": "shu",
+        "fromPort": "value",
+        "to": "laterWeiF",
+        "toPort": "a"
+      },
+      {
+        "from": "wu",
+        "fromPort": "value",
+        "to": "laterWeiF",
+        "toPort": "b"
+      },
+      {
+        "from": "laterWeiF",
+        "fromPort": "value",
+        "to": "laterWeiI",
+        "toPort": "a"
+      },
+      {
+        "from": "laterWeiI",
+        "fromPort": "value",
+        "to": "weiLast",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "value",
+        "to": "weiLast",
+        "toPort": "b"
+      },
+      {
+        "from": "wei",
+        "fromPort": "value",
+        "to": "weiOn",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "weiOn",
+        "toPort": "b"
+      },
+      {
+        "from": "shu",
+        "fromPort": "value",
+        "to": "shuOn",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "shuOn",
+        "toPort": "b"
+      },
+      {
+        "from": "wu",
+        "fromPort": "value",
+        "to": "wuOn",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroF",
+        "fromPort": "value",
+        "to": "wuOn",
+        "toPort": "b"
+      },
+      {
+        "from": "n",
+        "fromPort": "value",
+        "to": "none",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "value",
+        "to": "none",
+        "toPort": "b"
+      },
+      {
+        "from": "none",
+        "fromPort": "value",
+        "to": "brNone",
+        "toPort": "condition"
+      },
+      {
+        "from": "n",
+        "fromPort": "value",
+        "to": "nF",
+        "toPort": "a"
+      },
+      {
+        "from": "oneF",
+        "fromPort": "value",
+        "to": "bound",
+        "toPort": "a"
+      },
+      {
+        "from": "nF",
+        "fromPort": "value",
+        "to": "bound",
+        "toPort": "b"
+      },
+      {
+        "from": "weiOn",
+        "fromPort": "value",
+        "to": "brWei",
+        "toPort": "condition"
+      },
+      {
+        "from": "weiLast",
+        "fromPort": "value",
+        "to": "brWeiLast",
+        "toPort": "condition"
+      },
+      {
+        "from": "bound",
+        "fromPort": "value",
+        "to": "takeWei",
+        "toPort": "a"
+      },
+      {
+        "from": "roll",
+        "fromPort": "value",
+        "to": "takeWei",
+        "toPort": "b"
+      },
+      {
+        "from": "takeWei",
+        "fromPort": "value",
+        "to": "brTakeWei",
+        "toPort": "condition"
+      },
+      {
+        "from": "roll",
+        "fromPort": "value",
+        "to": "roll2",
+        "toPort": "a"
+      },
+      {
+        "from": "bound",
+        "fromPort": "value",
+        "to": "roll2",
+        "toPort": "b"
+      },
+      {
+        "from": "shuOn",
+        "fromPort": "value",
+        "to": "brShuA",
+        "toPort": "condition"
+      },
+      {
+        "from": "wuAbsent",
+        "fromPort": "value",
+        "to": "brShuLastA",
+        "toPort": "condition"
+      },
+      {
+        "from": "bound",
+        "fromPort": "value",
+        "to": "takeShuA",
+        "toPort": "a"
+      },
+      {
+        "from": "roll",
+        "fromPort": "value",
+        "to": "takeShuA",
+        "toPort": "b"
+      },
+      {
+        "from": "takeShuA",
+        "fromPort": "value",
+        "to": "brTakeShuA",
+        "toPort": "condition"
+      },
+      {
+        "from": "shuOn",
+        "fromPort": "value",
+        "to": "brShuB",
+        "toPort": "condition"
+      },
+      {
+        "from": "wuAbsent",
+        "fromPort": "value",
+        "to": "brShuLastB",
+        "toPort": "condition"
+      },
+      {
+        "from": "bound",
+        "fromPort": "value",
+        "to": "takeShuB",
+        "toPort": "a"
+      },
+      {
+        "from": "roll2",
+        "fromPort": "value",
+        "to": "takeShuB",
+        "toPort": "b"
+      },
+      {
+        "from": "takeShuB",
+        "fromPort": "value",
+        "to": "brTakeShuB",
+        "toPort": "condition"
+      },
+      {
+        "from": "wuOn",
+        "fromPort": "value",
+        "to": "brWu",
+        "toPort": "condition"
+      },
+      {
+        "from": "neg",
+        "fromPort": "value",
+        "to": "bad",
+        "toPort": "a"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "w0",
+        "toPort": "source"
+      },
+      {
+        "from": "id0",
+        "fromPort": "value",
+        "to": "w0",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "w1",
+        "toPort": "source"
+      },
+      {
+        "from": "id1",
+        "fromPort": "value",
+        "to": "w1",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "w2",
+        "toPort": "source"
+      },
+      {
+        "from": "id2",
+        "fromPort": "value",
+        "to": "w2",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "w3",
+        "toPort": "source"
+      },
+      {
+        "from": "id3",
+        "fromPort": "value",
+        "to": "w3",
+        "toPort": "value"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "apply",
+        "toPort": "target"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Supply.Commit",
+    "kind": "Effect",
+    "entry": "who",
+    "nodes": [
+      {
+        "id": "who",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "old",
+        "op": "ReadBlackboardEntity",
+        "blackboardKey": "Supply.City"
+      },
+      {
+        "id": "cut",
+        "op": "RelationshipRemoveLink",
+        "relationshipType": "SupplyHold"
+      },
+      {
+        "id": "scan",
+        "op": "QueryRadius",
+        "queryCapacityPolicy": "RequireComplete",
+        "radiusCm": 12000
+      },
+      {
+        "id": "layer",
+        "op": "QueryFilterLayer",
+        "layerMask": 65536
+      },
+      {
+        "id": "city",
+        "op": "AggMinByDistance"
+      },
+      {
+        "id": "cityOk",
+        "op": "LoadEntityPosValid"
+      },
+      {
+        "id": "brCity",
+        "op": "BranchBool"
+      },
+      {
+        "id": "neg",
+        "op": "ConstFloat",
+        "floatValue": -1
+      },
+      {
+        "id": "bad",
+        "op": "SqrtFloat"
+      },
+      {
+        "id": "picked",
+        "op": "ReadBlackboardInt",
+        "blackboardKey": "Supply.Picked"
+      },
+      {
+        "id": "facF",
+        "op": "LoadAttribute",
+        "attribute": "Supply.Faction"
+      },
+      {
+        "id": "fac",
+        "op": "FloatToInt"
+      },
+      {
+        "id": "zeroI",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "none",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brNone",
+        "op": "BranchBool"
+      },
+      {
+        "id": "same",
+        "op": "CompareEqInt"
+      },
+      {
+        "id": "brSame",
+        "op": "BranchBool"
+      },
+      {
+        "id": "tie",
+        "op": "RelationshipEnsureLink",
+        "relationshipType": "SupplyHold"
+      },
+      {
+        "id": "remember",
+        "op": "WriteBlackboardEntity",
+        "blackboardKey": "Supply.City"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "who",
+        "fromPort": "next",
+        "to": "old"
+      },
+      {
+        "from": "old",
+        "fromPort": "next",
+        "to": "cut"
+      },
+      {
+        "from": "cut",
+        "fromPort": "next",
+        "to": "scan"
+      },
+      {
+        "from": "scan",
+        "fromPort": "next",
+        "to": "layer"
+      },
+      {
+        "from": "layer",
+        "fromPort": "next",
+        "to": "city"
+      },
+      {
+        "from": "city",
+        "fromPort": "next",
+        "to": "cityOk"
+      },
+      {
+        "from": "cityOk",
+        "fromPort": "next",
+        "to": "brCity"
+      },
+      {
+        "from": "brCity",
+        "fromPort": "false",
+        "to": "neg"
+      },
+      {
+        "from": "neg",
+        "fromPort": "next",
+        "to": "bad"
+      },
+      {
+        "from": "brCity",
+        "fromPort": "true",
+        "to": "picked"
+      },
+      {
+        "from": "picked",
+        "fromPort": "next",
+        "to": "facF"
+      },
+      {
+        "from": "facF",
+        "fromPort": "next",
+        "to": "fac"
+      },
+      {
+        "from": "fac",
+        "fromPort": "next",
+        "to": "zeroI"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "next",
+        "to": "none"
+      },
+      {
+        "from": "none",
+        "fromPort": "next",
+        "to": "brNone"
+      },
+      {
+        "from": "brNone",
+        "fromPort": "true",
+        "to": "remember"
+      },
+      {
+        "from": "brNone",
+        "fromPort": "false",
+        "to": "same"
+      },
+      {
+        "from": "same",
+        "fromPort": "next",
+        "to": "brSame"
+      },
+      {
+        "from": "brSame",
+        "fromPort": "true",
+        "to": "remember"
+      },
+      {
+        "from": "brSame",
+        "fromPort": "false",
+        "to": "tie"
+      },
+      {
+        "from": "tie",
+        "fromPort": "next",
+        "to": "remember"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "old",
+        "toPort": "source"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "cut",
+        "toPort": "source"
+      },
+      {
+        "from": "old",
+        "fromPort": "value",
+        "to": "cut",
+        "toPort": "target"
+      },
+      {
+        "from": "city",
+        "fromPort": "value",
+        "to": "cityOk",
+        "toPort": "source"
+      },
+      {
+        "from": "cityOk",
+        "fromPort": "value",
+        "to": "brCity",
+        "toPort": "condition"
+      },
+      {
+        "from": "neg",
+        "fromPort": "value",
+        "to": "bad",
+        "toPort": "a"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "picked",
+        "toPort": "source"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "facF",
+        "toPort": "source"
+      },
+      {
+        "from": "facF",
+        "fromPort": "value",
+        "to": "fac",
+        "toPort": "a"
+      },
+      {
+        "from": "picked",
+        "fromPort": "value",
+        "to": "none",
+        "toPort": "a"
+      },
+      {
+        "from": "zeroI",
+        "fromPort": "value",
+        "to": "none",
+        "toPort": "b"
+      },
+      {
+        "from": "none",
+        "fromPort": "value",
+        "to": "brNone",
+        "toPort": "condition"
+      },
+      {
+        "from": "picked",
+        "fromPort": "value",
+        "to": "same",
+        "toPort": "a"
+      },
+      {
+        "from": "fac",
+        "fromPort": "value",
+        "to": "same",
+        "toPort": "b"
+      },
+      {
+        "from": "same",
+        "fromPort": "value",
+        "to": "brSame",
+        "toPort": "condition"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "tie",
+        "toPort": "source"
+      },
+      {
+        "from": "city",
+        "fromPort": "value",
+        "to": "tie",
+        "toPort": "target"
+      },
+      {
+        "from": "who",
+        "fromPort": "value",
+        "to": "remember",
+        "toPort": "source"
+      },
+      {
+        "from": "city",
+        "fromPort": "value",
+        "to": "remember",
+        "toPort": "value"
+      }
+    ]
+  }
+]
