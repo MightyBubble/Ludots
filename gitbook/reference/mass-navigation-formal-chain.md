@@ -77,6 +77,8 @@ MassNavigation command-group consumer 只查询：
 
 它不引用 Order 类型。route 目标、成员绑定、group 容量和 focus 容量必须在任何 group/solver 写入前完成 prepare。route 拒绝写 `Failed` result，由 GAS 取消订单；到达写 `Arrived` result，由 GAS 完成订单。
 
+下令不会把求解窗口一次甩到远处的落点。这批人还在当前活动范围里时，窗口留在原地；有人已经走出活动范围时，窗口只挪到刚好把他们收回来的位置。这批人在活动范围里放不下时，这次移动失败，不会把站在外面的人裁掉。窗口挪动的同一刻提交每个人的 `WorldPositionCm`：发布出去的世界坐标仍是挪动前的位置，本帧已经记下的 `PreviousWorldPositionCm` 只加同一差值，插值跨度仍是这一步真正走出的距离。
+
 ## Individual 与 CommandGroup
 
 `MovePlanExecutionMode` 必须显式声明：
