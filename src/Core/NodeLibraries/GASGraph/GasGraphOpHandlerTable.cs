@@ -2756,8 +2756,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryFilterTeam(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            int teamId = ins.Flags != 0 ? s.I[ins.A] : ins.Imm;
+            int teamId = ins.Flags switch
+            {
+                GraphEntityQueryPlan.TeamSourceImmediate => ins.Imm,
+                GraphEntityQueryPlan.TeamSourceIntRegister => s.I[ins.A],
+                GraphEntityQueryPlan.TeamSourceEntity => RequireEntityTeamId(ref s, ins.A),
+                _ => throw new InvalidOperationException($"ENTITY_QUERY.ERR.TeamSourceFlags: {ins.Flags}")
+            };
             s.TargetList.SetCount(s.Api.FilterTeam(s.Targets, s.TargetList.Count, teamId));
+        }
+
+        private static int RequireEntityTeamId(ref GraphExecutionState s, byte register)
+        {
+            int teamId = s.Api.GetTeamId(s.E[register]);
+            if (teamId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "ENTITY_QUERY.ERR.TeamSourceMissing: the entity supplying the team has no team.");
+            }
+
+            return teamId;
         }
 
         private static void HandleQueryFilterTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

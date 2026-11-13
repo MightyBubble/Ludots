@@ -14,7 +14,7 @@
 |----|----|
 | 可用图种 | Query / TriggerGraph |
 | 返回 | 无（副作用节点） |
-| 输入端口（值边 toPort） | `list`（目标名单）、`teamid`（队伍 id） |
+| 输入端口（值边 toPort） | `list`（目标名单）。队伍三选一：字段 `teamId`、值边 `teamId`、或值边 `source`（取这个实体当前的队伍） |
 | 特殊写法 | flags 填队伍来源 |
 
 手册分册（全量字段与语义）：[名单筛选与汇总 · gr-op-07](../mod-editor-prd/config/gr-op-07-entityset.md)

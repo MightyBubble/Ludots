@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Client
@@ -33,6 +34,35 @@ namespace Ludots.Core.Client
             return engine.GetService(CoreServiceKeys.ClientLocalSeatRegistry)
                 ?? throw new InvalidOperationException(
                     $"{CoreServiceKeys.ClientLocalSeatRegistry.Name} must be registered.");
+        }
+
+        public static int RequireSoleSeatTeamId(ClientLocalSeatRegistry seats, World world)
+        {
+            if (seats == null)
+            {
+                throw new ArgumentNullException(nameof(seats));
+            }
+
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            Entity rep = seats.RequireSolePossessedRep();
+            if (!world.IsAlive(rep) || !world.Has<Team>(rep))
+            {
+                throw new InvalidOperationException(
+                    "SELECTION.ERR.SeatRepHasNoTeam: the person in the local seat has no team.");
+            }
+
+            int teamId = world.Get<Team>(rep).Id;
+            if (teamId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "SELECTION.ERR.SeatRepHasNoTeam: the person in the local seat has no team.");
+            }
+
+            return teamId;
         }
 
         public static LogicViewRegistry RequireLogicViews(IReadOnlyDictionary<string, object> globals)

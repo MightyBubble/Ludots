@@ -66,7 +66,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             };
             string[] portListTeamId =
             {
-                GraphControlFlowPorts.List, GraphControlFlowPorts.TeamId
+                GraphControlFlowPorts.List, GraphControlFlowPorts.TeamId, GraphControlFlowPorts.Source
             };
             string[] portListMinMax =
             {
@@ -104,7 +104,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphControlFlowPorts.A, GraphControlFlowPorts.B, GraphControlFlowPorts.C, GraphControlFlowPorts.Max
             };
-            string[] portTeamId = { GraphControlFlowPorts.TeamId };
+            string[] portTeamId = { GraphControlFlowPorts.TeamId, GraphControlFlowPorts.Source };
             string[] portMinMax = { GraphControlFlowPorts.Min, GraphControlFlowPorts.Max };
             string[] portTargetCondition = { GraphControlFlowPorts.Target, GraphControlFlowPorts.Condition };
 

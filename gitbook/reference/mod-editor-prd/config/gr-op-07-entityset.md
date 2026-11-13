@@ -54,7 +54,7 @@ kind 全族为 Q（Query 专属）。TargetList 同 gr-op-06。
 |---|---|---|---|
 | QueryAllMapEntities | — | TargetList | 全图实体 |
 | QueryFromCollection | source + imm 集合键 | TargetList | 取 source 侧登记的集合 |
-| QueryFilterTeam | list teamId | TargetList | 按队伍留（TeamIdSource 旗标定 teamId 来源） |
+| QueryFilterTeam | list；队伍三选一：字段 teamId、引脚 teamId、引脚 source | TargetList | 按队伍留。source 取该实体当前队伍，绑名单时不把队伍号拍死 |
 | QueryFilterTemplate | list + imm 模板 | TargetList | 按实体模板留 |
 | QueryFilterAttributeRange | list min max + imm 属性 | TargetList | 属性值落在闭区间 |
 | QueryFilterTagAny | list + imm tag | TargetList | 命中任一 tag |

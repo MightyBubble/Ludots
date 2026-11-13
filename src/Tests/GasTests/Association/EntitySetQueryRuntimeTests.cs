@@ -1,10 +1,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
+using Ludots.Core.Map;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
@@ -782,6 +785,207 @@ namespace Ludots.Tests.GAS
             Assert.That(source.Contains(entity), Is.True);
             Assert.That(setup.TagOps.DirtyEntities.Count, Is.EqualTo(1));
             setup.EntityQueries.Dispose();
+        }
+
+        [Test]
+        public void SelectionCandidates_FollowTheSeatTeam_AndDoNotAuthorATeamId()
+        {
+            string path = Path.Combine(
+                FindRepoRoot(),
+                "mods", "capabilities", "navigation", "MassNavigationMod", "assets", "GAS", "graphs",
+                "graph.mass_navigation.selection_candidates.json");
+            JsonNode root = JsonNode.Parse(File.ReadAllText(path))
+                ?? throw new InvalidOperationException("selection candidates graph is empty.");
+            JsonObject graph = root[0]!.AsObject();
+            Assert.That(graph["id"]!.GetValue<string>(), Is.EqualTo("graph.mass_navigation.selection_candidates"));
+            Assert.That(graph["entry"]!.GetValue<string>(), Is.EqualTo("rep"));
+            bool sawTeam = false;
+            bool sawCommandable = false;
+            foreach (JsonNode? node in graph["nodes"]!.AsArray())
+            {
+                JsonObject authored = node!.AsObject();
+                string op = authored["op"]!.GetValue<string>();
+                if (op == nameof(GraphNodeOp.QueryFilterTeam))
+                {
+                    sawTeam = true;
+                    Assert.That(authored.ContainsKey("teamId"), Is.False);
+                }
+
+                if (op == nameof(GraphNodeOp.QueryFilterTagAny))
+                {
+                    sawCommandable = true;
+                    Assert.That(authored["tag"]!.GetValue<string>(), Is.EqualTo("Unit.Commandable"));
+                }
+            }
+
+            Assert.That(sawTeam, Is.True);
+            Assert.That(sawCommandable, Is.True);
+            bool sawSource = false;
+            foreach (JsonNode? edge in graph["valueEdges"]!.AsArray())
+            {
+                JsonObject authored = edge!.AsObject();
+                if (authored["toPort"]!.GetValue<string>() != GraphControlFlowPorts.Source)
+                {
+                    continue;
+                }
+
+                sawSource = true;
+                Assert.That(authored["from"]!.GetValue<string>(), Is.EqualTo("rep"));
+                Assert.That(authored["to"]!.GetValue<string>(), Is.EqualTo("team"));
+            }
+
+            Assert.That(sawSource, Is.True);
+            Assert.That(File.ReadAllText(path), Does.Not.Contain("\"teamId\""));
+
+            GraphControlFlowDocument? document = graph.Deserialize<GraphControlFlowDocument>(
+                StrictJsonOptions.CreateCamelCase(includeFields: true));
+            Assert.That(document, Is.Not.Null);
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(document!);
+            Assert.That(compiled.Succeeded, Is.True, string.Join("; ", compiled.Diagnostics.Select(d => d.Message)));
+            int teamPc = Array.FindIndex(compiled.Program, ins => (GraphNodeOp)ins.Op == GraphNodeOp.QueryFilterTeam);
+            int casterPc = Array.FindIndex(compiled.Program, ins => (GraphNodeOp)ins.Op == GraphNodeOp.LoadCaster);
+            int mapPc = Array.FindIndex(compiled.Program, ins => (GraphNodeOp)ins.Op == GraphNodeOp.QueryAllMapEntities);
+            Assert.That(teamPc, Is.GreaterThanOrEqualTo(0));
+            Assert.That(casterPc, Is.GreaterThanOrEqualTo(0));
+            Assert.That(mapPc, Is.GreaterThan(casterPc));
+            Assert.That(compiled.Program[teamPc].Flags, Is.EqualTo(GraphEntityQueryPlan.TeamSourceEntity));
+            Assert.That(compiled.Program[teamPc].Imm, Is.EqualTo(0));
+
+            GraphControlFlowCompileResult both = GraphControlFlowCompiler.Compile(SeatTeamDocument(teamId: 4, wireSource: true));
+            Assert.That(both.Succeeded, Is.False);
+            GraphControlFlowCompileResult neither = GraphControlFlowCompiler.Compile(SeatTeamDocument(teamId: 0, wireSource: false));
+            Assert.That(neither.Succeeded, Is.False);
+        }
+
+        [Test]
+        public void BoundQuery_SeatTeamChange_SelectsThatTeamAndFailsWhenTheSeatHasNone()
+        {
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(SeatTeamDocument(teamId: 0, wireSource: true));
+            Assert.That(compiled.Succeeded, Is.True, string.Join("; ", compiled.Diagnostics.Select(d => d.Message)));
+            var registration = new GraphProgramRegistration(compiled.Program, GraphKind.Query);
+
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            var map = new MapId("box-seat");
+            Entity owner = world.Create(new MapEntity { MapId = map }, new Team { Id = 1 });
+            Entity decoyTeamOne = world.Create(new MapEntity { MapId = map }, new Team { Id = 1 });
+            Entity allyEight = world.Create(new MapEntity { MapId = map }, new Team { Id = 8 });
+            Entity allySix = world.Create(new MapEntity { MapId = map }, new Team { Id = 6 });
+            Entity allyNine = world.Create(new MapEntity { MapId = map }, new Team { Id = 9 });
+            Entity repEight = world.Create(new Team { Id = 8 });
+            Entity repNine = world.Create(new Team { Id = 9 });
+            Entity repWithoutTeam = world.Create();
+
+            var emptySeats = new ClientLocalSeatRegistry();
+            int emptyKey = setup.Collections.KeyRegistry.Register("box.empty");
+            InvalidOperationException empty = Assert.Throws<InvalidOperationException>(() =>
+                setup.EntityQueries.BindCollection(
+                    setup.Collections, owner, emptyKey, registration,
+                    seatedTeam: () => ClientLocalSeatAccess.RequireSoleSeatTeamId(emptySeats, world)))!;
+            Assert.That(empty.Message, Does.Contain("exactly one client local seat"));
+            Assert.That(setup.Collections.TryGet(owner, emptyKey, out _), Is.False);
+            Assert.That(Contains(ReadBound(setup, owner, emptyKey), decoyTeamOne), Is.False);
+
+            var bareSeats = new ClientLocalSeatRegistry();
+            var bareSeat = new ClientLocalSeat("local");
+            bareSeats.Add(bareSeat);
+            bareSeats.SetPossession(bareSeat.SeatId, 4, repWithoutTeam);
+            int bareKey = setup.Collections.KeyRegistry.Register("box.bare");
+            InvalidOperationException bare = Assert.Throws<InvalidOperationException>(() =>
+                setup.EntityQueries.BindCollection(
+                    setup.Collections, owner, bareKey, registration,
+                    seatedTeam: () => ClientLocalSeatAccess.RequireSoleSeatTeamId(bareSeats, world)))!;
+            Assert.That(bare.Message, Does.Contain("SELECTION.ERR.SeatRepHasNoTeam"));
+            Assert.That(setup.Collections.TryGet(owner, bareKey, out _), Is.False);
+
+            var seats = new ClientLocalSeatRegistry();
+            var seat = new ClientLocalSeat("local");
+            seats.Add(seat);
+            seats.SetPossession(seat.SeatId, 4, repEight);
+            int key = setup.Collections.KeyRegistry.Register("box.selectable");
+            setup.EntityQueries.BindCollection(
+                setup.Collections, owner, key, registration,
+                seatedTeam: () => ClientLocalSeatAccess.RequireSoleSeatTeamId(seats, world));
+            var source = setup.Collections.RequireSource(owner, key);
+            AssertOnly(source.Read(), allyEight, decoyTeamOne, allySix, allyNine, owner);
+
+            world.Get<Team>(repEight).Id = 6;
+            AssertOnly(source.Read(), allySix, decoyTeamOne, allyEight, allyNine, owner);
+
+            seats.SetPossession(seat.SeatId, 9, repNine);
+            AssertOnly(source.Read(), allyNine, decoyTeamOne, allyEight, allySix, owner);
+
+            world.Remove<Team>(repNine);
+            InvalidOperationException lost = Assert.Throws<InvalidOperationException>(() => source.Read())!;
+            Assert.That(lost.Message, Does.Contain("SELECTION.ERR.SeatRepHasNoTeam"));
+            setup.EntityQueries.Dispose();
+        }
+
+        private static GraphControlFlowDocument SeatTeamDocument(int teamId, bool wireSource)
+        {
+            var document = new GraphControlFlowDocument
+            {
+                Id = "tests.box.seat_team",
+                Kind = nameof(GraphKind.Query),
+                Entry = wireSource ? "rep" : "map",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "rep", Op = nameof(GraphNodeOp.LoadCaster) },
+                    new() { Id = "map", Op = nameof(GraphNodeOp.QueryAllMapEntities) },
+                    new() { Id = "team", Op = nameof(GraphNodeOp.QueryFilterTeam), TeamId = teamId },
+                    new() { Id = "halt", Op = nameof(GraphNodeOp.HaltReturnInt), IntValue = 1 }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("rep", GraphControlFlowPorts.Next, "map"),
+                    new("map", GraphControlFlowPorts.Next, "team"),
+                    new("team", GraphControlFlowPorts.Next, "halt")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("map", GraphControlFlowPorts.List, "team", GraphControlFlowPorts.List)
+                }
+            };
+            if (wireSource)
+            {
+                document.ValueEdges.Add(new GraphControlFlowValueEdge(
+                    "rep", GraphControlFlowPorts.Value, "team", GraphControlFlowPorts.Source));
+            }
+
+            return document;
+        }
+
+        private static ReadOnlySpan<Entity> ReadBound(QueryRuntimeSetup setup, Entity owner, int key)
+        {
+            if (!setup.Collections.TryGet(owner, key, out _))
+            {
+                return ReadOnlySpan<Entity>.Empty;
+            }
+
+            return setup.Collections.RequireSource(owner, key).Read();
+        }
+
+        private static void AssertOnly(ReadOnlySpan<Entity> members, Entity kept, params Entity[] excluded)
+        {
+            Assert.That(members.Length, Is.EqualTo(1));
+            Assert.That(members[0], Is.EqualTo(kept));
+            for (int i = 0; i < excluded.Length; i++)
+            {
+                Assert.That(Contains(members, excluded[i]), Is.False);
+            }
+        }
+
+        private static bool Contains(ReadOnlySpan<Entity> members, Entity entity)
+        {
+            for (int i = 0; i < members.Length; i++)
+            {
+                if (members[i] == entity)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static QueryRuntimeSetup CreateQueryRuntime(World world)

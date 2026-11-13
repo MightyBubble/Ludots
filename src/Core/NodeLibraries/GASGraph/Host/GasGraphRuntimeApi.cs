@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
@@ -1744,7 +1745,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (_entityCollections == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
             if (!programs.TryGetRegistration(graphId, out var registration)) throw new InvalidOperationException("ENTITY_QUERY.ERR.QueryGraphUnknown");
             RequireEntityQueries().BindCollection(_entityCollections, owner, collectionKeyId, registration,
-                () => programs.TryGetRegistration(graphId, out var current) && ReferenceEquals(current.Program, registration.Program));
+                () => programs.TryGetRegistration(graphId, out var current) && ReferenceEquals(current.Program, registration.Program),
+                ResolveSeatedTeamId);
+        }
+
+        private int ResolveSeatedTeamId()
+        {
+            GameEngine engine = _engineResolver?.Invoke()
+                ?? throw new InvalidOperationException("SELECTION.ERR.SeatTeamUnresolved: local seat is not available.");
+            return ClientLocalSeatAccess.RequireSoleSeatTeamId(ClientLocalSeatAccess.RequireRegistry(engine), _world);
         }
 
         public Span<Entity> QueryCollection(Entity owner, int collectionKeyId, int depth)

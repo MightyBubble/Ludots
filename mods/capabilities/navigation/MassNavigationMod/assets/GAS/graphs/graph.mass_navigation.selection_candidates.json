@@ -2,21 +2,24 @@
   {
     "id": "graph.mass_navigation.selection_candidates",
     "kind": "Query",
-    "entry": "map",
+    "entry": "rep",
     "nodes": [
+      { "id": "rep", "op": "LoadCaster" },
       { "id": "map", "op": "QueryAllMapEntities" },
       { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable" },
-      { "id": "startup_team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "team", "op": "QueryFilterTeam" },
       { "id": "halt", "op": "HaltReturnInt", "intValue": 1 }
     ],
     "controlEdges": [
+      { "from": "rep", "fromPort": "next", "to": "map" },
       { "from": "map", "fromPort": "next", "to": "commandable" },
-      { "from": "commandable", "fromPort": "next", "to": "startup_team" },
-      { "from": "startup_team", "fromPort": "next", "to": "halt" }
+      { "from": "commandable", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "halt" }
     ],
     "valueEdges": [
+      { "from": "rep", "fromPort": "value", "to": "team", "toPort": "source" },
       { "from": "map", "fromPort": "list", "to": "commandable", "toPort": "list" },
-      { "from": "commandable", "fromPort": "list", "to": "startup_team", "toPort": "list" }
+      { "from": "commandable", "fromPort": "list", "to": "team", "toPort": "list" }
     ]
   }
 ]

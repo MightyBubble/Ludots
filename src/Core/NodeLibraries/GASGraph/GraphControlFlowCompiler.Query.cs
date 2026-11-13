@@ -100,18 +100,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.QueryFilterTeam:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    bool hasTeamField = node.TeamId != 0;
-                    bool hasTeamPin = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId));
-                    if (hasTeamField == hasTeamPin)
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
-                            $"Node '{node.Id}' must provide exactly one team source: TeamId field or teamId value pin.", node.Id));
-                    }
-                    else if (hasTeamPin)
-                    {
-                        RequireValueInput(node, GraphControlFlowPorts.TeamId, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    }
-
+                    ValidateTeamSource(node, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterKnowledgeVisible:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -493,19 +482,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadEffectStack:
                     break;
                 case GraphNodeOp.QueryFilterTeam:
-                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
-                    {
-                        instruction.A = ResolveValueInput(
-                            node, GraphControlFlowPorts.TeamId, GraphValueType.Int,
-                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                        instruction.Flags = 1;
-                    }
-                    else
-                    {
-                        instruction.Imm = node.TeamId;
-                        instruction.Flags = 0;
-                    }
-
+                    EmitTeamSource(node, ref instruction, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterKnowledgeVisible:
                     instruction.A = ResolveValueInput(
@@ -924,6 +901,72 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
                 $"Node '{node.Id}' attribute '{attr}' is unknown (allowed: RemainingTicks, TotalTicks).", node.Id));
             return 0;
+        }
+
+        private static void ValidateTeamSource(
+            GraphControlFlowNode node,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            bool hasTeamField = node.TeamId != 0;
+            bool hasTeamPin = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId));
+            bool hasEntityPin = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source));
+            int sources = (hasTeamField ? 1 : 0) + (hasTeamPin ? 1 : 0) + (hasEntityPin ? 1 : 0);
+            if (sources != 1)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                    $"Node '{node.Id}' must provide exactly one team source: teamId field, teamId value pin, or source entity pin.", node.Id));
+                return;
+            }
+
+            if (hasTeamPin)
+            {
+                RequireValueInput(node, GraphControlFlowPorts.TeamId, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+            }
+            else if (hasEntityPin)
+            {
+                RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+            }
+        }
+
+        private static void EmitTeamSource(
+            GraphControlFlowNode node,
+            ref GraphInstruction instruction,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            byte[] outputRegisters,
+            byte[] boolScratches,
+            byte[] droppedRegisters,
+            bool[] definedInts,
+            bool[] definedBools,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
+            {
+                instruction.A = ResolveValueInput(
+                    node, GraphControlFlowPorts.TeamId, GraphValueType.Int,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                instruction.Flags = GraphEntityQueryPlan.TeamSourceIntRegister;
+                return;
+            }
+
+            if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Source)))
+            {
+                instruction.A = ResolveValueInput(
+                    node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
+                instruction.Flags = GraphEntityQueryPlan.TeamSourceEntity;
+                instruction.Imm = 0;
+                return;
+            }
+
+            instruction.Imm = node.TeamId;
+            instruction.Flags = GraphEntityQueryPlan.TeamSourceImmediate;
         }
     }
 }
