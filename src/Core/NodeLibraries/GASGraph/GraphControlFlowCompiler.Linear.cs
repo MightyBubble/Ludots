@@ -106,21 +106,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.QueryFilterTeam:
-                {
-                    bool hasTeamField = node.TeamId != 0;
-                    bool hasTeamPin = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId));
-                    if (hasTeamField == hasTeamPin)
-                    {
-                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
-                            $"Node '{node.Id}' must provide exactly one team source: TeamId field or teamId value pin.", node.Id));
-                    }
-                    else if (hasTeamPin)
-                    {
-                        RequireValueInput(node, GraphControlFlowPorts.TeamId, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-                    }
-
+                    ValidateTeamSource(node, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
-                }
 
                 case GraphNodeOp.QueryFilterAttributeRange:
                     RequireValueInput(node, GraphControlFlowPorts.Min, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -1068,19 +1055,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.QueryFilterTeam:
-                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
-                    {
-                        instruction.A = ResolveValueInput(
-                            node, GraphControlFlowPorts.TeamId, GraphValueType.Int,
-                            valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
-                        instruction.Flags = 1;
-                    }
-                    else
-                    {
-                        instruction.Imm = node.TeamId;
-                        instruction.Flags = 0;
-                    }
-
+                    EmitTeamSource(node, ref instruction, valueEdges, nodeIndices, outputTypes, outputRegisters, boolScratches, droppedRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.QueryFilterTemplate:

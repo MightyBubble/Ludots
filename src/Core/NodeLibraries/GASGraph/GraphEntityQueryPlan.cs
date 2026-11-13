@@ -12,9 +12,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph;
 
 public sealed class GraphEntityQueryPlan
 {
+    public const byte TeamSourceImmediate = 0;
+    public const byte TeamSourceIntRegister = 1;
+    public const byte TeamSourceEntity = 2;
+
     private readonly GraphInstruction[] _program;
     private readonly int[] _filters;
     public int ResumePc { get; }
+    public bool ReadsSeatedTeam { get; }
     public int InstructionCount { get; }
     public ComponentType[] Dependencies { get; }
     public QueryDescription Description { get; }
@@ -44,6 +49,17 @@ public sealed class GraphEntityQueryPlan
         var signature = new ComponentType[required.Count];
         required.CopyTo(signature);
         Description = new QueryDescription(all: signature);
+        bool readsSeatedTeam = false;
+        for (int i = 0; i < filters.Length; i++)
+        {
+            GraphInstruction filter = program[filters[i]];
+            if (filter.Op == (ushort)GraphNodeOp.QueryFilterTeam && filter.Flags == TeamSourceEntity)
+            {
+                readsSeatedTeam = true;
+            }
+        }
+
+        ReadsSeatedTeam = readsSeatedTeam;
     }
 
     public static Dictionary<int, GraphEntityQueryPlan> Compile(GraphInstruction[] program)
@@ -84,13 +100,26 @@ public sealed class GraphEntityQueryPlan
         {
             GraphInstruction ins = _program[_filters[i]];
             int offset = i * 3;
-            values[offset] = ins.Op == (ushort)GraphNodeOp.QueryFilterTeam && ins.Flags != 0 ? ints[ins.A] : ins.Imm;
+            if (ins.Op == (ushort)GraphNodeOp.QueryFilterTeam && ins.Flags == TeamSourceIntRegister)
+            {
+                values[offset] = ints[ins.A];
+            }
+            else if (ins.Op == (ushort)GraphNodeOp.QueryFilterTeam &&
+                     ins.Flags is not (TeamSourceImmediate or TeamSourceEntity))
+            {
+                throw new InvalidOperationException($"ENTITY_QUERY.ERR.TeamSourceFlags: {ins.Flags}");
+            }
+            else
+            {
+                // Entity team source is not part of the index key. A captured id would freeze the list.
+                values[offset] = ins.Imm;
+            }
             values[offset + 1] = ins.Op == (ushort)GraphNodeOp.QueryFilterAttributeRange ? BitConverter.SingleToInt32Bits(floats[ins.B]) : 0;
             values[offset + 2] = ins.Op == (ushort)GraphNodeOp.QueryFilterAttributeRange ? BitConverter.SingleToInt32Bits(floats[ins.C]) : 0;
         }
     }
 
-    public EntityQueryPredicate CreatePredicate(EntitySetQueryRuntime runtime, int[] values)
+    public EntityQueryPredicate CreatePredicate(EntitySetQueryRuntime runtime, int[] values, int[]? seatedTeam = null)
     {
         return (world, entity) =>
         {
@@ -101,7 +130,7 @@ public sealed class GraphEntityQueryPlan
                 int offset = i * 3;
                 int count = (GraphNodeOp)_program[_filters[i]].Op switch
                 {
-                    GraphNodeOp.QueryFilterTeam => runtime.FilterTeam(candidate, 1, values[offset]),
+                    GraphNodeOp.QueryFilterTeam => runtime.FilterTeam(candidate, 1, TeamValue(i, values, seatedTeam)),
                     GraphNodeOp.QueryFilterTemplate => runtime.FilterTemplate(candidate, 1, values[offset]),
                     GraphNodeOp.QueryFilterAttributeRange => runtime.FilterAttributeRange(candidate, 1, values[offset],
                         BitConverter.Int32BitsToSingle(values[offset + 1]), BitConverter.Int32BitsToSingle(values[offset + 2])),
@@ -113,5 +142,21 @@ public sealed class GraphEntityQueryPlan
             }
             return true;
         };
+    }
+
+    private int TeamValue(int filterIndex, int[] values, int[]? seatedTeam)
+    {
+        GraphInstruction ins = _program[_filters[filterIndex]];
+        if (ins.Op != (ushort)GraphNodeOp.QueryFilterTeam || ins.Flags != TeamSourceEntity)
+        {
+            return values[filterIndex * 3];
+        }
+
+        if (seatedTeam == null || seatedTeam.Length == 0)
+        {
+            throw new InvalidOperationException("ENTITY_QUERY.ERR.SeatTeamUnresolved");
+        }
+
+        return seatedTeam[0];
     }
 }

@@ -69,7 +69,7 @@ BT 组合糖（`BtSequence` / `BtSelector` / `BtDecorator`，仅 Script）同属
 ### Query ControlFlow
 
 - 列表流（`Query*` / `Relationship*` 过滤与聚合）必须用 `valueEdges` 的 `list` 显式连接；控制边 `next` 不隐含 TargetList。
-- 实体输入用 `source`；区间过滤用 `min` / `max`；`QueryFilterTeam` 的队伍来源必须二选一：节点字段 `teamId`，或 `teamId` int value pin。
+- 实体输入用 `source`；区间过滤用 `min` / `max`；`QueryFilterTeam` 的队伍来源必须三选一：节点字段 `teamId`、`teamId` int value pin、或 `source` 实体 pin。三者只能留一个。`source` 取这个实体当前的队伍，不在绑名单时把队伍号拍死。
 - 标量 / 实体结果绑 Summary；当前 TargetList 结果绑 EntityCollection（`collectionKey` 必填）。
 - 空间查询容量：节点字段 `queryCapacityPolicy` 为 `RequireComplete` 或 `AllowTruncated`；后者必须同时声明 `droppedOutput`（未声明则失败关闭）。
 

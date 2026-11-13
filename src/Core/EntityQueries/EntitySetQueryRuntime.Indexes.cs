@@ -36,8 +36,10 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
         return result.Slice(0, written);
     }
 
-    private DerivedEntityIndex GetIndex(GraphEntityQueryPlan plan, MapId? map, ReadOnlySpan<int> ints, ReadOnlySpan<float> floats, Func<bool>? isCurrent)
+    private DerivedEntityIndex GetIndex(GraphEntityQueryPlan plan, MapId? map, ReadOnlySpan<int> ints, ReadOnlySpan<float> floats, Func<bool>? isCurrent, Func<int>? seatedTeam)
     {
+        if (plan.ReadsSeatedTeam && seatedTeam == null)
+            throw new InvalidOperationException("ENTITY_QUERY.ERR.SeatTeamUnresolved");
         if (plan.ParameterCount > GraphVmLimits.MaxInstructionsPerExecution * 3)
             throw new InvalidOperationException("ENTITY_QUERY.ERR.ParameterBudget");
         Span<int> values = stackalloc int[plan.ParameterCount];
@@ -54,8 +56,23 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
         if (instance == null)
         {
             int[] captured = values.ToArray();
+            int[]? seatedSlot = null;
+            Func<int>? criterion = null;
+            if (plan.ReadsSeatedTeam)
+            {
+                seatedSlot = new int[1];
+                int[] slot = seatedSlot;
+                Func<int> readTeam = seatedTeam!;
+                criterion = () =>
+                {
+                    int teamId = readTeam();
+                    slot[0] = teamId;
+                    return teamId;
+                };
+            }
+
             var index = new DerivedEntityIndex(_world, map, plan.Description, plan.Dependencies,
-                plan.CreatePredicate(this, captured), isCurrent: isCurrent);
+                plan.CreatePredicate(this, captured, seatedSlot), isCurrent: isCurrent, criterion: criterion);
             InitialQueryVisitedCount += index.InitialVisitedCount;
             instance = new QueryInstance(plan, map, captured, index);
             _indexes.Add(instance);
@@ -63,7 +80,7 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
         return instance.Index;
     }
 
-    public void BindCollection(EntityCollectionStore store, Entity owner, int keyId, GraphProgramRegistration registration, Func<bool>? isCurrent = null)
+    public void BindCollection(EntityCollectionStore store, Entity owner, int keyId, GraphProgramRegistration registration, Func<bool>? isCurrent = null, Func<int>? seatedTeam = null)
     {
         if (_boundStore != null && !ReferenceEquals(_boundStore, store))
             throw new InvalidOperationException("ENTITY_QUERY.ERR.CollectionStoreMismatch");
@@ -81,6 +98,7 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
         floats.Clear();
         int pc = 0;
         GraphEntityQueryPlan? plan = null;
+        bool sawLoadCaster = false;
         for (int step = 0; step < registration.Program.Length; step++)
         {
             if ((uint)pc >= (uint)registration.Program.Length) throw new InvalidOperationException("ENTITY_QUERY.ERR.InvalidPlan");
@@ -90,13 +108,26 @@ public sealed partial class EntitySetQueryRuntime : IDisposable
                 case GraphNodeOp.Jump: pc += ins.Imm; break;
                 case GraphNodeOp.ConstInt when plan == null: ints[ins.Dst] = ins.Imm; break;
                 case GraphNodeOp.ConstFloat when plan == null: floats[ins.Dst] = ins.ImmF; break;
+                case GraphNodeOp.LoadCaster when plan == null:
+                    // The list is owned by the map context. This operand means the sole local seat, read again on use.
+                    sawLoadCaster = true;
+                    if (seatedTeam == null) throw new InvalidOperationException("ENTITY_QUERY.ERR.SeatTeamUnresolved");
+                    seatedTeam();
+                    break;
                 case GraphNodeOp.QueryAllMapEntities:
                     plan = registration.EntityQueries[pc - 1];
                     pc = plan.ResumePc;
                     break;
                 case GraphNodeOp.HaltReturnInt:
                     if (plan == null) throw new InvalidOperationException("ENTITY_QUERY.ERR.SourceMissing");
-                    store.BindSource(owner, keyId, GetIndex(plan, _world.Get<MapEntity>(owner).MapId, ints, floats, isCurrent));
+                    if (plan.ReadsSeatedTeam != sawLoadCaster)
+                    {
+                        throw new InvalidOperationException(plan.ReadsSeatedTeam
+                            ? "ENTITY_QUERY.ERR.SeatTeamSourceMissing"
+                            : "ENTITY_QUERY.ERR.UntrackedDependency: LoadCaster");
+                    }
+
+                    store.BindSource(owner, keyId, GetIndex(plan, _world.Get<MapEntity>(owner).MapId, ints, floats, isCurrent, seatedTeam));
                     return;
                 default: throw new InvalidOperationException($"ENTITY_QUERY.ERR.UntrackedDependency: {(GraphNodeOp)ins.Op}");
             }

@@ -17,7 +17,9 @@ public sealed class DerivedEntityIndex : IDisposable, IEntityCollectionSource
     private readonly Query _matchedQuery;
     private readonly object _pendingLock = new();
     private readonly EntityQueryPredicate _predicate;
+    private readonly Func<int>? _criterion;
     private readonly Func<bool>? _isCurrent;
+    private int _criterionValue;
     private readonly HashSet<int> _dependencies;
     private readonly HashSet<Entity> _dirty;
     private readonly Dictionary<Entity, int> _positions;
@@ -26,7 +28,7 @@ public sealed class DerivedEntityIndex : IDisposable, IEntityCollectionSource
     private bool _disposed;
 
     public DerivedEntityIndex(World world, MapId? map, in QueryDescription query,
-        ReadOnlySpan<ComponentType> dependencies, EntityQueryPredicate predicate, int initialCapacity = 256, Func<bool>? isCurrent = null)
+        ReadOnlySpan<ComponentType> dependencies, EntityQueryPredicate predicate, int initialCapacity = 256, Func<bool>? isCurrent = null, Func<int>? criterion = null)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(predicate);
@@ -36,7 +38,12 @@ public sealed class DerivedEntityIndex : IDisposable, IEntityCollectionSource
         _query = query;
         _matchedQuery = world.Query(in query);
         _predicate = predicate;
+        _criterion = criterion;
         _isCurrent = isCurrent;
+        if (_criterion != null)
+        {
+            _criterionValue = _criterion();
+        }
         _dependencies = new HashSet<int>();
         foreach (ComponentType dependency in dependencies) _dependencies.Add(dependency.Id);
         foreach (ComponentType component in query.All) _dependencies.Add(component.Id);
@@ -71,6 +78,18 @@ public sealed class DerivedEntityIndex : IDisposable, IEntityCollectionSource
         if (_isCurrent != null && !_isCurrent()) throw new InvalidOperationException("ENTITY_QUERY.ERR.PlanReplaced");
         lock (_pendingLock)
         {
+            if (_criterion != null)
+            {
+                int next = _criterion();
+                if (next != _criterionValue)
+                {
+                    Rescan();
+                    _criterionValue = next;
+                    _dirty.Clear();
+                    return _members.AsSpan(0, _count);
+                }
+            }
+
             foreach (Entity entity in _dirty)
             {
                 ReevaluatedCount++;
@@ -112,6 +131,24 @@ public sealed class DerivedEntityIndex : IDisposable, IEntityCollectionSource
         _positions.Clear();
         _members = Array.Empty<Entity>();
         _count = 0;
+    }
+
+    private void Rescan()
+    {
+        _positions.Clear();
+        _count = 0;
+        Array.Clear(_members, 0, _members.Length);
+        foreach (ref var chunk in _world.Query(in _query))
+        {
+            foreach (int row in chunk)
+            {
+                Entity entity = chunk.Entity(row);
+                ReevaluatedCount++;
+                if (Matches(entity)) Add(entity);
+            }
+        }
+
+        Changed();
     }
 
     private bool Matches(Entity entity) => _world.IsAlive(entity) &&
