@@ -8,28 +8,6 @@ namespace Ludots.UI.Browser;
 
 public sealed class BrowserAppResourceResolver : IBrowserResourceResolver
 {
-	private static readonly IReadOnlyDictionary<string, string> DefaultContentTypes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-	{
-		[".html"] = "text/html; charset=utf-8",
-		[".htm"] = "text/html; charset=utf-8",
-		[".js"] = "application/javascript; charset=utf-8",
-		[".mjs"] = "application/javascript; charset=utf-8",
-		[".css"] = "text/css; charset=utf-8",
-		[".json"] = "application/json; charset=utf-8",
-		[".wasm"] = "application/wasm",
-		[".png"] = "image/png",
-		[".jpg"] = "image/jpeg",
-		[".jpeg"] = "image/jpeg",
-		[".gif"] = "image/gif",
-		[".webp"] = "image/webp",
-		[".svg"] = "image/svg+xml",
-		[".ico"] = "image/x-icon",
-		[".woff"] = "font/woff",
-		[".woff2"] = "font/woff2",
-		[".ttf"] = "font/ttf",
-		[".otf"] = "font/otf"
-	};
-
 	private readonly string _rootDirectory;
 	private readonly string _indexFileName;
 	private readonly IReadOnlyDictionary<string, string> _contentTypes;
@@ -50,7 +28,7 @@ public sealed class BrowserAppResourceResolver : IBrowserResourceResolver
 
 		_rootDirectory = EnsureTrailingSeparator(Path.GetFullPath(rootDirectory));
 		_indexFileName = indexFileName;
-		_contentTypes = contentTypes ?? DefaultContentTypes;
+		_contentTypes = contentTypes ?? BrowserContentTypes.Default;
 	}
 
 	public ValueTask<BrowserResource?> ResolveAsync(Uri uri, CancellationToken cancellationToken = default)

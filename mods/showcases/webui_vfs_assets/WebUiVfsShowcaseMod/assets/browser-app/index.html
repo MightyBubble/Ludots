@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>模组里的这张图</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">展示</p>
+    <h1>模组里的这张图</h1>
+    <p class="lead">下面这张图登记在这个模组的展示资源里。面板按登记去取，取到就显示在这里。</p>
+    <figure>
+      <img data-image-asset="showcase.webui.vfs.mark" alt="一枚深蓝底、金色纹章的图" src="{{image-src}}">
+      <figcaption id="caption">正在取这张图。</figcaption>
+    </figure>
+  </main>
+  <script>
+    const img = document.querySelector("img");
+    const caption = document.getElementById("caption");
+    const showLoaded = () => { caption.textContent = "图已经显示出来了。"; };
+    const showMissing = () => { caption.textContent = "这张图没有取到。"; };
+    img.addEventListener("load", showLoaded);
+    img.addEventListener("error", showMissing);
+    if (img.complete && img.naturalWidth > 0) showLoaded();
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -467,7 +468,11 @@ internal static class UltralightProcessRuntime
 internal static class UltralightLocalAppStager
 {
 	private static readonly Regex LocalAssetRegex = new(
-		"""(?<attr>src|href)\s*=\s*["'](?<path>(?!https?:|data:|blob:|ludots-app:)[^"']+)["']""",
+		"""(?<attr>src|href)\s*=\s*["'](?<path>(?!https?:|data:|blob:|ludots-app:|ludots-vfs:)[^"']+)["']""",
+		RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+	private static readonly Regex VfsAssetRegex = new(
+		"""(?<attr>src|href)\s*=\s*["'](?<url>ludots-vfs://[^"']+)["']""",
 		RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 	public static async Task<string> StageAsync(
@@ -553,13 +558,29 @@ internal static class UltralightLocalAppStager
 		Directory.CreateDirectory(Path.GetDirectoryName(physical)!);
 		await File.WriteAllBytesAsync(physical, resource.Content.ToArray(), cancellationToken).ConfigureAwait(false);
 
-		if (!recursiveHtml ||
-		    !resource.ContentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+		if (!resource.ContentType.Contains("html", StringComparison.OrdinalIgnoreCase))
 		{
 			return;
 		}
 
 		string html = Encoding.UTF8.GetString(resource.Content.Span);
+		if (recursiveHtml)
+		{
+			await StageLocalAssetsAsync(stagingRoot, html, resolver, cancellationToken).ConfigureAwait(false);
+		}
+
+		// Ultralight has no custom-scheme handler. Resolve the address while the
+		// page is still text, so the mod id keeps the case written in the markup.
+		await MaterializeVfsAssetsAsync(stagingRoot, physical, html, resolver, cancellationToken)
+			.ConfigureAwait(false);
+	}
+
+	private static async Task StageLocalAssetsAsync(
+		string stagingRoot,
+		string html,
+		IBrowserResourceResolver resolver,
+		CancellationToken cancellationToken)
+	{
 		foreach (Match match in LocalAssetRegex.Matches(html))
 		{
 			string assetPath = match.Groups["path"].Value.Trim();
@@ -579,5 +600,91 @@ internal static class UltralightLocalAppStager
 					recursiveHtml: false)
 				.ConfigureAwait(false);
 		}
+	}
+
+	private static async Task MaterializeVfsAssetsAsync(
+		string stagingRoot,
+		string htmlPath,
+		string html,
+		IBrowserResourceResolver resolver,
+		CancellationToken cancellationToken)
+	{
+		MatchCollection matches = VfsAssetRegex.Matches(html);
+		if (matches.Count == 0)
+		{
+			return;
+		}
+
+		var staged = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (Match match in matches)
+		{
+			string url = match.Groups["url"].Value;
+			if (staged.ContainsKey(url))
+			{
+				continue;
+			}
+
+			string? relativeUrl = await TryStageVfsAssetAsync(stagingRoot, htmlPath, url, resolver, cancellationToken)
+				.ConfigureAwait(false);
+			if (relativeUrl != null)
+			{
+				staged.Add(url, relativeUrl);
+			}
+		}
+
+		if (staged.Count == 0)
+		{
+			return;
+		}
+
+		string rewritten = html;
+		foreach (KeyValuePair<string, string> pair in staged)
+		{
+			rewritten = rewritten.Replace(pair.Key, pair.Value, StringComparison.Ordinal);
+		}
+
+		await File.WriteAllTextAsync(htmlPath, rewritten, Encoding.UTF8, cancellationToken).ConfigureAwait(false);
+	}
+
+	private static async Task<string?> TryStageVfsAssetAsync(
+		string stagingRoot,
+		string htmlPath,
+		string url,
+		IBrowserResourceResolver resolver,
+		CancellationToken cancellationToken)
+	{
+		if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) ||
+		    !BrowserVfsUri.TryParse(uri, out string modId, out string relativePath))
+		{
+			return null;
+		}
+
+		BrowserResource? resource = await resolver.ResolveAsync(uri, cancellationToken).ConfigureAwait(false);
+		if (resource == null)
+		{
+			return null;
+		}
+
+		string stagedRelative = Path.Combine(
+			"_ludots_vfs",
+			modId,
+			relativePath.Replace('/', Path.DirectorySeparatorChar));
+		string stagedFull = Path.GetFullPath(Path.Combine(stagingRoot, stagedRelative));
+		string rootFull = EnsureTrailingSeparator(Path.GetFullPath(stagingRoot));
+		if (!stagedFull.StartsWith(rootFull, StringComparison.Ordinal))
+		{
+			return null;
+		}
+
+		Directory.CreateDirectory(Path.GetDirectoryName(stagedFull)!);
+		await File.WriteAllBytesAsync(stagedFull, resource.Content.ToArray(), cancellationToken).ConfigureAwait(false);
+
+		string htmlDirectory = Path.GetDirectoryName(htmlPath) ?? stagingRoot;
+		return Path.GetRelativePath(htmlDirectory, stagedFull).Replace('\\', '/');
+	}
+
+	private static string EnsureTrailingSeparator(string path)
+	{
+		return path.EndsWith(Path.DirectorySeparatorChar) ? path : path + Path.DirectorySeparatorChar;
 	}
 }

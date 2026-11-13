@@ -180,7 +180,7 @@ internal sealed class PanelWebSkinSystem : ISystem<float>
         try
         {
             string assetRoot = ResolveAssetRoot();
-            var resolver = new BrowserAppResourceResolver(assetRoot);
+            var resolver = WebPanelBrowserResources.Create(assetRoot, _engine.VFS);
             surface = await _runtime
                 .CreateSurfaceAsync(new BrowserViewport(SurfaceWidth, SurfaceHeight), resolver)
                 .ConfigureAwait(false);

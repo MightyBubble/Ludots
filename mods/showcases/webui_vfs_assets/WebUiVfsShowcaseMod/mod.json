@@ -1,0 +1,13 @@
+{
+  "name": "WebUiVfsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Web panel that shows one picture registered in the mod presentation assets.",
+  "main": "bin/net9.0/WebUiVfsShowcaseMod.dll",
+  "priority": 191,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "UiShowcaseCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "web", "presentation"]
+}
