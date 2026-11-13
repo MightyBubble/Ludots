@@ -325,6 +325,14 @@
       }
     },
     {
+      "name": "webui_vfs_assets",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/webui_vfs_assets/WebUiVfsShowcaseMod",
+        "projectPath": "WebUiVfsShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "ui_nineslice_panel_showcase",
       "target": {
         "type": "path",

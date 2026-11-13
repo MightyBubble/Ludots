@@ -431,6 +431,43 @@
       }
     },
     {
+      "id": "webui_vfs_assets_raylib",
+      "name": "Web UI VFS Assets Raylib",
+      "selectors": [
+        "$webui_vfs_assets"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "webui_vfs_assets_cef_raylib",
+      "name": "Web UI VFS Assets CEF Raylib",
+      "selectors": [
+        "$webui_vfs_assets"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "webui_vfs_assets_ultralight_raylib",
+      "name": "Web UI VFS Assets Ultralight Raylib",
+      "selectors": [
+        "$webui_vfs_assets"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "ultralight"
+      }
+    },
+    {
       "id": "browser_react_flow_ultralight_raylib",
       "name": "Browser React Flow Ultralight Raylib",
       "selectors": [

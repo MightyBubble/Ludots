@@ -224,6 +224,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferS
 			return null;
 		}
 
+		// Keep the request text. Uri.Host lowercases the authority and would change the mod id.
 		if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out Uri? uri))
 		{
 			return null;

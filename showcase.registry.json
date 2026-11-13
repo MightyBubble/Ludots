@@ -392,6 +392,27 @@
       ]
     },
     {
+      "id": "webui_vfs_assets",
+      "path": "mods/showcases/webui_vfs_assets/WebUiVfsShowcaseMod",
+      "projectPath": "WebUiVfsShowcaseMod.csproj",
+      "title": "模组里的这张图",
+      "summary": "打开后能看到一张登记在模组展示资源里的图。面板按登记去取；没装载的模组不会另找一张来顶上。",
+      "tier": "T3",
+      "category": "panel",
+      "binding": "webui_vfs_assets",
+      "preset": "webui_vfs_assets_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "WebUiVfsShowcaseTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "webui",
+        "presentation"
+      ]
+    },
+    {
       "id": "camera",
       "path": "mods/showcases/camera/CameraShowcaseMod",
       "projectPath": "CameraShowcaseMod.csproj",

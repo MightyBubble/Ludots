@@ -314,6 +314,19 @@ internal static class CefProcessRuntime
 			SchemeHandlerFactory = new CefBrowserSchemeHandlerFactory(Registry)
 		});
 
+		// A standard scheme lowercases the host, which would change the mod id.
+		settings.RegisterScheme(new CefCustomScheme
+		{
+			SchemeName = BrowserVfsUri.Scheme,
+			DomainName = string.Empty,
+			IsStandard = false,
+			IsSecure = true,
+			IsCorsEnabled = true,
+			IsFetchEnabled = true,
+			IsCSPBypassing = true,
+			SchemeHandlerFactory = new CefBrowserSchemeHandlerFactory(Registry)
+		});
+
 		return settings;
 	}
 
