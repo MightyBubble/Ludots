@@ -41,7 +41,7 @@ public sealed class CrowdLinkCandidateBakeTests
                     shortestCm = Math.Min(shortestCm, ctx.AgentProfiles[i].HeightCm);
                 }
 
-                string modAssets = Path.Combine(repo, "mods", "showcases", "crowd_simulation", modId, "assets");
+                string modAssets = Path.Combine(repo, "mods", "showcases", "crowd_map", modId, "assets");
                 string surfacePath = Path.Combine(modAssets, "terrain", mapId + ".navsurface");
                 NavSurfaceAsset stored;
                 using (FileStream input = File.OpenRead(surfacePath))

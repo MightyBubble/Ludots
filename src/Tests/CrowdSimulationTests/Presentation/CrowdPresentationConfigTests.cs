@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using CrowdSimulationTests;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Presentation;
@@ -261,8 +262,8 @@ public sealed class CrowdPresentationConfigTests
     private static string DebugPath(string mod)
     {
         string path = Path.Combine(
-            ModConfigChain.RepoRoot(),
-            "mods", "showcases", "crowd_simulation", mod, "assets", "CrowdSimulationDebug.json");
+            CrowdShowcaseLayers.ModDirectory(ModConfigChain.RepoRoot(), mod),
+            "assets", "CrowdSimulationDebug.json");
         Assert.That(File.Exists(path), Is.True, path);
         return path;
     }

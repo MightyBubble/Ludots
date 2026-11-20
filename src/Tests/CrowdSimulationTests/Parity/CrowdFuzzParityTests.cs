@@ -94,7 +94,7 @@ public sealed class CrowdFuzzParityTests
     {
         string path = Path.Combine(
             RepoRoot(),
-            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress",
+            "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress",
             fileName);
         return CrowdWebFuzzParityFixture.Load(path);
     }
@@ -106,7 +106,7 @@ public sealed class CrowdFuzzParityTests
         {
             string catalog = Path.Combine(
                 dir.FullName,
-                "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json");
+                "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json");
             if (File.Exists(catalog)) return dir.FullName;
             dir = dir.Parent;
         }

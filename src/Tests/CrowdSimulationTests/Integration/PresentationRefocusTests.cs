@@ -35,8 +35,8 @@ public class PresentationRefocusTests
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS3PathMod"),
+            Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
+            Path.Combine(repoRoot, "mods", "showcases", "crowd_path", "CrowdSimulationS3PathMod"),
             clockModRoot,
         }, Path.Combine(repoRoot, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());

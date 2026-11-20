@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CrowdSimulationTests;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -39,8 +40,8 @@ internal sealed class CrowdShowcaseHost : IDisposable
         Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
         Path.Combine("mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
         Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-        Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"),
+        Path.Combine("mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
+        Path.Combine("mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod"),
         Path.Combine("mods", "showcases", "crowd_simulation", "CrowdSimulationShowcaseStageMod"),
     };
 
@@ -253,7 +254,7 @@ internal sealed class CrowdShowcaseHost : IDisposable
     }
 
     private static string SceneDir(string repo, string sceneMod)
-        => Path.Combine(repo, "mods", "showcases", "crowd_simulation", sceneMod);
+        => CrowdShowcaseLayers.ModDirectory(repo, sceneMod);
 
     internal static string RepoRoot()
     {

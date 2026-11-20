@@ -201,7 +201,7 @@ public sealed class CrowdSimulationMinimalModTests
             Path.Combine(repo, "mods", "LudotsCoreMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
-            Path.Combine(repo, "mods", "showcases", "crowd_simulation", ModId),
+            Path.Combine(repo, "mods", "showcases", "crowd_wall", ModId),
         }, Path.Combine(repo, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
         engine.SetService(CoreServiceKeys.ViewController, new StubView());
@@ -217,7 +217,7 @@ public sealed class CrowdSimulationMinimalModTests
     }
 
     private static string ModAssets(string repo)
-        => Path.Combine(repo, "mods", "showcases", "crowd_simulation", ModId, "assets");
+        => Path.Combine(repo, "mods", "showcases", "crowd_wall", ModId, "assets");
 
     private sealed class StubView : Ludots.Core.Presentation.Camera.IViewController
     {

@@ -201,7 +201,7 @@ DeepObject 合并：`formations`、`structures.templates`、`traversal.json` 的
 ## S1 交付：地形与障碍物（本次）
 
 - **导出工具**：`tools/crowdsimulation-export/exportLudots.mjs`（正本在本仓库，运行于 Web 沙盒 `scripts/` 下）按种子写出 `.height`（CHTM v2，uint16 缩放）、`Maps/<id>.json`（队伍代表 `Relations`、阻挡物与桥实体）与 S1 对拍摘要。建筑和桥按 Web `structures.footprint` 的插入序写：先全部建筑，再全部桥，两段内部不按坐标排序。`.navsurface` 用 `nav bake-crowd-navsurface` 从地编网格烘焙。覆盖片段不写 `relations`，功能位在标准参数 Mod。坐标：Web 米 × 100 = Ludots 地图局部厘米，轴向与 Web 一致。
-- **演示 Mod**：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用 `maps.<mapId>.navCellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 由 `nav bake-crowd-navsurface` 从地编网格烤出。
+- **演示 Mod**：`mods/showcases/crowd_map/CrowdSimulationS1Terrain{1337,2024,7}Mod`，三个种子各一个 Mod，launcher 选择即切换。群体参数在标准参数 Mod，一份配置给这些地图共用。每张图的求解器、区域和地形写在 `navmesh.json` 的 `maps.<mapId>`。地编网格写在同级 `logicTerrainAsset`（`terrain/crowd_simulation_s<种子>.map_data.bin`），不写进板的 `DataFile`。板的 `Grid.CellSizeCm` 仍是 100。引擎因此走连续高度图投影；16000×16000 格超过投影预算，装上的是步长 100 cm 的平坦逻辑地形，空间网格格边长也是 100 cm。高度仍在 `.height`。编辑器打开这张图时读 `logicTerrainAsset`，画布格边长用 `maps.<mapId>.navCellSizeCm`（6250），256 格铺满 16 km。仓库里已提交的 `.navsurface` 由 `nav bake-crowd-navsurface` 从地编网格烤出。
 - **验收（自动化，`src/Tests/CrowdSimulationTests/Parity/`）**：三种子的地形类型栅格、区域栅格、阻挡栅格、阻挡物 / 桥清单与 Web 导出做 FNV-1a 逐格对拍，全相等，摘要里跳跃候选那一段用 Web 快照 `parity/s1-jump-truth.json` 填；Ludots 烤的跳跃候选和这份快照按行为对拍；删一个阻挡物栅格变、改模板尺寸全体变、覆盖率阈值（< 0.5 不阻挡）生效；`.height` 经 Ludots 正式读取器加载。
 - **验收（目视）**：`artifacts/acceptance/crowdsimulation-s1/index.html` 查看器，`CrowdSimulationMapProbe` 工具从真实资产渲染地形类型着色 / 阻挡格 / 桥与跳跃候选三层视图。
 
@@ -567,7 +567,7 @@ React 编辑器的群体配置页有一块「单位模板」。数据来自 `GET
 
 回放捕获在 `CrowdSimReplay`。它记下已执行的指令日志、tick、合计校验码，以及 `CrowdSimPartitions.Copy` 的全部分区。分区包括每个稠密字段的 `units.<字段>`、`units.handles`、`groups`、`orders`、`planner`（序号、待回复队列、刷新队列、流场缓存从旧到新的 LRU 键）、`fog`、`belief`、`structures`、每个已构建导航上下文的 `nav.<id>`，以及已经物化的 `belief.<槽位>`。复制只读已物化的认知变体，不调用会构建变体的 `Get`。这些分区不进 `CrowdSimChecksum.Compute` 的合计。`--repeat` 和无头回放对不上时列出分区名。运行时按校验码环比较的 `RunReplay` 仍走自己的路径。
 
-无头回归是工具 `src/Tools/CrowdSimulationRegress`。场景表在 `mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json`。默认场景是 deploy、rebake、areas。deploy 和 rebake 读 1337 种子目录里现成的真值脚本。areas 是修路、泛洪、起火：火场按模板寿命到期后必须离场，道路和泛洪还在。stress 和 50k 基准读同一份 `regress/stress-50k.json`。`--repeat` 比较各轮终点校验码和全部分区。`--fuzz 0` 不跑随机操作。`--budget` 看的是含路径计算的 tick p95。`--fog 0` 跳过迷雾验收，默认跑 UAT-FOG-01..03 和隐藏核对。隐藏判定用 `CrowdPlayerVisibility`，和呈现层同一份；调试叠加层不走这份判定。场景坐标在 `regress/fog-acceptance.json`。Web 的 validateMirror 比较 Worker 镜像摘要；Ludots 没有这条 Worker 镜像，所以没有对应校验。
+无头回归是工具 `src/Tools/CrowdSimulationRegress`。场景表在 `mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json`。默认场景是 deploy、rebake、areas。deploy 和 rebake 读 1337 种子目录里现成的真值脚本。areas 是修路、泛洪、起火：火场按模板寿命到期后必须离场，道路和泛洪还在。stress 和 50k 基准读同一份 `regress/stress-50k.json`。`--repeat` 比较各轮终点校验码和全部分区。`--fuzz 0` 不跑随机操作。`--budget` 看的是含路径计算的 tick p95。`--fog 0` 跳过迷雾验收，默认跑 UAT-FOG-01..03 和隐藏核对。隐藏判定用 `CrowdPlayerVisibility`，和呈现层同一份；调试叠加层不走这份判定。场景坐标在 `regress/fog-acceptance.json`。Web 的 validateMirror 比较 Worker 镜像摘要；Ludots 没有这条 Worker 镜像，所以没有对应校验。
 
 ## 当前缺口（诚实清单）
 

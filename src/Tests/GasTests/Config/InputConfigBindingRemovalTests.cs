@@ -117,7 +117,7 @@ namespace Ludots.Tests.GAS
             Assert.That(Keys(coreOnly, "Default_Gameplay"), Does.Not.Contain("PrecisionModifier|<Keyboard>/leftSuper"));
             Assert.That(Keys(coreOnly, "Default_Gameplay"), Does.Not.Contain("ModifierSubtract|<Keyboard>/leftAlt"));
 
-            vfs.Mount("CrowdSimulationS4DeployMod", Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"));
+            vfs.Mount("CrowdSimulationS4DeployMod", Path.Combine(repo, "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod"));
             var mods = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
             mods.LoadedModIds.Add("CrowdSimulationS4DeployMod");
             InputConfigRoot withS4 = new InputConfigPipelineLoader(new ConfigPipeline(vfs, mods)).Load();

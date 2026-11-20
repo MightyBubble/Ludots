@@ -163,7 +163,7 @@ public sealed class CrowdSharedHudContractTests
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
-            Path.Combine(repo, "mods", "showcases", "crowd_simulation", Minimal),
+            Path.Combine(repo, "mods", "showcases", "crowd_wall", Minimal),
         }, Path.Combine(repo, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new CameraBehaviorInputState());
         engine.SetService(CoreServiceKeys.ViewController, new StubView());

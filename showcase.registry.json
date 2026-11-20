@@ -11161,7 +11161,7 @@
     },
     {
       "id": "crowd_simulation_s1_terrain_1337",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod",
+      "path": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod",
       "projectPath": null,
       "title": "CrowdSimulation S1 地形（种子 1337）",
       "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
@@ -11183,7 +11183,7 @@
     },
     {
       "id": "crowd_simulation_s1_terrain_2024",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain2024Mod",
+      "path": "mods/showcases/crowd_map/CrowdSimulationS1Terrain2024Mod",
       "projectPath": null,
       "title": "CrowdSimulation S1 地形（种子 2024）",
       "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
@@ -11205,7 +11205,7 @@
     },
     {
       "id": "crowd_simulation_s1_terrain_7",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod",
+      "path": "mods/showcases/crowd_map/CrowdSimulationS1Terrain7Mod",
       "projectPath": null,
       "title": "CrowdSimulation S1 地形（种子 7）",
       "summary": "CrowdSimulation S1：.navsurface 地表 + 高度图 + 阻挡物实体（300 阻挡、桥、跳跃候选），逐格对拍摘要在 assets/CrowdSimulation/parity/s1-truth.json。",
@@ -11227,7 +11227,7 @@
     },
     {
       "id": "crowd_simulation_s3_path_1337",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationS3PathMod",
+      "path": "mods/showcases/crowd_path/CrowdSimulationS3PathMod",
       "projectPath": null,
       "title": "CrowdSimulation S3 路径（种子 1337）",
       "summary": "在种子 1337 上点起点和终点。Q 换体型，T 在 1/2/4 条后台线程间换，G 放慢后台路径。画面上是折线、方向贴花，以及请求帧、生效帧、等了几拍。",
@@ -11249,7 +11249,7 @@
     },
     {
       "id": "crowd_simulation_s4_deploy_1337",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod",
+      "path": "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod",
       "projectPath": null,
       "title": "CrowdSimulation S4 部署（种子 1337）",
       "summary": "种子 1337 上的部署沙盘。进图按配置放人，到点自动回放。HUD 上有工具、避让、暂停和倍速、重烘报告、单位状态。玩家一开始操作，自动回放就停。",
@@ -11271,7 +11271,7 @@
     },
     {
       "id": "crowd_simulation_minimal",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationMinimalMod",
+      "path": "mods/showcases/crowd_wall/CrowdSimulationMinimalMod",
       "projectPath": null,
       "title": "CrowdSimulation 最小样板",
       "summary": "从空目录写出的群体 Mod：一种单位、一个表现、256×256 导航格的陆地 + 水面小图，方块墙挡在中间，两名玩家各 200 人绕墙走到对面。",
@@ -11293,7 +11293,7 @@
     },
     {
       "id": "crowd_simulation_showcase_march",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationMarchShowcaseMod",
+      "path": "mods/showcases/crowd_march/CrowdSimulationMarchShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 行军",
       "summary": "120 人方块在图中心集结，向东行军，出发 30 tick 后改令转向约 60°；转向时背离新目标的单位-tick 不超过 2%。",
@@ -11315,7 +11315,7 @@
     },
     {
       "id": "crowd_simulation_showcase_reversal",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationReversalShowcaseMod",
+      "path": "mods/showcases/crowd_march/CrowdSimulationReversalShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 折返",
       "summary": "120 人方块向东出发后 180° 掉头：新领队镜像排槽，单位沿旧航向的队内位置不穿队，同向再令镜像不回翻。",
@@ -11337,7 +11337,7 @@
     },
     {
       "id": "crowd_simulation_showcase_repeat_click",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationRepeatClickShowcaseMod",
+      "path": "mods/showcases/crowd_march/CrowdSimulationRepeatClickShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 连点",
       "summary": "已集结的 120 人方块被同一目标每 10 tick 连点 8 次：单位不后退，不在到达和行进之间来回翻转。",
@@ -11359,7 +11359,7 @@
     },
     {
       "id": "crowd_simulation_showcase_fog_explore",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogExploreShowcaseMod",
+      "path": "mods/showcases/crowd_fog/CrowdSimulationFogExploreShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 迷雾探索",
       "summary": "视野外的敌方小队、敌方目标和新建筑都不画；敌人走进视野才显示，小队向南探索，看见建筑后它才进认知、才画出来。",
@@ -11382,7 +11382,7 @@
     },
     {
       "id": "crowd_simulation_showcase_fog_reroute",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogRerouteShowcaseMod",
+      "path": "mods/showcases/crowd_fog/CrowdSimulationFogRerouteShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 乐观迷雾",
       "summary": "没探索过的水域先当成能走：队伍直穿，看见岸上的建筑和真实水域后改道到达。关掉乐观则从一开始就走已知的绕行路线。",
@@ -11405,7 +11405,7 @@
     },
     {
       "id": "crowd_simulation_showcase_fog_shared_vision",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationFogAllyVisionShowcaseMod",
+      "path": "mods/showcases/crowd_fog/CrowdSimulationFogAllyVisionShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 共享视野",
       "summary": "盟友看见的建筑和敌人，原地不动的本方也看见；视野外拆掉的建筑留残影，盟友回去看一眼残影才消失。",
@@ -11428,7 +11428,7 @@
     },
     {
       "id": "crowd_simulation_showcase_stress_50k",
-      "path": "mods/showcases/crowd_simulation/CrowdSimulationStress50kShowcaseMod",
+      "path": "mods/showcases/crowd_scale/CrowdSimulationStress50kShowcaseMod",
       "projectPath": null,
       "title": "CrowdSimulation 演示 · 5 万单位压力场景",
       "summary": "与 50k 门禁同一场景：4 名玩家共 5 万步兵开往同一目标，遥测面板默认打开，分列模拟耗时和渲染耗时。",

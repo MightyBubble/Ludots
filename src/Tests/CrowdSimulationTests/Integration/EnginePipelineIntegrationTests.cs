@@ -68,7 +68,7 @@ public class EnginePipelineIntegrationTests
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
                 probeModRoot,
             }, Path.Combine(repoRoot, "assets"));
             // 无头引擎没有宿主:相机行为输入与视口是宿主服务,补最小实例让默认相机的

@@ -188,7 +188,7 @@ public sealed class CrowdFuzzRunnerTests
     private static CrowdFuzzPlan CatalogPlan()
     {
         string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
-        string path = Path.Combine(root, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json");
+        string path = Path.Combine(root, "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json");
         return CrowdSimRegressCatalog.Parse(JsonNode.Parse(File.ReadAllText(path))!.AsObject()).CreateFuzzPlan(1, 1);
     }
 

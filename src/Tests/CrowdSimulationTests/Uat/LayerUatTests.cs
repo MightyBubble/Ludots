@@ -93,7 +93,7 @@ public sealed class LayerUatTests
     private static CrowdSimRegressCatalog RegressCatalog()
     {
         string relative = Path.Combine(
-            "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulation", "regress", "catalog.json");
+            "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulation", "regress", "catalog.json");
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
             string path = Path.Combine(dir.FullName, relative);

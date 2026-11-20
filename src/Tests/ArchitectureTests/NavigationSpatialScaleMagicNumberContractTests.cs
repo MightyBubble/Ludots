@@ -177,7 +177,7 @@ namespace Ludots.Tests.Architecture
                 fileName.Contains("FlowField", StringComparison.OrdinalIgnoreCase) ||
                 relative.StartsWith("src/Core/CrowdSimulation/", StringComparison.OrdinalIgnoreCase) ||
                 relative.StartsWith("mods/capabilities/navigation/CrowdSimulationMod/", StringComparison.OrdinalIgnoreCase) ||
-                relative.StartsWith("mods/showcases/crowd_simulation/", StringComparison.OrdinalIgnoreCase);
+                relative.StartsWith("mods/showcases/crowd_", StringComparison.OrdinalIgnoreCase);
         }
 
         private static IEnumerable<(int LineNumber, string Code)> StripCommentsAndStrings(string source)

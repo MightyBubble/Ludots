@@ -28,7 +28,7 @@ if (!outPath) {
   process.exit(1);
 }
 
-const catalogPath = arg('catalog') ?? join('mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json');
+const catalogPath = arg('catalog') ?? join('mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json');
 const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
 const toolsPath = arg('tools') ?? join('mods/capabilities/navigation/CrowdSimulationUiMod/assets/CrowdSimulationDebug.json');
 const tools = JSON.parse(readFileSync(toolsPath, 'utf8')).tools;
