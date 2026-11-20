@@ -497,9 +497,9 @@
           "renderPath": "None",
           "mobility": "Movable",
           "localScale": [
-            2.45,
+            1.15,
             1,
-            2.45
+            1.15
           ]
         },
         "style": {
@@ -516,22 +516,27 @@
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "crowd_simulation.unit.square",
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
           "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
+          "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
-          "localOffset": [
-            0,
-            0.35,
-            0
-          ],
           "localScale": [
-            2.0,
-            0.7,
-            2.0
-          ],
-          "colorParamKey": "crowd_simulation.unit.color"
+            2.4,
+            2.4,
+            2.4
+          ]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "crowd_simulation.unit.infantry.locomotion",
+          "animationProfileId": "crowd_simulation.unit.infantry.profile",
+          "speedParamKey": "crowd_simulation.unit.locomotion.speed",
+          "stateParamKey": "none"
         }
       },
       {
@@ -540,7 +545,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0,
+          "offset": 2.7,
           "updatePolicy": "EveryFrame"
         }
       }
@@ -561,6 +566,11 @@
           1,
           1
         ]
+      },
+      {
+        "paramKey": "crowd_simulation.unit.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
       }
     ]
   },

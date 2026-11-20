@@ -1,0 +1,16 @@
+[
+  {
+    "id": "crowd_simulation.unit.infantry.clip.idle",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "RaylibPlatformMeshesMod:assets/Models/Knight.glb#anim:0" }
+    ]
+  },
+  {
+    "id": "crowd_simulation.unit.infantry.clip.walk",
+    "assetKind": "Clip",
+    "locators": [
+      { "backendId": "raylib", "assetRef": "RaylibPlatformMeshesMod:assets/Models/Knight.glb#anim:0" }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+[
+  {
+    "id": "crowd_simulation.unit.infantry.locomotion",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 80, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 81, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": []
+  }
+]

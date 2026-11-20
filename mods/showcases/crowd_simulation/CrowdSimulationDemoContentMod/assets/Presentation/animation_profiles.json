@@ -1,0 +1,10 @@
+[
+  {
+    "id": "crowd_simulation.unit.infantry.profile",
+    "animatorControllerId": "crowd_simulation.unit.infantry.locomotion",
+    "stateClips": [
+      { "packedStateIndex": 80, "clipAssetId": "crowd_simulation.unit.infantry.clip.idle" },
+      { "packedStateIndex": 81, "clipAssetId": "crowd_simulation.unit.infantry.clip.walk" }
+    ]
+  }
+]
