@@ -23,7 +23,7 @@ node scripts/exportLudots.mjs --seed 7 --map-id crowd_simulation_s7 --out export
 `.navsurface` 不由本脚本写。加载器要头长 30 字节的链接候选布局，用地编网格重烘：
 
 ```bash
-dotnet run --project src/Tools/Ludots.Tool -c Release -- nav bake-crowd-navsurface --mapId crowd_simulation_s7 --modId CrowdSimulationS1Terrain7Mod --out mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod/assets/terrain/crowd_simulation_s7.navsurface --overwrite
+dotnet run --project src/Tools/Ludots.Tool -c Release -- nav bake-crowd-navsurface --mapId crowd_simulation_s7 --modId CrowdSimulationS1Terrain7Mod --out mods/showcases/crowd_map/CrowdSimulationS1Terrain7Mod/assets/terrain/crowd_simulation_s7.navsurface --overwrite
 ```
 
 地编网格 `terrain/<mapId>.map_data.bin` 也不在本脚本里生成。
@@ -36,7 +36,7 @@ dotnet run --project src/Tools/Ludots.Tool -c Release -- nav bake-crowd-navsurfa
 
 ```bash
 CROWD_WEB_SRC=<Web 源码根目录> node tools/crowdsimulation-export/exportFuzzParity.mjs --seed 11111 --ops 40 \
-  --out mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fuzz-parity-seed11111.json
+  --out mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fuzz-parity-seed11111.json
 ```
 
 夹具字段（`paritySchema` = `crowd-fuzz-parity-v3`）：
@@ -59,7 +59,7 @@ dotnet test src/Tests/CrowdSimulationTests --filter "FullyQualifiedName~CrowdFuz
 读 `stress-50k.json`（厘米、玩家 1..4），换成 Web 的米制和 0 基玩家后，用无头内核跑文件里的预热段和测量段。不读 `BENCH_SCENARIOS`。输出 JSON 供文档对照 C# `CrowdKernel50KBenchmarkTests`。已入库的那次对照是忙机器上的数字，已撤下。重测要在空闲机器上与 C# 紧挨着做，1 分钟负载明显低于核数，两端产物一起换。
 
 ```bash
-node scripts/benchmarkStress50k.mjs --scenario mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json
+node scripts/benchmarkStress50k.mjs --scenario mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json
 ```
 
 脚本放在 Web 沙盒的 `scripts/`（与 `src/engine/` 同级）时，`--scenario` 仍指向 Ludots 仓库里的那份文件。

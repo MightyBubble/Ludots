@@ -29,8 +29,8 @@ public sealed class SharedConfigSessionLifecycleTests
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain7Mod"),
+            Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
+            Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain7Mod"),
         }, Path.Combine(repoRoot, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController());
@@ -133,8 +133,8 @@ public sealed class SharedConfigSessionLifecycleTests
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-                Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain7Mod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
+                Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain7Mod"),
                 probeModRoot,
             }, repoRoot);
 
@@ -283,7 +283,7 @@ public sealed class SharedConfigSessionLifecycleTests
         Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
         Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
         Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-        Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+        Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
     ];
 
     private static GameEngine Start(List<string> mods, string repoRoot)

@@ -13,7 +13,7 @@ namespace CrowdSimulationRegress;
 /// </summary>
 public static class Program
 {
-    private const string DefaultCatalog = "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json";
+    private const string DefaultCatalog = "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/catalog.json";
 
     public static int Main(string[] args)
     {

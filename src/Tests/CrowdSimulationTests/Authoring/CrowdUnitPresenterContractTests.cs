@@ -110,7 +110,7 @@ public sealed class CrowdUnitPresenterContractTests
     public void ShippedMinimalMod_LinksItsUnitThroughTheBootstrapRule()
     {
         string repo = RepoRoot();
-        using GameEngine engine = StartEngine(Path.Combine(repo, "mods", "showcases", "crowd_simulation", ModId));
+        using GameEngine engine = StartEngine(Path.Combine(repo, "mods", "showcases", "crowd_wall", ModId));
 
         var links = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)!.SpawnLinks.For(Unit);
 
@@ -149,7 +149,7 @@ public sealed class CrowdUnitPresenterContractTests
 
     private static string CopyMinimalMod(Action<JsonArray> editPresenters)
     {
-        string source = Path.Combine(RepoRoot(), "mods", "showcases", "crowd_simulation", ModId);
+        string source = Path.Combine(RepoRoot(), "mods", "showcases", "crowd_wall", ModId);
         string target = Path.Combine(Path.GetTempPath(), "crowd-presenter-contract-" + Guid.NewGuid().ToString("N"), ModId);
         foreach (string dir in Directory.GetDirectories(source, "*", SearchOption.AllDirectories))
         {

@@ -43,7 +43,7 @@ public class CrowdS1LogicTerrainCouplingTests
         Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationMod"),
         Path.Combine(repoRoot, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
         Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-        Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
+        Path.Combine(repoRoot, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
     ];
 
     private sealed class StubView : Ludots.Core.Presentation.Camera.IViewController

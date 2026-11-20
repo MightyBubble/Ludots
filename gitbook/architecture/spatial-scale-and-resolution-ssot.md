@@ -46,7 +46,7 @@ In scope：
 
 - 本页定义尺度 taxonomy、owner、约束和现状名到目标名映射。
 - 新增命名常量模块，集中 `256` / `64` / `100` / `50` / `16` 等尺度默认值。
-- 添加路径白名单 contract：扫描板烘焙（`/Map/Board/`、`/NavMesh/Bake/`、`NavBake.`）、`Ludots.Tool` 的地图转换入口，以及文件名含 `NavTileBuilder` / `MassNavigationFlow` / `FlowField` 的源码；群体模拟另扫 `src/Core/CrowdSimulation/`、`mods/capabilities/navigation/CrowdSimulationMod/`、`mods/showcases/crowd_simulation/`。这些路径禁止内联 `256` / `64` / `100`。常驻豁免：`SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 每个一级目录登记为扫描根或“未纳入扫描”，漏登记则测试失败。
+- 添加路径白名单 contract：扫描板烘焙（`/Map/Board/`、`/NavMesh/Bake/`、`NavBake.`）、`Ludots.Tool` 的地图转换入口，以及文件名含 `NavTileBuilder` / `MassNavigationFlow` / `FlowField` 的源码；群体模拟另扫 `src/Core/CrowdSimulation/`、`mods/capabilities/navigation/CrowdSimulationMod/`，以及 `mods/showcases/` 里名字以 `crowd_` 开头的每一层。这些路径禁止内联 `256` / `64` / `100`。常驻豁免：`SpatialScaleDefaults.cs`、`Ludots.Physics2D`、`CrowdSimulationLimits.cs`。`src/Core/` 每个一级目录登记为扫描根或“未纳入扫描”，漏登记则测试失败。
 - 更新 GitBook 索引。
 
 Out of scope：

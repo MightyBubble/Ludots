@@ -191,11 +191,11 @@ public sealed class CrowdTerrainTypeOverlayTests
         Assert.That(input, Does.Contain("\"path\": \"<Keyboard>/leftBracket\""));
 
         string s4Input = File.ReadAllText(Path.Combine(
-            root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "Input", "default_input.json"));
+            root, "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod", "assets", "Input", "default_input.json"));
         Assert.That(s4Input, Does.Not.Contain("ToggleTerrainTypes"));
         Assert.That(s4Input, Does.Not.Contain("leftBracket"));
 
-        string s1 = Path.Combine(root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod", "assets");
+        string s1 = Path.Combine(root, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod", "assets");
         Assert.That(File.Exists(Path.Combine(s1, "CrowdSimulationDebugView.json")), Is.False);
         Assert.That(File.Exists(Path.Combine(s1, "config_catalog.json")), Is.False);
         Assert.That(File.Exists(Path.Combine(s1, "Input", "default_input.json")), Is.False);

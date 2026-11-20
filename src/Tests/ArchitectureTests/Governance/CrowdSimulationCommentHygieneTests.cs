@@ -58,8 +58,8 @@ public sealed class CrowdSimulationCommentHygieneTests
         {
             Path.Combine(repoRoot, "src", "Core", "CrowdSimulation"),
             Path.Combine(repoRoot, "src", "Tests", "CrowdSimulationTests"),
-            Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation"),
         };
+        roots.AddRange(CrowdShowcaseLayers(repoRoot));
 
         string navigationRoot = Path.Combine(repoRoot, "mods", "capabilities", "navigation");
         if (Directory.Exists(navigationRoot))
@@ -94,6 +94,23 @@ public sealed class CrowdSimulationCommentHygieneTests
         }
 
         return directory ?? throw new InvalidOperationException("Could not locate repository root.");
+    }
+
+    private static IEnumerable<string> CrowdShowcaseLayers(string repoRoot)
+    {
+        string showcases = Path.Combine(repoRoot, "mods", "showcases");
+        if (!Directory.Exists(showcases))
+        {
+            yield break;
+        }
+
+        foreach (string layer in Directory.EnumerateDirectories(showcases))
+        {
+            if (Path.GetFileName(layer).StartsWith("crowd_", StringComparison.Ordinal))
+            {
+                yield return layer;
+            }
+        }
     }
 
     private static string ToRepoRelative(string repoRoot, string absolutePath)

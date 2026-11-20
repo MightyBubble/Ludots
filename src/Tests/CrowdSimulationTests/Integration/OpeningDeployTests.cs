@@ -205,8 +205,8 @@ public sealed class OpeningDeployTests
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationUiMod"),
             Path.Combine(repo, "mods", "capabilities", "navigation", "CrowdSimulationStandardMod"),
             Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationDemoContentMod"),
-            Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS1Terrain1337Mod"),
-            Path.Combine(repo, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod"),
+            Path.Combine(repo, "mods", "showcases", "crowd_map", "CrowdSimulationS1Terrain1337Mod"),
+            Path.Combine(repo, "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod"),
             probe,
         }, Path.Combine(repo, "assets"));
         engine.SetService(CoreServiceKeys.CameraBehaviorInputState, new Ludots.Core.Gameplay.Camera.CameraBehaviorInputState());

@@ -147,7 +147,7 @@ public sealed class CrowdSimRegressTests
         root,
         "mods",
         "showcases",
-        "crowd_simulation",
+        "crowd_placement",
         "CrowdSimulationS4DeployMod",
         "assets",
         "CrowdSimulation",

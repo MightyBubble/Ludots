@@ -145,9 +145,8 @@ public sealed class SpatialVocabularyContractTests
     public void ParityJsonKeys_FollowTheSameSuffixRules()
     {
         string repoRoot = FindRepoRoot();
-        string showcase = Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation");
         var violations = new List<string>();
-        foreach (string file in Directory.GetFiles(showcase, "*.json", SearchOption.AllDirectories))
+        foreach (string file in CrowdShowcaseJsonFiles(repoRoot))
         {
             string relative = ToRepoRelative(repoRoot, file);
             if (!relative.Contains("/assets/CrowdSimulation/parity/", StringComparison.Ordinal))
@@ -302,13 +301,13 @@ public sealed class SpatialVocabularyContractTests
 
     private static IEnumerable<string> CrowdSourceFiles(string repoRoot)
     {
-        string[] roots =
-        [
+        var roots = new List<string>
+        {
             Path.Combine(repoRoot, "src/Core/CrowdSimulation"),
             Path.Combine(repoRoot, "src/Tools/CrowdSimulationMapProbe"),
-            Path.Combine(repoRoot, "mods/showcases/crowd_simulation"),
             Path.Combine(repoRoot, "mods/capabilities/navigation/CrowdSimulationMod"),
-        ];
+        };
+        roots.AddRange(CrowdShowcaseLayers(repoRoot));
         foreach (string root in roots)
         {
             if (!Directory.Exists(root))
@@ -354,4 +353,32 @@ public sealed class SpatialVocabularyContractTests
 
     private static string ToRepoRelative(string repoRoot, string file)
         => Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+
+    private static IEnumerable<string> CrowdShowcaseLayers(string repoRoot)
+    {
+        string showcases = Path.Combine(repoRoot, "mods", "showcases");
+        if (!Directory.Exists(showcases))
+        {
+            yield break;
+        }
+
+        foreach (string layer in Directory.EnumerateDirectories(showcases))
+        {
+            if (Path.GetFileName(layer).StartsWith("crowd_", StringComparison.Ordinal))
+            {
+                yield return layer;
+            }
+        }
+    }
+
+    private static IEnumerable<string> CrowdShowcaseJsonFiles(string repoRoot)
+    {
+        foreach (string layer in CrowdShowcaseLayers(repoRoot))
+        {
+            foreach (string file in Directory.EnumerateFiles(layer, "*.json", SearchOption.AllDirectories))
+            {
+                yield return file;
+            }
+        }
+    }
 }

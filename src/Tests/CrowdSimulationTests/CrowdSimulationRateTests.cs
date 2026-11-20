@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text.Json.Nodes;
 using Ludots.Core.CrowdSimulation.Fog;
@@ -39,26 +40,34 @@ public class CrowdSimulationRateTests
     public void ParityTruth_RecordsFixedHz_WithoutTouchingDigest()
     {
         string repoRoot = FindRepoRoot();
-        string showcase = Path.Combine(repoRoot, "mods", "showcases", "crowd_simulation");
+        string showcases = Path.Combine(repoRoot, "mods", "showcases");
         int seen = 0;
-        foreach (string file in Directory.EnumerateFiles(showcase, "*.json", SearchOption.AllDirectories))
+        foreach (string layer in Directory.EnumerateDirectories(showcases))
         {
-            if (!file.Contains($"{Path.DirectorySeparatorChar}parity{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            if (!Path.GetFileName(layer).StartsWith("crowd_", StringComparison.Ordinal))
             {
                 continue;
             }
 
-            var root = JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
-            if (root?["mapId"] == null)
+            foreach (string file in Directory.EnumerateFiles(layer, "*.json", SearchOption.AllDirectories))
             {
-                continue;
-            }
+                if (!file.Contains($"{Path.DirectorySeparatorChar}parity{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                {
+                    continue;
+                }
 
-            seen++;
-            Assert.That(root["fixedHz"]?.GetValue<int>(), Is.EqualTo(TestDefaults.FixedHz), file);
-            if (root["fnv1a"] != null)
-            {
-                Assert.That(root["fnv1a"]!.GetValue<string>(), Does.Match("^[0-9a-f]{8}$"), file);
+                var root = JsonNode.Parse(File.ReadAllText(file)) as JsonObject;
+                if (root?["mapId"] == null)
+                {
+                    continue;
+                }
+
+                seen++;
+                Assert.That(root["fixedHz"]?.GetValue<int>(), Is.EqualTo(TestDefaults.FixedHz), file);
+                if (root["fnv1a"] != null)
+                {
+                    Assert.That(root["fnv1a"]!.GetValue<string>(), Does.Match("^[0-9a-f]{8}$"), file);
+                }
             }
         }
 

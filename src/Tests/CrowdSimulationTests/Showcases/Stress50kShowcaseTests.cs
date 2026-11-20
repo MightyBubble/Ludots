@@ -20,7 +20,7 @@ public sealed class Stress50kShowcaseTests
     [Test]
     public void SameScenarioAsGate_RunsThroughWarmup_WithTelemetryPanelOpen()
     {
-        const string S4Root = "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/";
+        const string S4Root = "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/";
         var catalog = CrowdSimRegressCatalog.Parse(JsonNode.Parse(File.ReadAllText(Path.Combine(
             CrowdShowcaseHost.RepoRoot(), S4Root + "assets/CrowdSimulation/regress/catalog.json")))!.AsObject());
         string gateScript = catalog.Scenarios["stress"].ScriptAsset!;

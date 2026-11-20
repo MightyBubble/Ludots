@@ -182,7 +182,7 @@ public sealed class CrowdNavSurfaceAuthoringTests
                     repo,
                     "mods",
                     "showcases",
-                    "crowd_simulation",
+                    "crowd_map",
                     modId,
                     "assets");
                 string mapPath = Path.Combine(modAssets, "Maps", mapId + ".json");

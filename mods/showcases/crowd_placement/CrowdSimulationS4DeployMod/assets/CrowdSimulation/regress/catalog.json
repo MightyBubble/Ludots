@@ -14,36 +14,36 @@
   "demoAssets": "mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod/assets",
   "scenarios": {
     "deploy": {
-      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets",
       "scriptAsset": "CrowdSimulation/parity/s4-deploy-truth.json",
       "ticksFrom": "frames",
       "movement": false,
       "withFog": false
     },
     "rebake": {
-      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
+      "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets",
       "scriptAsset": "CrowdSimulation/parity/s7-rebake-truth.json",
       "ticksFrom": "ticks",
       "movement": true,
       "withFog": false
     },
     "areas": {
-      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
-      "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/areas-road-flood-fire.json",
+      "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/areas-road-flood-fire.json",
       "ticksFrom": "ticks",
       "movement": false,
       "withFog": false
     },
     "stress": {
-      "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
-      "scriptAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json",
+      "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets",
+      "scriptAsset": "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/stress-50k.json",
       "ticksFrom": "ticks",
       "movement": true,
       "withFog": true
     }
   },
   "fuzz": {
-    "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain7Mod/assets",
+    "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain7Mod/assets",
     "movement": true,
     "withFog": false,
     "stepsPerOp": 2,
@@ -71,7 +71,7 @@
     ]
   },
   "fog": {
-    "seedAssets": "mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets",
-    "sceneAsset": "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json"
+    "seedAssets": "mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets",
+    "sceneAsset": "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json"
   }
 }

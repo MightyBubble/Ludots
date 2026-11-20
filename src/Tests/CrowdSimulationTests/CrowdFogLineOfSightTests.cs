@@ -49,7 +49,7 @@ public sealed class CrowdFogLineOfSightTests
         string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
         var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(
             root,
-            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
+            "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
         Ludots.Core.CrowdSimulation.Diagnostics.CrowdFogAcceptance.RunHide(session, scene);
     }
 
@@ -59,7 +59,7 @@ public sealed class CrowdFogLineOfSightTests
         string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
         var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(
             root,
-            "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
+            "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulation/regress/fog-acceptance.json")))!.AsObject();
         RunTerrain(scene, optimistic: false);
         RunTerrain(scene, optimistic: true);
     }

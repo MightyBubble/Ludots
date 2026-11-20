@@ -53,6 +53,81 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void Culling_GroundPastLookAtBox_StaysVisibleWhenItProjectsOnScreen()
+        {
+            using World world = World.Create();
+            var camera = new CameraManager();
+            camera.State.TargetCm = Vector2.Zero;
+            camera.State.DistanceCm = 8000f;
+            camera.State.Pitch = 22f;
+            camera.State.Yaw = 0f;
+            camera.State.FovYDeg = 42f;
+
+            var view = new StubViewController();
+            CameraStateSnapshot snapshot = CameraStateSnapshot.FromState(camera.State);
+            (float _, float logicHeight) = CameraViewportUtil.ComputeViewportExtent(
+                camera.State.DistanceCm,
+                camera.State.FovYDeg,
+                camera.State.Pitch,
+                view.AspectRatio);
+            float lookAtHalfHeightCm = logicHeight * 0.5f;
+
+            bool found = false;
+            int foundX = 0;
+            int foundY = 0;
+            for (float screenY = 4f; screenY < view.Resolution.Y * 0.5f; screenY += 8f)
+            {
+                if (!CameraViewportUtil.TryGroundCmUnderPointer(
+                        in snapshot,
+                        new Vector2(view.Resolution.X * 0.5f, screenY),
+                        view.Resolution,
+                        view.AspectRatio,
+                        out Vector2 groundCm) ||
+                    groundCm.Y <= lookAtHalfHeightCm + 200f)
+                {
+                    continue;
+                }
+
+                CameraRenderState3D render = CameraViewportUtil.StateToRenderState(in snapshot);
+                Vector2 projected = CameraViewportUtil.WorldToScreen(
+                    new Vector3(groundCm.X * 0.01f, 0f, groundCm.Y * 0.01f),
+                    in render,
+                    view.Resolution,
+                    view.AspectRatio);
+                if (float.IsNaN(projected.X) || float.IsNaN(projected.Y))
+                {
+                    continue;
+                }
+
+                foundX = (int)MathF.Round(groundCm.X);
+                foundY = (int)MathF.Round(groundCm.Y);
+                found = true;
+                break;
+            }
+
+            Assert.That(found, Is.True, "A shallow camera shows ground beyond the look-at box.");
+
+            Entity entity = CreateCullableEntity(world, foundX, foundY);
+            var spatial = new StubSpatialQueryService(entity);
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            Assert.That(cull.IsVisible, Is.True,
+                $"Ground at ({foundX},{foundY}) cm projects on screen and must keep its mesh.");
+        }
+
+        [Test]
         public void Culling_OutsideViewport_UsesVisibilityWithoutOverwritingLod()
         {
             using World world = World.Create();

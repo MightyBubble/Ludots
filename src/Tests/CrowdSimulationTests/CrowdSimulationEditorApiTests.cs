@@ -602,7 +602,7 @@ public class CrowdSimulationEditorApiTests
 
     private static string CopyMod(string modId)
     {
-        string source = Path.Combine(FindRepoRoot(), "mods", "showcases", "crowd_simulation", modId);
+        string source = CrowdShowcaseLayers.ModDirectory(FindRepoRoot(), modId);
         string copy = Path.Combine(Path.GetTempPath(), "ludots-crowd-edit-test-" + Guid.NewGuid().ToString("N"));
         CopyTree(source, copy);
         return copy;

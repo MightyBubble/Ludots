@@ -27,7 +27,7 @@ public sealed class CrowdPlayerViewTests
     public void PlayerFogScene_ClustersEnemiesAndLeavesHideFixtureAlone()
     {
         string root = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "..", ".."));
-        string mod = Path.Combine(root, "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulation");
+        string mod = Path.Combine(root, "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod", "assets", "CrowdSimulation");
         var fixture = JsonNode.Parse(File.ReadAllText(Path.Combine(mod, "regress", "fog-acceptance.json")))!.AsObject();
         var scene = JsonNode.Parse(File.ReadAllText(Path.Combine(mod, "player-fog-check.json")))!.AsObject();
         Assert.That(fixture["spawnCount"]!.GetValue<int>(), Is.EqualTo(1));

@@ -27,8 +27,8 @@
 - `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulation/traversal.json`
 - `mods/capabilities/navigation/CrowdSimulationStandardMod/assets/CrowdSimulationConfig.json`
 - `mods/showcases/crowd_simulation/CrowdSimulationDemoContentMod/assets/…`
-- `mods/showcases/crowd_simulation/CrowdSimulationMinimalMod/assets/…`
-- `mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets/Navigation/navmesh.json`
+- `mods/showcases/crowd_wall/CrowdSimulationMinimalMod/assets/…`
+- `mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets/Navigation/navmesh.json`
 
 ## `CrowdSimulation/traversal.json`
 
@@ -197,7 +197,7 @@
 | --- | --- | --- |
 | `<playerId>` | string（十进制玩家号） | ≥ 1；值 `#rrggbb` 或 `#rrggbbaa` |
 
-地图 `Players` 里每个 `PlayerId` 都必须有颜色；表内不能有多余玩家号。正本示例：`mods/showcases/crowd_simulation/CrowdSimulationS1Terrain1337Mod/assets/Presentation/crowd_player_colors.json`。
+地图 `Players` 里每个 `PlayerId` 都必须有颜色；表内不能有多余玩家号。正本示例：`mods/showcases/crowd_map/CrowdSimulationS1Terrain1337Mod/assets/Presentation/crowd_player_colors.json`。
 
 ## 表现与调试配置（D 类）
 

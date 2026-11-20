@@ -259,7 +259,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
     {
         // 会话建在 S1 地形配置上（S1 进图不带单位），开局人数取 S4 自己声明的 deploy.initialUnits，与会话宿主同一条合成。
         var doc = ModConfigChain.Open("CrowdSimulationS4DeployMod").Merged("CrowdSimulationDebug.json");
-        string assets = Path.Combine(RepoRoot(), "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets");
+        string assets = Path.Combine(RepoRoot(), "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets");
         var s4Config = JsonNode.Parse(File.ReadAllText(Path.Combine(assets, "CrowdSimulationConfig.json")))!.AsObject();
         int initialUnits = s4Config["deploy"]!["initialUnits"]!.GetValue<int>();
         CrowdDebugScriptEntry[]? script = CrowdSimulationDebugConfig.Load(doc).Session?.Script;
@@ -271,7 +271,7 @@ public sealed class CrowdReplayInteractiveDiagnosticTests
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)
         {
-            if (File.Exists(Path.Combine(dir.FullName, "mods/showcases/crowd_simulation/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))
+            if (File.Exists(Path.Combine(dir.FullName, "mods/showcases/crowd_placement/CrowdSimulationS4DeployMod/assets/CrowdSimulationDebug.json")))
                 return dir.FullName;
             dir = dir.Parent;
         }

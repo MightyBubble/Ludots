@@ -184,6 +184,7 @@ namespace Ludots.Core.Systems
         private int _lastSpatialRefreshFrameId = int.MinValue / 2;
         private bool _spatialCandidatesFresh;
         private bool _dynamicHysteresisActive;
+        private readonly FrustumGroundRayProvider _groundRays = new();
         private readonly int _hysteresisOwnerToken = System.Threading.Interlocked.Increment(ref _nextHysteresisOwnerToken);
         private static int _nextHysteresisOwnerToken;
 
@@ -413,7 +414,7 @@ namespace Ludots.Core.Systems
             passTarget = target;
 
             float aspectRatio = _view.AspectRatio;
-            WorldAabbCm queryBounds = ComputeBroadPhaseCameraAabb(
+            WorldAabbCm queryBounds = ComputeCullQueryBounds(
                 in cameraState,
                 aspectRatio,
                 out float minX,
@@ -1509,6 +1510,83 @@ namespace Ludots.Core.Systems
             return ((to - from + 540f) % 360f) - 180f;
         }
 
+        private WorldAabbCm ComputeCullQueryBounds(
+            in CameraStateSnapshot cameraState,
+            float aspectRatio,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            WorldAabbCm lookAtMargin = ComputeBroadPhaseCameraAabb(
+                in cameraState,
+                aspectRatio,
+                out minX,
+                out maxX,
+                out minY,
+                out maxY);
+
+            Vector2 resolution = _view.Resolution;
+            if (resolution.X <= 1f || resolution.Y <= 1f || aspectRatio <= 0f || !float.IsFinite(aspectRatio))
+            {
+                return lookAtMargin;
+            }
+
+            _groundRays.Bind(in cameraState, resolution, aspectRatio);
+            float farMeters = _groundRays.FarMeters;
+            float farCmFloat = farMeters * WorldUnits.CmPerMeter;
+            if (!float.IsFinite(farCmFloat) || farCmFloat < 1f)
+            {
+                throw new InvalidOperationException(
+                    "CULL.ERR.VisibleGroundClip: the camera far plane is not a finite ground extent.");
+            }
+
+            int farCm = (int)MathF.Min(farCmFloat, int.MaxValue / 4f);
+            long centerX = (long)MathF.Round(cameraState.TargetCm.X);
+            long centerY = (long)MathF.Round(cameraState.TargetCm.Y);
+            long left = centerX - farCm;
+            long top = centerY - farCm;
+            long width = (long)farCm * 2L;
+            long height = width;
+            if (left < int.MinValue || top < int.MinValue ||
+                left > int.MaxValue || top > int.MaxValue ||
+                width <= 0 || width > int.MaxValue || height > int.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "CULL.ERR.VisibleGroundClip: the camera ground clip does not fit the world grid.");
+            }
+
+            var clip = new WorldAabbCm((int)left, (int)top, (int)width, (int)height);
+            var screen = new ScreenRect(0f, 0f, resolution.X, resolution.Y);
+            if (!ScreenRegionBroadphase.TryGetBounds(
+                    _groundRays,
+                    in screen,
+                    in clip,
+                    radiusCm: 0f,
+                    out WorldAabbCm visibleGround))
+            {
+                throw new InvalidOperationException(
+                    "CULL.ERR.VisibleGroundMissing: the camera frustum does not meet the ground, so a unit on screen cannot stay visible.");
+            }
+
+            WorldAabbCm query = Union(lookAtMargin, visibleGround);
+            minX = query.Left;
+            maxX = query.Right;
+            minY = query.Top;
+            maxY = query.Bottom;
+            return query;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static WorldAabbCm Union(in WorldAabbCm a, in WorldAabbCm b)
+        {
+            int left = Math.Min(a.Left, b.Left);
+            int top = Math.Min(a.Top, b.Top);
+            int right = Math.Max(a.Right, b.Right);
+            int bottom = Math.Max(a.Bottom, b.Bottom);
+            return new WorldAabbCm(left, top, right - left, bottom - top);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static WorldAabbCm ComputeBroadPhaseCameraAabb(
             in CameraStateSnapshot cameraState,
@@ -2240,6 +2318,28 @@ namespace Ludots.Core.Systems
             public void Update(ref PresentationFrameState state)
             {
                 Alpha = state.Enabled ? state.InterpolationAlpha : 1f;
+            }
+        }
+
+        private sealed class FrustumGroundRayProvider : IScreenRayProvider
+        {
+            private CameraRenderState3D _camera;
+            private Vector2 _resolution;
+            private float _aspect;
+
+            public float FarMeters { get; private set; }
+
+            public void Bind(in CameraStateSnapshot state, Vector2 resolution, float aspect)
+            {
+                _camera = CameraViewportUtil.StateToRenderState(in state);
+                _resolution = resolution;
+                _aspect = aspect;
+                FarMeters = _camera.ResolveClipPlanes().FarMeters;
+            }
+
+            public ScreenRay GetRay(Vector2 screenPosition)
+            {
+                return CameraViewportUtil.ScreenToRay(screenPosition, in _camera, _resolution, _aspect);
             }
         }
     }

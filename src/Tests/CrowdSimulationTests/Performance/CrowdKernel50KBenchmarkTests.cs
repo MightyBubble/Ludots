@@ -187,7 +187,7 @@ public sealed class CrowdKernel50KBenchmarkTests
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         string relative = Path.Combine(
-            "mods", "showcases", "crowd_simulation", "CrowdSimulationS4DeployMod",
+            "mods", "showcases", "crowd_placement", "CrowdSimulationS4DeployMod",
             "assets", "CrowdSimulation", "regress", "stress-50k.json");
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, relative))) dir = dir.Parent;
         if (dir == null) throw new InvalidOperationException("找不到 50k 压力场景。");
