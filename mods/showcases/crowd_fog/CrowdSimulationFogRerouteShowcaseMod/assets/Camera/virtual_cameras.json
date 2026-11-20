@@ -2,19 +2,27 @@
   {
     "id": "CrowdSimulation.Camera.S4Deploy",
     "fixedTargetCm": {
-      "x": 1310200,
-      "y": 427400
+      "x": 1330250,
+      "y": 315300
     },
-    "distanceCm": 5500,
-    "pitch": 38,
-    "yaw": 20,
+    "distanceCm": 12000,
+    "pitch": 50,
+    "yaw": 0,
     "fovYDeg": 42,
-    "minDistanceCm": 800,
-    "maxDistanceCm": 80000,
-    "zoomCmPerWheel": 2000,
+    "minDistanceCm": 2500,
+    "maxDistanceCm": 120000,
+    "minPitchDeg": 18,
+    "maxPitchDeg": 70,
+    "zoomCmPerWheel": 1500,
     "zoomTowardsPointer": false,
-    "panCmPerSecond": 2000,
+    "panMode": "Keyboard",
+    "panCmPerSecond": 22000,
+    "enableGrabDrag": false,
+    "rotateMode": "DragRotate",
+    "rotateRequiresHold": true,
+    "rotateDegPerPixel": 0.35,
     "enableZoom": true,
-    "allowUserInput": true
+    "allowUserInput": true,
+    "defaultBlendDuration": 0
   }
 ]

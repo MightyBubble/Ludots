@@ -3,9 +3,38 @@
     "id": "crowd_simulation.unit.infantry.locomotion",
     "defaultStateIndex": 0,
     "states": [
-      { "packedStateIndex": 80, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 81, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+      { "packedStateIndex": 80, "durationSeconds": 1.067, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 81, "durationSeconds": 1.067, "playbackSpeed": 1.0, "loop": true }
     ],
-    "transitions": []
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": "crowd_simulation.unit.locomotion.speed",
+        "threshold": 0.2,
+        "durationSeconds": 0.08,
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 0,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": "crowd_simulation.unit.locomotion.speed",
+        "threshold": 0.1,
+        "durationSeconds": 0.08,
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
+      }
+    ]
   }
 ]
