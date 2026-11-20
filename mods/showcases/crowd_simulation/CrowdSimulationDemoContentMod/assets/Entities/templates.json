@@ -10,8 +10,7 @@
         "speedCmPerSec": 1400,
         "pushPriority": 2,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -25,8 +24,7 @@
         "speedCmPerSec": 1400,
         "pushPriority": 3,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -40,8 +38,7 @@
         "speedCmPerSec": 1400,
         "pushPriority": 4,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -55,8 +52,7 @@
         "speedCmPerSec": 1400,
         "pushPriority": 5,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -70,8 +66,7 @@
         "speedCmPerSec": 1100,
         "pushPriority": 2,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -85,8 +80,7 @@
         "speedCmPerSec": 1100,
         "pushPriority": 3,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -100,8 +94,7 @@
         "speedCmPerSec": 1100,
         "pushPriority": 4,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -115,8 +108,7 @@
         "speedCmPerSec": 1100,
         "pushPriority": 5,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -130,8 +122,7 @@
         "speedCmPerSec": 800,
         "pushPriority": 3,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -145,8 +136,7 @@
         "speedCmPerSec": 800,
         "pushPriority": 4,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -160,8 +150,7 @@
         "speedCmPerSec": 800,
         "pushPriority": 5,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -175,8 +164,7 @@
         "speedCmPerSec": 800,
         "pushPriority": 6,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -190,8 +178,7 @@
         "speedCmPerSec": 1000,
         "pushPriority": 1,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -205,8 +192,7 @@
         "speedCmPerSec": 1000,
         "pushPriority": 2,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -220,8 +206,7 @@
         "speedCmPerSec": 1000,
         "pushPriority": 3,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -235,8 +220,7 @@
         "speedCmPerSec": 1000,
         "pushPriority": 4,
         "autoDeploy": true
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -250,8 +234,7 @@
         "speedCmPerSec": 1200,
         "pushPriority": 2,
         "autoDeploy": false
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -265,8 +248,7 @@
         "speedCmPerSec": 1200,
         "pushPriority": 3,
         "autoDeploy": false
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -280,8 +262,7 @@
         "speedCmPerSec": 1200,
         "pushPriority": 4,
         "autoDeploy": false
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   },
   {
@@ -295,8 +276,7 @@
         "speedCmPerSec": 1200,
         "pushPriority": 5,
         "autoDeploy": false
-      },
-      "SpatialPartitionExcluded": {}
+      }
     }
   }
 ]
